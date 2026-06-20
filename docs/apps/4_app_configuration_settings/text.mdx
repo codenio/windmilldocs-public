@@ -1,0 +1,68 @@
+---
+description: What is the Text component in Windmill? Display static or dynamic text content in your app.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Text
+
+The text component allows you to display text.
+
+![Text API](../../assets/apps/4_app_component_library/text.png.webp)
+
+The following section details Text component's specific settings. For more details on the App editor, check the [dedicated documentation](../0_app_editor/index.mdx) or the App editor [Quickstart](../../getting_started/7_apps_quickstart/index.mdx):
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		color="orange"
+		title="App editor Documentation"
+		description="The app editor is a low-code builder to create custom User Interfaces with a mix of drag-and-drop and code."
+		href="/docs/apps/app_editor"
+	/>
+	<DocCard
+		color="orange"
+		title="Apps quickstart"
+		description="Learn how to build your first app in a matter of minutes."
+		href="/docs/getting_started/apps_quickstart"
+	/>
+</div>
+
+## Controls
+
+This component can be controlled by [frontend scripts](../3_app-runnable-panel.mdx#frontend-scripts) using these functions:
+
+| Name   |        Parameters        | Description          | Example       |
+| ------ | :----------------------: | -------------------- | ------------- |
+| [setValue](../3_app-runnable-panel.mdx#setvalue) | id: string, value: any | Manually set or force the value of a component. | `setValue(id: 'a', value: 17)` |
+
+## Text input
+
+|  Type  | Connectable | Templatable |   Default    | Description          |
+| :----: | :---------: | :---------: | :----------: | -------------------- |
+| string |    true     |    true     | Hello World! | The text to display. |
+
+## Text configuration
+
+| Name        |                      Type                      | Connectable | Templatable | Default | Description                       |
+| ----------- | :--------------------------------------------: | :---------: | :---------: | :-----: | --------------------------------- |
+| style       | 'title', 'subtitle', 'body', 'label','caption' |    false    |    false    | 'body'  | The text style.                   |
+| Copy button |                    boolean                     |    false    |    false    |  false  | Whether to display a copy button. |
+| Tooltip     |                    boolean                     |    false    |    false    |  false  | Whether to display a tooltip.     |
+
+## Outputs
+
+| Name    |  Type   | Description                              |
+| ------- | :-----: | ---------------------------------------- |
+| result  | string  | The text.                                |
+| loading | boolean | The loading state of the text component. |
+
+## Inline editor
+
+You can directly edit the text by click the `Pen` icon on the app editor. You can also double click on the text to edit it.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	autoPlay
+	controls
+	src="/videos/text_editor.mp4"
+/>

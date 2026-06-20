@@ -1,0 +1,643 @@
+---
+description: How do I configure Windmill instance settings as a superadmin?
+---
+
+import DocCard from '@site/src/components/DocCard';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Instance settings
+
+Instance settings are accessible to all [superadmins](../../core_concepts/16_roles_and_permissions/index.mdx#superadmin) of your Windmill instance. This is where you manage settings and features across all workspaces. One instance can have several workspaces.
+
+This is from the Instance settings that you can see on which Windmill [version](https://github.com/windmill-labs/windmill/releases) your instance is running.
+
+![Instance version](./instance_version.png "Instance version")
+
+## Admins workspace
+
+The Admins workspace is for [superadmins](../../core_concepts/16_roles_and_permissions/index.mdx#superadmin) only and contains scripts whose purpose is to manage your Windmill instance, such as [keeping resource types up to date](../../core_concepts/3_resources_and_types/index.mdx#sync-resource-types-with-windmillhub) or the New User Setup App.
+
+The [resources types](../../core_concepts/3_resources_and_types/index.mdx) created from the Admins workspace are shared across all workspaces.
+
+You can access it from the list of workspaces or from Instance settings.
+
+![Admins workspace](./admins_workspace.png "Admins workspace")
+
+## Global users
+
+Global Users are users of the Windmill instance. They are not associated with any workspace and can be assigned to any workspace (from the workspace settings).
+
+From there you can manually add a user to the instance, giving an email and a password. Users can be set to User, [Devops](../../core_concepts/16_roles_and_permissions/index.mdx#devops) or Superadmin [roles](../../core_concepts/16_roles_and_permissions/index.mdx#superadmin).
+
+When a user's role is set by an [instance group](../../core_concepts/8_groups_and_folders/index.mdx#instance-level-roles), a "Set by instance group" indicator appears next to the role toggle. You can still upgrade a user to a higher role manually (e.g. from group-assigned devops to superadmin), but demoting to "User" requires removing the user from the instance group. See [instance-level roles via instance groups](../../core_concepts/16_roles_and_permissions/index.mdx#instance-level-roles-via-instance-groups) for details.
+
+You can also enable automatic username creation from emails. Usernames will be shared accross workspaces. We recommend setting it to avoid duplicated usernames.
+
+A more common way to add users is to use [SSO/OAuth](#authoauth).
+
+For each user, you can see Email, Auth (manually-set password or Auth methods), Name, Kind ([Developer](../../core_concepts/16_roles_and_permissions/index.mdx#developer) or [Operator](../../core_concepts/16_roles_and_permissions/index.mdx#operator) where an operator at the instace level is an operator in all workspaces they are members of), and Role (User or [Superadmin](../../core_concepts/16_roles_and_permissions/index.mdx#superadmin)).
+
+You can also toggle on 'Recently active only' to only show users who have performed at least one action in the last 30 days. Only those users are counted in our [Pricing](/pricing). When enabled, the table also displays each user's Kind (Developer or Operator), reflecting their highest permission level across all workspaces they belong to. 
+
+![Global Users](./global_users.png "Global Users")
+
+## Core
+
+![Core settings](./core_settings.png "Core settings")
+
+### Base url
+
+The base URL is the public base url of the instance.
+
+If the base URL is not set correctly, some server-side generated URLs like resume URLs will be incorrect. Additionally, [OAuth and SSO](#authoauth) functionalities will not work properly.
+
+### WebSocket base url
+
+Optional override for the base URL used by the frontend to open WebSocket connections to the LSP, debugger, and multiplayer services. When empty, WebSocket connections fall back to the current `window.location` (same host as the page).
+
+Set this when the browser cannot reach WebSocket services on the same host as the main app — for example, when WebSocket services are exposed under a dedicated subdomain (e.g. `wss://ws.example.com`). The value is used as a prefix for all frontend WebSocket connections (LSP, debugger, multiplayer).
+
+A "Test connectivity" button runs HTTP health and WebSocket ping checks for the three services in parallel and reports per-service results inline.
+
+### Email domain
+
+Domain to display in webhooks for [email triggers](../17_email_triggers/index.mdx) (should match the [MX record](https://www.cloudflare.com/learning/dns/dns-records/dns-mx-record/)).
+
+### Request size limit in MB
+
+Maximum size of HTTP requests in MB. Cloud only.
+
+### Default timeout
+
+Default timeout for individual [jobs](../../core_concepts/20_jobs/index.mdx#retention-policy), in seconds.
+
+You will find a helper to convert days, hours, minutes, and seconds to seconds.
+
+Note that you can set a [custom timeout for flow steps](../../flows/9_custom_timeout.md).
+
+### Max timeout for sync endpoints
+
+Maximum amount of time (measured in seconds) that a [sync endpoint](../../core_concepts/4_webhooks/index.mdx) is allowed to run before it is forcibly stopped or timed out.
+
+You will find a helper to convert days, hours, minutes, and seconds to seconds.
+
+### Keep job directories for debug
+
+Toogle to keep Job directories after execution at `/tmp/windmill/<worker>/<job_id>`.
+
+### License key
+
+The license key is used to enable [Enterprise Edition](/pricing). You can get one by starting a free trial from the [pricing page](/pricing) or by contacting us at contact@windmill.dev
+
+To see how to upgrade your instance to Enterprise Edition, see the [Upgrade to Enterprise Edition](../../misc/7_plans_details/index.mdx#self-host) docs.
+A same key can also be used for non-prod instances. Just make sure to set the [`Non-prod instance`](#non-prod-instance) to true so that the computation usage is not counted in the billing.
+
+From there you also have two buttons:
+- `Renew key`: to renew the license key (as long as you have a valid subscription). Anyway, the key is automatically renewed everyday as long as your subscription is valid.
+- `Open customer portal`: the recommended way to access the [Customer portal](../../misc/7_plans_details/index.mdx#windmill-customer-portal) where you can manage your subscription.
+
+If your subscription is active, the key is automatically renewed everyday. A key is typically valid for 35 days.
+
+### Non-prod instance
+
+Whether we should consider the reported usage of this instance as non-prod.
+
+Non-prod instances work the same as prod instances in terms of features, but their [computation usage](/pricing) is not counted in the billing. Seats count, however, are across all instances. If all instances using the same key are 'Non-prod', the one using most Compute Units will be counted as Prod.
+
+Alternatively, you can copy a development license key using the dedicated button from the [Customer portal](../../misc/7_plans_details/index.mdx#windmill-customer-portal). This provides an alternative to manually turning instances to Non-prod mode.
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+### Retention period in secs
+
+How long to keep the jobs data (especially the [audit logs](../../core_concepts/14_audit_logs/index.mdx)) in the database (max 30 days on [Community Edition](/pricing)).
+
+You will find a helper to convert days, hours, minutes, and seconds to seconds.
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+### Audit log retention (days)
+
+How long to keep audit log entries in the database. Default: 365 days (EE), 14 days (CE). Audit logs are internally partitioned by day for performance - expired partitions are dropped automatically rather than deleted row by row.
+
+If you enable [Store audit logs in object storage](#store-audit-logs-in-object-storage), the bucket holds the durable long-term history, so you can safely lower this value to only what you need for the in-app [audit log](../../core_concepts/14_audit_logs/index.mdx) view. Windmill never deletes the exported audit logs from object storage.
+
+### Instance object storage
+
+[Connect your instance](../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage) to a S3 bucket to [store large logs](../../core_concepts/20_jobs/index.mdx#large-job-logs-management) and [global cache for Python and Go](../../misc/13_s3_cache/index.mdx).
+
+This feature has no overlap with the [Workspace object storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#workspace-object-storage).
+
+You can choose to use S3, Azure Blob Storage, AWS OIDC or Google Cloud Storage. For each you will find a button to test settings from a server or from a worker.
+
+![S3/Azure for Python/Go cache & large logs](../../core_concepts/20_jobs/s3_azure_cache.png "S3/Azure for Python/Go cache & large logs")
+
+#### S3
+
+| Field | Description |
+|-------|-------------|
+| Bucket | The name of your S3 bucket |
+| Region | If left empty, will be derived automatically from $AWS_REGION |
+| Access key ID | If left empty, will be derived automatically from $AWS_ACCESS_KEY_ID, pod or ec2 profile |
+| Secret key | If left empty, will be derived automatically from $AWS_SECRET_KEY, pod or ec2 profile |
+| Endpoint | Only needed for non AWS S3 providers like R2 or MinIo |
+| Allow http | Disable if using https only policy |
+
+#### Azure Blob
+
+| Field | Description |
+|-------|-------------|
+| Account name | The name of your Azure storage account |
+| Container name | The name of your Azure blob container |
+| Access key | Your Azure storage account access key |
+| Tenant ID | (Optional) Your Azure tenant ID |
+| Client ID | (Optional) Your Azure client ID |
+| Endpoint | (Optional) Only needed for non Azure Blob providers like Azurite |
+
+#### AWS OIDC
+
+| Field | Description |
+|-------|-------------|
+| Bucket | The name of your S3 bucket |
+| Region | The AWS region where your bucket is located |
+| Role ARN | The ARN of the IAM role to assume (e.g., arn:aws:iam::123456789012:role/test) |
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+#### Google Cloud Storage
+
+| Field | Description |
+|-------|-------------|
+| Bucket | The name of your Google Cloud Storage bucket |
+| Service Account Key | The service account key for your Google Cloud Storage bucket in JSON format |
+
+
+### Store audit logs in object storage
+
+When enabled and [instance object storage](#instance-object-storage) is configured, [audit logs](../../core_concepts/14_audit_logs/index.mdx) are also exported as newline-delimited JSON (NDJSON) to a dedicated `logs/audit/` folder in the bucket, partitioned by day (`logs/audit/dt=YYYY-MM-DD/`). The export is incremental and runs in the background off the audit log hot path.
+
+Only audit logs created after the setting is enabled are exported (no historical backfill), and Windmill never deletes the exported files from object storage. This is the recommended setup to forward audit logs to a [SIEM](https://en.wikipedia.org/wiki/Security_information_and_event_management) for long-term security analysis. See [exporting audit logs to object storage](../../core_concepts/14_audit_logs/index.mdx#exporting-audit-logs-to-object-storage) for details.
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+### Private Hub base url
+
+Base url of your [Private Hub](../../core_concepts/32_private_hub/index.mdx) instance, without trailing slash.
+
+The url above will be used both when accesing the hub from the instance and from the user browser.
+If end users cannot access the Private Hub with the url above, you can enable the toggle just below the field to set a different url for the Private Hub which is accessible to the users (Private Hub accessible url).
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+### Private hub api secret
+
+Private Hub api secret. Only required if access to your [Private Hub is restricted](../../core_concepts/32_private_hub/index.mdx#restricting-access-to-your-private-hub).
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+### Disable hub
+
+When enabled, Windmill stops making any request to `hub.windmill.dev` (or your [Private Hub](../../core_concepts/32_private_hub/index.mdx)) and hides the hub pickers in the flow, app, and script editors. This is intended for closed/air-gapped deployments where outbound access to the hub is unavailable.
+
+When the hub is reachable but returns errors, the hub pickers display a persistent warning alert with a direct link back to this setting (instead of a transient error toast), guiding superadmins to toggle "Disable hub" and remove the warning.
+
+## Auth/OAuth
+
+Windmill supports [SSO/OAuth](../../misc/2_setup_oauth/index.mdx) for user authentication. You can enable it from the Instance settings.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Setup OAuth and SSO"
+		description="Windmill supports Single Sign-On for Microsoft, Google, GitHub, GitLab, Okta, and domain restriction."
+		href="/docs/misc/setup_oauth"
+	/>
+</div>
+
+### Single Sign On (SSO)
+
+When at least one of the [SSO options](../../misc/2_setup_oauth/index.mdx#sso) is set, users will be able to login to Windmill via their third-party account.
+
+To test SSO, the recommended workflow is to to save the settings and try to login in an incognito window.
+
+![SSO](./sso.png "SSO")
+
+You can add a custom SSO client by providing a client id.
+
+Also, from the instance settings you can enable toggle 'Require users to have been added manually to Windmill to sign in through OAuth'.
+
+Without [Enterprise Edition](/pricing), the number of SSO users is limited to 10.
+
+### OAuth
+
+When one of the [OAuth](../../misc/2_setup_oauth/index.mdx#oauth) options is set, you will be able to create a specific [resource](../../core_concepts/3_resources_and_types/index.mdx) containing a 'token' automatically generated by the third-party provider.
+To test it after setting an oauth client, go to the Resources menu and create a new one of the type of your oauth client (i.e. a '[github](https://hub.windmill.dev/integrations/github)' resource if you set GitHub OAuth).
+
+![OAuth](./oauth.png "OAuth")
+
+### SCIM/SAML
+
+Windmill supports [SCIM and SAML](../../misc/14_saml_and_scim/index.md) for user provisioning and [authentication](../../core_concepts/15_authentification/index.mdx).
+
+![SCIM/SAML](./scim_saml.png "SCIM/SAML")
+
+You can test settings with button 'Test content/url'.
+
+These settings are only available on [Enterprise Edition](/pricing).
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="SAML & SCIM"
+		description="Configure Okta or Microsoft for both SAML and SCIM."
+		href="/docs/misc/saml_and_scim"
+	/>
+</div>
+
+#### SCIM token
+
+Token used to authenticate requests from the IdP.
+
+#### SAML metadata
+
+XML metadata url OR content for the SAML IdP.
+
+## Registries
+
+Add private registries for [UV](https://pypi.org/), [Bun](https://bun.sh/), [npm](https://www.npmjs.com/), [Nuget](https://www.nuget.org/), [PowerShell](https://learn.microsoft.com/en-us/azure/devops/artifacts/tutorials/private-powershell-library), [Maven/Java](../../getting_started/0_scripts_quickstart/13_java_quickstart/index.mdx#private-maven-registries), and [Cargo/Rust](../../getting_started/0_scripts_quickstart/9_rust_quickstart/index.mdx).
+
+These settings are only available on [Enterprise Edition](/pricing).
+
+![Registries](./registries.png "Registries")
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Dependency management & imports"
+		description="Windmill's strength lies in its ability to run scripts without having to manage a requirements.txt directly."
+		href="/docs/advanced/imports"
+	/>
+	<DocCard
+		title="Dependencies in Python"
+		description="How to manage dependencies in Python scripts."
+		href="/docs/advanced/dependencies_in_python"
+	/>
+	<DocCard
+		title="Dependencies in TypeScript"
+		description="How to manage dependencies in TypeScript scripts."
+		href="/docs/advanced/dependencies_in_typescript"
+	/>
+</div>
+
+### UV index url
+
+Add private registry for python.
+
+### UV extra index url
+
+Add private extra private registry for python.
+
+### Npm config registry
+
+Add private NPM registry.
+
+### Bunfig install scopes
+
+Add private scoped registries for Bun, See: https://bun.sh/docs/install/registries.
+
+### `.npmrc`
+
+Provide the full content of a standard [`.npmrc`](https://docs.npmjs.com/cli/v10/configuring-npm/npmrc) file. This works natively with Bun (since 1.1.18), Deno (2.x), and the Windmill npm proxy (which parses the default registry and auth token from the `.npmrc`). When configured, the legacy `Npm config registry` and `Bunfig install scopes` fields are hidden for new setups.
+
+### Maven `settings.xml`
+
+Provide the full content of a Maven `settings.xml` file. Windmill writes it to `{JAVA_HOME}/.m2/settings.xml` so Coursier can use your configured servers, mirrors, and repository URLs when resolving [Java](../../getting_started/0_scripts_quickstart/13_java_quickstart/index.mdx) dependencies. Clearing the setting removes the file.
+
+### Cargo registries
+
+Provide the content of a Cargo `config.toml` file for configuring private [Rust](../../getting_started/0_scripts_quickstart/9_rust_quickstart/index.mdx) crate registries. Written to `{job_dir}/.cargo/config.toml` during job execution.
+
+### Nuget config
+
+Write a nuget.config file to set custom/private package sources and credentials.
+
+### Workspace-specific registry overrides
+
+Superadmins can configure per-workspace overrides for package registry settings. This allows different workspaces to use different private registries (e.g. workspace A uses registry-a.example.com while workspace B uses registry-b.example.com). All registry settings except the Python version and uv index strategy can be overridden per workspace. Configure these under the "Workspace Registries" section.
+
+### Docker registries
+
+Credentials used by `crane` when pulling private container images for [sandbox](../../core_concepts/58_ai_sandbox/index.mdx) snapshot builds. Provide a JSON array of `{registry, username, password}` objects, for example:
+
+```json
+[
+  { "registry": "ghcr.io", "username": "my-user", "password": "ghp_xxx" },
+  { "registry": "registry.example.com", "username": "ci", "password": "..." }
+]
+```
+
+Windmill writes the corresponding Docker `config.json` to `/tmp/windmill/docker` and sets `DOCKER_CONFIG` when invoking `crane export`, so private base images can be resolved without exposing credentials in the snapshot build script. This setting is fully redacted in logs.
+
+## Alerts
+
+![Alerts](./alerts.png)
+
+### Critical alert channels
+
+Channels to send [critical alerts](../../core_concepts/37_critical_alerts/index.mdx) to. [SMTP](#smtp) must be configured for the email channel. A Slack workspace must be connected to the instance for the Slack channel. [Microsoft Teams](../../misc/2_setup_oauth/index.mdx#microsoft-teams) must be setup to configure critical alerts to be sent to a Microsoft Teams channel.
+
+You can add multiple channels between Email, Slack, and Microsoft Teams.
+
+![Critical alerts channels](./critical_alerts_channels.png 'Critical alerts channels')
+
+Furthermore you can chose to mute [critical alerts in the UI](../../core_concepts/37_critical_alerts/index.mdx) using the "Mute critical alerts in UI" toggle.
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+![Critical alert example](./teams_critical_alert.png 'Critical alert example')
+
+### Mute critical alerts in UI
+
+Enable to mute critical alerts in the UI.
+
+### Alert on token expiry
+
+Enable to send [critical alerts](../../core_concepts/37_critical_alerts/index.mdx#token-expiration-notifications) when API tokens are about to expire (within 7 days) or have expired. This setting is off by default.
+
+Email notifications to token owners are always sent regardless of this setting, as long as [SMTP](#smtp) is configured.
+
+### Slack
+
+Connecting your instance to a Slack workspace enables [critical alerts](#critical-alert-channels) to be sent to a Slack channel.
+
+Just click on the 'Connect to Slack' button and follow the instructions from Slack.
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+### SMTP
+
+Setting SMTP unlocks [sending emails upon adding new users](../../core_concepts/15_authentification/index.mdx) to the workspace or the instance and [sending critical alerts](#critical-alert-channels).
+
+You need to provide the following details:
+
+| Name   |  Type  | Description                                |
+| ------ | ---- | -------------------------------------------- |
+| Host   | String | SMTP server host                           |
+| Port   | Number | SMTP server port                           |
+| Username   | String | SMTP server user                       |
+| Password   | String | SMTP server password                   |
+| From Address  | String | Email address to send emails from   |
+| Implicit TLS  | Boolean | Use implicit TLS (default: false)  |
+
+You have another field to test the SMTP settings.
+
+<iframe
+	style={{ aspectRatio: '16/9' }}
+	src="https://www.youtube.com/embed/Wyq6d0bkuGo"
+	title="YouTube video player"
+	frameBorder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	allowFullScreen
+	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
+></iframe>
+
+<br/>
+
+<details>
+  <summary>Set-up SMTP from the `.env` file (depreciated) </summary>
+
+The relevant environment variables are:
+
+```
+SMTP_FROM=windmill@domain.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=email@domain.com
+SMTP_PASSWORD=app_password
+```
+
+If you used the [Setup Windmill on localhost](../../advanced/1_self_host/index.mdx#setup-windmill-on-localhost) method, open the `.env` file in any text editor. You can use `nano`, `vim`, or any other editor you're comfortable with.
+
+```bash
+nano .env
+```
+
+Append the following to the end of your `.env` file:
+
+```
+SMTP_FROM=windmill@domain.com
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+```
+
+Make sure to replace `your_email@gmail.com` with your actual Gmail email address and `your_app_password` with the app password you've generated from Gmail.
+
+{' '}
+
+<br />
+
+> **Note**: If you're using Gmail, you'll need to [generate an App Password](https://support.google.com/accounts/answer/185833?hl=en) to use as `SMTP_PASSWORD`. This is a unique password that Gmail provides for apps and services that want to connect to your account.
+
+<br />
+
+Save and Close the File:
+
+- If using `nano`, press `CTRL + O` to save and then `CTRL + X` to exit.
+- If using `vim`, press `Esc`, then type `:wq` and press `Enter`.
+
+Restart your Windmill application:
+
+- Since you've made changes to the `.env` file, you'll need to restart your Windmill application for the changes to take effect.
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+Now, your Windmill instance should use the SMTP settings you've provided to send invites and email to manually added users. Make sure the SMTP details you've provided are correct and that the Gmail account you're using has allowed less secure apps or generated an App Password.
+
+</details>
+
+### Set up auto-invites
+
+When creating a workspace, you have the option to invite automatically everyone on the same domain. That's how you make sure that anyone added to the instance is also added to the workspace.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full"
+	controls
+	id="new_workspace"
+	src="/videos/new_workspace.mp4"
+/>
+
+## Webhooks
+
+### Instance events webhook
+
+URL to receive POST requests for instance events such as user added, OAuth signup, user invited to workspace, or user joined workspace.
+
+Configure it from **Instance settings > Monitoring > Webhooks**.
+
+For workspace-level events (script, flow, app, resource lifecycle) see the [workspace webhook](../../core_concepts/4_webhooks/index.mdx#workspace-webhook). For incoming webhooks that trigger scripts and flows, see [webhooks](../../core_concepts/4_webhooks/index.mdx).
+
+## AI
+
+Configure [Windmill AI](../../core_concepts/22_ai_generation/index.mdx) providers, models, and prompts once at the instance level so every workspace inherits them. Navigate to **Instance settings > AI**.
+
+Resolution order used by AI chat, code generation, and code completion:
+
+1. **Workspace AI settings** when the workspace has any provider configured.
+2. **Instance AI settings** as the fallback when the workspace has no providers configured.
+
+The fallback references resources from the `admins` workspace, so any resources used by instance AI settings must exist there. A workspace using the instance fallback shows a read-only summary of the active instance AI config and an **Override for this workspace** button; clearing the workspace override instantly reverts to instance defaults.
+
+### AI_HTTP_HEADERS
+
+Set the `AI_HTTP_HEADERS` env var on the server and workers to attach custom headers to every outgoing AI request (OpenAI, Anthropic, Azure, Bedrock, Vertex, etc.). Headers are comma-separated:
+
+```bash
+AI_HTTP_HEADERS="X-Org: acme, X-Env: prod" ./windmill
+```
+
+Use this when AI traffic must flow through a corporate proxy or gateway that expects fixed auth/routing headers. Per-resource `headers` on the `customai` resource type are applied after this env var and take precedence on conflicting keys.
+
+## Open Telemetry & Prometheus
+
+![Open Telemetry & Prometheus](./otel_prometheus.png)
+
+### OpenTelemetry (OTEL)
+
+Enable to collect telemetry data and send it to an [OpenTelemetry](https://opentelemetry.io/) collector such as [Jaeger](https://www.jaegertracing.io/) or [Tempo](https://www.tempo.io/) for tracing. OpenTelemetry data sent to the collector consists of traces, logs, and [metrics](../../misc/9_guides/otel/index.mdx#exporting-windmill-metrics-via-otlp). You can independently toggle each signal (Tracing, Logs, Metrics) in the instance settings.
+
+The transport protocol can also be selected from a dropdown: **grpc** (default, port 4317) or **http/protobuf** (port 4318, sets `OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf`). Use `http/protobuf` when your collector or network environment does not support gRPC. Follow this [guide](../../misc/9_guides/otel/index.mdx) for an example setup.
+
+### HTTP tracing
+
+HTTP tracing captures HTTP/HTTPS requests made by job scripts as observability spans within the job details UI. Traces are stored and correlated with the job, displaying method, URL, status code, and timing information.
+
+If the [OpenTelemetry](#opentelemetry-otel) external collector is enabled, traces are also sent to that collector and seamlessly integrate with existing spans.
+
+The feature works in two modes:
+- **Auto-instrumentation** for Native TypeScript: uses built-in OpenTelemetry instrumentation to automatically capture `fetch()` requests.
+- **MITM proxy** for other languages (Python, Bun, Deno, Go, Bash, Rust, C#, Nu, Ruby): outgoing HTTP traffic is routed through a tracing proxy that intercepts and records requests.
+
+You can select which language runtimes should have tracing enabled. Toggling this setting restarts workers.
+
+![HTTP traces tab](./http_traces_tab.png)
+
+This setting is only available on [Enterprise Edition](/pricing).
+
+### Prometheus
+Expose [Prometheus](https://prometheus.io/) metrics for workers and servers on port 8001 at /metrics.
+
+## Indexer 
+
+![Indexer](./indexer.png)
+
+### Max index time window
+
+Maximum time window (in days) that the indexer looks back when indexing jobs and service logs. Defaults to 7 days. This caps both the initial population of the index and periodic cleanup — documents older than the window are not indexed and are evicted on the next refresh cycle. Windmill internally uses `min(max_index_time_window_secs, retention_period_secs)` so the window never exceeds the configured [retention period](#retention-period-in-secs). Setting the value to 0 disables the time window and falls back to the retention period alone.
+
+This setting can also be controlled via the `TANTIVY_MAX_INDEX_TIME_WINDOW__S` env var.
+
+### Index writer memory budget 
+
+The allocated memory arena for the indexer. A bigger value means less writing to disk and potentially higher indexing throughput
+
+### Commit max batch size
+
+The max amount of documents (here jobs) per commit. To optimize indexing throughput, it is best to keep this as high as possible. However, especially when reindexing the whole instance, it can be useful to have a limit on how many jobs can be written without being commited. A commit will make the jobs available for search, constitute a "checkpoint" state in the indexing and will be logged.
+
+### Refresh index period
+
+The index will query new jobs periodically and write them on the index. This setting sets that period in seconds.
+
+### Max indexed job log size
+
+Job logs are included when indexing, but to avoid the index size growing artificially, the logs will be truncated after that size (in KB) has been reached.
+
+### Commit max batch size
+
+The max amount of documents per commit. In this case 1 document is one log file representing all logs during 1 minute for a specific host. To optimize indexing throughput, it is best to keep this as high as possible. However, especially when reindexing the whole instance, it can be useful to have a limit on how many logs can be written without being commited. A commit will make the logs available for search, appear as a log line, and be a "checkpoint" of the indexing progress.
+
+### Refresh index period
+
+The index will query new service logs peridically and write them on the index. This setting sets that period in seconds.
+
+## Telemetry
+
+Anonymous usage data is collected to help improve Windmill. Telemetry data is sent as a HTTPS request to https://stats.windmill.dev once a day.
+
+![Telemetry](./telemetry.png "Telemetry")
+
+The data collected differs between Community Edition and [Enterprise Edition](/pricing):
+
+### Community Edition
+
+The following information is collected:
+- version of your instance
+- instance base URL
+- job usage (language, total duration, count)
+- login type usage (login type, count)
+- worker usage (worker, worker instance, vCPUs, memory)
+- user usage (author count, operator count)
+- development instance status
+
+Telemetry can be fully disabled from the instance settings using the "Disable telemetry" toggle.
+
+### Enterprise Edition
+
+On [Enterprise Edition](/pricing), telemetry is required for [license compliance](../../misc/19_enterprise_onboarding/index.mdx#billing) and cannot be fully disabled. You can toggle "Minimal telemetry" to reduce the data sent to only what is needed for license compliance. If you have fully air-gapped requirements, [contact us](../../misc/19_enterprise_onboarding/index.mdx#air-gapped-environments) to arrange an alternative.
+
+When minimal telemetry is enabled, the following is sent:
+- version of your instance
+- instance base URL
+- login type usage (login type, count)
+- worker usage (worker, worker instance, vCPUs, memory)
+- user usage (author count, operator count)
+- superadmin email addresses
+- development instance status
+
+When minimal telemetry is disabled, the following is also collected:
+- job usage (language, total duration, count)
+
+You can "Send usage" to manually send usage data to Windmill and monitor it from the [Customer portal](../../misc/7_plans_details/index.mdx#windmill-customer-portal). You can also "Download usage" to get a signed copy of the telemetry data as a JSON file named `windmill-telemetry-{date}-{signature}.json`. This is useful for air-gapped instances that cannot send telemetry directly: the file can be inspected before being sent manually to Windmill, and the signature lets Windmill verify it has not been tampered with.
+
+## GitHub Enterprise App
+
+Configure a self-managed GitHub App for GitHub.com or GitHub Enterprise Server to enable [Git sync](../11_git_sync/index.mdx) without relying on the Windmill-managed GitHub App via `stats.windmill.dev`.
+
+This setting is found under **Advanced > GitHub Enterprise App** in Instance Settings and is only available on [Enterprise Edition](/pricing).
+
+| Field | Description |
+|-------|-------------|
+| Base URL | The base URL of your GitHub instance (e.g. `https://github.com` or your GHES URL) |
+| App ID | The ID of your registered GitHub App |
+| App Slug | The slug of your GitHub App |
+| Client ID | The client ID of your GitHub App |
+| Private Key (PEM) | The private key generated for your GitHub App |
+
+For setup instructions, see [Self-managed GitHub App](../../integrations/git_repository.mdx#self-managed-github-app).
+
+## DB Health
+
+The DB Health diagnostic dashboard provides on-demand insights into your Windmill database. It is available under **Monitoring > DB Health** in Instance Settings and is accessible to superadmins only.
+
+Click **Run Diagnostics** to execute a set of lightweight, read-only queries against your database. Results are displayed in collapsible sections with green/yellow/red status indicators.
+
+![DB Health](./db_health.png 'DB Health dashboard')
+
+### Diagnostics
+
+| Section | What it shows |
+|---------|---------------|
+| **Database Size** | Total database size and top 15 tables by size |
+| **Job Retention** | Oldest completed job age vs configured `retention_period_secs`, total completed job count. Green if cleanup is keeping up, yellow/red if jobs are accumulating beyond the retention window |
+| **Large Job Results** | Top 10 largest `result` payloads (by `pg_column_size`) among recently scanned jobs, plus average result size. Only results > 1 KB are listed |
+| **Connection Pool** | SQLx pool size, idle connections, max connections, and active PostgreSQL connections from `pg_stat_activity`. Green below 80% utilization, yellow below 95%, red at 95%+ |
+| **Table Maintenance** | Top 15 tables by dead tuples with dead/live ratio, last autovacuum and autoanalyze timestamps. Red when dead tuple ratio exceeds 30% |
+| **Slow Queries** | Top 10 queries by mean execution time from `pg_stat_statements`. If the extension is not installed, a message suggests enabling it |
+| **Datatables** | Instance-stored datatables with per-table size and estimated row count from `pg_class` |
+
+### Scan limit
+
+Use the **Scan last N jobs** dropdown to control how many recent completed jobs are scanned for the large results analysis. The default is 10,000. Higher values give more complete results but take longer on large databases. The allowed range is 1,000 to 1,000,000.

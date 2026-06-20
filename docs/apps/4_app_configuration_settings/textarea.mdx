@@ -1,0 +1,50 @@
+---
+description: What is the Textarea component in Windmill? Collect multi-line text from users with an expandable input area.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Textarea
+
+The textarea component allows you to get a string from the user, with an expandable text area.
+
+![Textarea API](../../assets/apps/4_app_component_library/textarea.gif)
+
+The following section details Textarea component's specific settings. For more details on the App editor, check the [dedicated documentation](../0_app_editor/index.mdx) or the App editor [Quickstart](../../getting_started/7_apps_quickstart/index.mdx):
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		color="orange"
+		title="App editor Documentation"
+		description="The app editor is a low-code builder to create custom User Interfaces with a mix of drag-and-drop and code."
+		href="/docs/apps/app_editor"
+	/>
+	<DocCard
+		color="orange"
+		title="Apps quickstart"
+		description="Learn how to build your first app in a matter of minutes."
+		href="/docs/getting_started/apps_quickstart"
+	/>
+</div>
+
+## Controls
+
+This component can be controlled by [frontend scripts](../3_app-runnable-panel.mdx#frontend-scripts) using these functions:
+
+| Name   |        Parameters        | Description          | Example       |
+| ------ | :----------------------: | -------------------- | ------------- |
+| [setValue](../3_app-runnable-panel.mdx#setvalue) | id: string, value: any | Manually set or force the value of a component. | `setValue(id: 'a', value: 17)` |
+
+## Textarea configuration
+
+| Name          |  Type   | Connectable | Templatable | Default | Description                                |
+| ------------- | :-----: | :---------: | :---------: | :-----: | ------------------------------------------ |
+| Placeholder   | string  |    false    |    false    | Type... | The text input placeholder.                |
+| Default value | string  |    true     |    false    |         | The default value of the text input.       |
+| Disabled      | boolean |    false    |    false    |         | Whether the text input should be disabled. |
+
+## Outputs
+
+| Name   |  Type  | Description           |
+| ------ | :----: | --------------------- |
+| Result | string | The text input value. |

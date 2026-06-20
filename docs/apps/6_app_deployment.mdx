@@ -1,0 +1,33 @@
+---
+description: How do I deploy Windmill apps? Publish apps with read-access control or as standalone public URLs.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Deployment
+
+Windmill apps are custom-made user interfaces meant to interact with scripts and flows.
+
+There are two ways to [deploy](../core_concepts/0_draft_and_deploy/index.mdx) an app:
+
+- **Read-Access Required**: The app can be accessed & triggered by anyone who has [read access](../core_concepts/16_roles_and_permissions/index.mdx) to the app.
+- **Publish Publicly**: The app can be accessed as a standalone app by anyone who has the secret URL.
+
+Apps are automatically saved as [drafts](../core_concepts/0_draft_and_deploy/index.mdx#draft) as you edit, before being deployed.
+
+### Learn more
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Draft and deploy"
+		description="Learn how to draft and deploy apps."
+		href="/docs/core_concepts/draft_and_deploy"
+		color="orange"
+	/>
+	<DocCard
+		title="Public apps"
+		description="Apps can be accessed as a standalone app by anyone who has the secret URL"
+		href="/docs/apps/public_apps"
+		color="orange"
+	/>
+</div>

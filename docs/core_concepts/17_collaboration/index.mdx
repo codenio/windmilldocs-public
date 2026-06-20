@@ -1,0 +1,193 @@
+---
+description: How do I collaborate with team members on scripts, flows, and apps in Windmill?
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Collaboration in Windmill
+
+Collaboration in Windmill is simplified through various features and workflows. If you're setting up collaboration for a team for the first time, start with the [collaboration and deployment stages](../../advanced/23_canonical_deployment_setups/index.mdx) guide, which walks through the recommended progression from a shared workspace to multi-workspace promotion.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Collaboration and deployment stages"
+		description="A staged progression from shared workspace to git sync, forks, and multi-workspace promotion."
+		href="/docs/advanced/canonical_deployment_setups"
+	/>
+</div>
+
+## Draft system
+
+Windmill offers a draft system for scripts, flows, and apps (both [low-code](../../apps/0_app_editor/index.mdx) and [full-code](../../full_code_apps/index.mdx)), allowing multiple iterations before deploying. Drafts are **user-scoped** and **automatically saved** to the database as you edit - no manual save action is required.
+
+When multiple users work on the same item, each user has their own draft. You can see who else is editing the same item and view their version (as JSON) or fork their draft to continue from their changes. This provides a basic mechanism to handle concurrent editing without conflicts.
+
+For conflicts, Windmill alerts you if another session saved changes since your last save, or if someone deployed a new version while you were editing. You can choose to keep your draft or load the latest deployed version.
+
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Draft and deploy"
+		description="Develop and cooperate in a structured way."
+		href="/docs/core_concepts/draft_and_deploy"
+	/>
+</div>
+
+## Granular permissions
+
+Windmill employs a granular permission system along with folder and group permissions. Users can be assigned to groups, and folders can be granted read/write access to groups or individual users. This system enables fine-grained control over who can access and modify specific items. Items can also be selectively shared with specific groups or users.
+
+<br />
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Roles and permissions"
+		description="Control access and manage permissions within your instance and workspaces."
+		href="/docs/core_concepts/roles_and_permissions"
+	/>
+	<DocCard
+		title="Groups and folders"
+		description="Groups and folders enable efficient permission management by grouping users with similar access levels."
+		href="/docs/core_concepts/groups_and_folders"
+	/>
+</div>
+
+## Dev/Staging/Prod workspaces
+
+Workspaces in Windmill enable a dev/staging/prod workflow directly from the web interface. You can create separate workspaces for different stages of development, such as development, staging, and production. This allows for easy deployment of changes from one workspace to another. Workspaces provide logical isolation and enable a structured approach to managing different environments.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	src="/videos/staging_prod.mp4"
+/>
+
+<br />
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Deploy to Staging or Prod"
+		description="Deploy items to another staging/prod workspace."
+		href="/docs/core_concepts/staging_prod"
+	/>
+</div>
+
+### Cross-instance deployment (promotion)
+
+When you have workspaces in different instances (for example, a staging instance and a prod instance), cross-instance promotion is one way to deploy changes from one workspace to the other. When changes are made in the first workspace, a branch with a name corresponding to the item is created in the second workspace's repo. A PR is automatically created through the CI/CD. Changes are reviewed, and once the PR is merged the changes are reflected in the production workspace.
+
+**Requirements**: Git sync must be set up on both workspaces, so that they're both syncing changes with their respective repositories.
+
+:::info Enterprise Feature
+
+This feature is [Cloud plans & Enterprise Self-Hosted](/pricing) only.
+
+:::
+
+## Workspace forks
+
+Workspace forks let users branch off of a workspace and have an exact copy where they can create new items or make changes, test them, and deploy them to the main workspace once it's all working.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	src="/videos/merge-ui-demo.mp4"
+/>
+
+<br />
+
+### Workspace forks with git sync
+
+Workspace forks unlock their full potential when git sync is enabled. When a fork is created, a branch with a corresponding name is created, and changes are tracked there.
+
+**Example feature development workflow:**
+
+1. **Create fork**: The user forks the `main` workspace into a fork named `wm-fork-new-feature`
+2. **Develop**: User makes changes in the forked workspace -> The changes are reflected in the branch `wm-fork/main/new-feature` of the repo
+3. **Create PR**: A PR is automatically created by the CI from `wm-fork/main/new-feature` -> `main`
+4. **Review & merge**: Team reviews changes before merging to main branch
+5. **Sync back changes**: Changes are automatically synced to the main workspace as soon as the PR is merged
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	src="/videos/fork_workspace_demo.mp4"
+/>
+
+<br />
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Workspace forks"
+		description="Create independent copies of workspaces for parallel development workflows."
+		href="/docs/advanced/workspace_forks"
+	/>
+</div>
+
+
+## Multiplayer editing
+
+Multiplayer editing is available for script editing in the Cloud & Enterprise Self-Hosted of Windmill. It allows simultaneous collaboration and displays a presence bar to avoid conflicts. Windmill is actively working on adding multiplayer editing for flow and app editors as well. This feature enhances real-time collaboration among team members.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	src="/videos/multiplayer.mp4"
+/>
+
+<br />
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Multiplayer"
+		description="Collaborate on scripts simultaneously."
+		href="/docs/core_concepts/multiplayer"
+	/>
+</div>
+
+:::info Enterprise Feature
+
+This feature is [Cloud plans and Self-Hosted Enterprise Edition](/pricing) only.
+
+:::
+
+## Git integration
+
+Windmill supports 2-way sync from any source control (github, gitlab, or any other source control) leveraging our [CLI](../../advanced/3_cli/index.mdx) and CI actions. The CLI can pull a workspace locally (of all the items one has permission on, if admin, it will be the entire workspace) and push local changes to the remote. The CLI has an internal state stored in .wmill which can detect conflicts when changes have been made both locally and on the remote.
+
+Git sync works seamlessly with workspace forks - when a fork is created, a corresponding branch is automatically created in your repository, enabling git-based review workflows as described in the workspace forks section above.
+
+<iframe
+	style={{ aspectRatio: '16/9' }}
+	src="https://www.youtube.com/embed/TXtmLrToxoI"
+	title="YouTube video player"
+	frameBorder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	allowFullScreen
+	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
+></iframe>
+
+<br />
+
+You can use this to:
+
+1. Backup regularly your workspaces to git.
+
+2. Develop locally using your favorite [code editor](../../cli_local_dev/1_vscode-extension/index.mdx) and push changes to the remote.
+
+3. Implement a dev/staging/prod workflow where changes are automatically pulled from one workspace and transformed into a pull request. And only once the pull request is approved are the changes deployed to the target workspace. This enable full GitOps style of deployments while still allowing users to use the web UI to edit scripts/flows/apps/.
+
+![VS Code Extention](../../../blog/2023-11-20-vscode/vscode_extension.png.webp 'VS Code extension')
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Command-line interface (CLI)"
+		description="The Windmill CLI, `wmill` allows you to interact with Windmill instances right from your terminal."
+		href="/docs/advanced/cli"
+	/>
+	<DocCard
+		title="VS Code extension"
+		description="Build scripts and flows in the comfort of your VS Code or Cursor editor, while leveraging Windmill UIs for test & flows edition."
+		href="/docs/cli_local_dev/vscode-extension"
+	/>
+</div>

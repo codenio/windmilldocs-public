@@ -1,0 +1,112 @@
+rubenfiszel:
+  name: Ruben Fiszel
+  title: Founder at Windmill
+  url: https://github.com/rubenfiszel
+  image_url: https://github.com/rubenfiszel.png
+adamkov:
+  name: Adam Kovacs
+  title: Front-end Developer at Windmill
+  url: https://github.com/adam-kov
+  image_url: https://github.com/adam-kov.png
+henricourdent:
+  name: Henri Courdent
+  title: Head of Operations
+  url: https://github.com/hcourdent
+  image_url: https://github.com/hcourdent.png
+fatonramadani:
+  name: Faton Ramadani
+  title: Founding Engineer
+  url: https://github.com/fatonramadani
+  image_url: https://github.com/fatonramadani.png
+toumask:
+  name: Krestoufer Toumas (community)
+  title: Contributor from the Windmill Community
+  url: https://github.com/Toumask
+  image_url: https://github.com/Toumask.png
+tfbecker:
+  name: Felix Becker (community)
+  title: Contributor from the Windmill Community
+  url: https://github.com/tfbecker
+  image_url: https://github.com/tfbecker.png
+jeffknorr:
+  name: Jeffrey Knorr (community)
+  title: Contributor from the Windmill Community
+  url: https://github.com/JeffKnorr
+  image_url: https://github.com/JeffKnorr.png
+atelier:
+  name: Wei Chih (community)
+  title: Contributor from the Windmill Community
+pirminkalberer:
+  name: Pirmin Kalberer (community)
+  title: Contributor from the Windmill Community
+  url: https://github.com/pka
+  image_url: https://github.com/pka.png
+malomarrec:
+  name: Malo Marrec
+  title: Contributor from the Windmill Community
+  url: https://github.com/malomarrec
+  image_url: https://github.com/malomarrec.png
+saidhasyim:
+  name: Said Hasyim
+  title: Contributor from the Windmill Community
+  url: https://saidhasyim.com/
+  image_url: '/contributors/said_hasyim.jpg'
+hugocasa:
+  name: Hugo Casademont
+  title: Founding Engineer
+  url: https://github.com/hugocasa
+  image_url: '/contributors/hugo_casademont.png'
+sindresvendby:
+  name: Sindre Svendby
+  title: Software Engineer at Kahoot!
+  url: https://github.com/SindreSvendby
+  image_url: https://avatars.githubusercontent.com/u/1047421?v=4
+guillaumebouv:
+  name: Guillaume Bouvignies
+  title: Lead Backend Engineer
+  url: https://www.linkedin.com/in/guillaumebouvignies/
+  image_url: '/team/guillaume-bouvignies.jpg'
+romaricphilogene:
+  name: Romaric Philogène
+  title: CEO & Co-founder at Qovery
+  url: https://www.linkedin.com/in/romaricphilogene/
+  image_url: https://media.licdn.com/dms/image/D4E03AQFlNTUW60HFbQ/profile-displayphoto-shrink_800_800/0/1693895615653?e=2147483647&v=beta&t=2LTYXKDAv4KTmN1UqYUHe28mGAHbcvyEzhUzLPs3p0Q
+edwindmiller:
+  name: Edwind Miller
+  title: Contributor from the Windmill Community
+  image_url: '/team/edwind_miller.jpg'
+yonathanadest:
+  name: Yonathan Adest
+  title: CTO at Investing.com
+  url: https://www.linkedin.com/in/yonatan-adest/
+  image_url: https://media.licdn.com/dms/image/v2/D4D03AQHh9uu2s-Aviw/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1680507511387?e=1746057600&v=beta&t=uncSMmdMz0sB6nWEiWoIF7jc2CaFHiVCVjJmUG6d4kw
+guilhemlemouel:
+  name: Guilhem Le Mouel
+  title: UX Engineer
+  url: https://github.com/Guilhem-lm
+  image_url: '/contributors/guilhem_lemouel.png'
+rudokemper:
+  name: Rudo Kemper
+  title: Director, Indigenous Guardianship Program at Conservation Metrics
+  image_url: '/contributors/rudo_kemper.jpeg'
+  url: https://www.linkedin.com/in/rudo-kemper/
+alexpetric:
+  name: Alex Petric
+  title: CISSP, Head of Customer Success at Windmill
+  url: https://www.linkedin.com/in/alexanderpetric/
+  image_url: /contributors/alex_petric.jpg
+farhadgoulamabasse:
+  name: Farhad Goulamabasse
+  title: Software Engineer
+  url: https://github.com/centdix
+  image_url: '/contributors/farhad_goulamabasse.png'
+tristanlecuyer:
+  name: Tristan Lécuyer
+  title: GTM
+  url: https://github.com/tristantr
+  image_url: '/contributors/tristan_lecuyer.png'
+diegoimbert:
+  name: Diego Imbert
+  title: Software Engineer
+  url: https://github.com/diegoimbert
+  image_url: '/contributors/diego_imbert.png'

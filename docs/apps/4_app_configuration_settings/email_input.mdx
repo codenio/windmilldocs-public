@@ -1,0 +1,44 @@
+---
+description: What is the Email input component in Windmill? Collect an email address from users with a dedicated input field.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Email input
+
+The email input component allows you to get an email from the user.
+
+![Email input API](../../assets/apps/4_app_component_library/email.png.webp)
+
+The following section details Email input component's specific settings. For more details on the App editor, check the [dedicated documentation](../0_app_editor/index.mdx) or the App editor [Quickstart](../../getting_started/7_apps_quickstart/index.mdx):
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		color="orange"
+		title="App editor Documentation"
+		description="The app editor is a low-code builder to create custom User Interfaces with a mix of drag-and-drop and code."
+		href="/docs/apps/app_editor"
+	/>
+	<DocCard
+		color="orange"
+		title="Apps quickstart"
+		description="Learn how to build your first app in a matter of minutes."
+		href="/docs/getting_started/apps_quickstart"
+	/>
+</div>
+
+## Email input configuration
+
+| Name          |  Type   | Connectable | Templatable |  Default  | Description                                |
+| ------------- | :-----: | :---------: | :---------: | :-------: | ------------------------------------------ |
+| Placeholder   | string  |    false    |    false    |   Email   | The email input placeholder.               |
+| Default value | string  |    true     |    false    |   Email   | The email input default value.             |
+| Before Icon   | string  |    false    |    false    | Undefined | The icon to display before the label.      |
+| After Icon    | string  |    false    |    false    | Undefined | The icon to display after the label.       |
+| Disabled      | boolean |    false    |    false    |   false   | Whether the text input should be disabled. |
+
+## Outputs
+
+| Name   |  Type  | Description            |
+| ------ | :----: | ---------------------- |
+| Result | string | The email input value. |

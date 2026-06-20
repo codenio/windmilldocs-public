@@ -1,0 +1,68 @@
+---
+description: How do I deploy to production in Windmill? Set up staging/prod environments with Git-based deployment and workspace forks.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Deploy to prod
+
+When working on Windmill, you will quickly be looking for ways to iterate on and test your scripts, flows, and apps all the while having a working version running. The following section explains the different methods available in Windmill to have a production environement and deploy to it.
+
+:::tip Canonical deployment setups
+
+If you're looking for opinionated, step-by-step guidance, see [Canonical deployment setups](../23_canonical_deployment_setups/index.mdx) for three recommended deployment models ranging from UI-only to Git-based workflows.
+
+:::
+
+## Option 1. Draft and deploy - Single workspace
+
+A simple setup in which deploying to prod means deploying items that have been iterated on in the UI as drafts.
+Deployments in Windmill are commonly done from the same workspace using the [Draft and deploy](../../core_concepts/0_draft_and_deploy/index.mdx) workflow. Drafts are user-scoped and automatically saved as you edit, then deployed when ready.
+
+## Option 2. Workspace forks - Multi workspace (recommended)
+
+[Windmill workspaces](../20_workspace_forks/index.mdx) can be forked, creating a new copy of the workspace at that point in time. The forked workspace can be iterated on, tested, and once changes are ready, merged back to the original workspace, thus deploying the new versions of the scripts, flows, or apps. The workflow will be familiar to anyone who has used branches in version control tools such as git. The analogy can be further reinforced if [Git Sync](../11_git_sync/index.mdx) is setup: Windmill will autmatically create branches for each of the forks, and merging can be controlled direclty through git.
+
+## Option 3. Git Promotion workflow: deploying through git - Multi workspace (possible cross-instance)
+
+This is a more complex but very reliable setup that leverages [Git Sync](../11_git_sync/index.mdx) to deploy from one workspace to another through git. When changes are done to the Staging workspace, they are pushed to a branch in the Prod repo. Once merge to the main branch of the Prod repo, the Prod workspace is updated with the changes.
+
+This workflow lets you review all the changes on a PR before merging and deploying. It also has the advantage, unlike the other options here, to work across separate windmill instances.
+
+![Git Promotion](/images/git_promotion.png 'Git Promotion')
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Deploy to prod using the Git Promotion workflow"
+		description="Windmill integration with Git repositories makes it possible to adopt a robust development process for your Windmill scripts, flows and apps."
+		href="/docs/advanced/deploy_gh_gl"
+	/>
+</div>
+
+## Option 4. Deploy to prod using the UI only - Multi workspace
+
+From a workspace in Windmill, you can deploy a script/flow/resource/variable and all its dependencies to another workspace.
+
+Deploy to prod using the UI is [Cloud plans and Self-Hosted Enterprise Edition](/pricing) only.
+
+More details at:
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Deploy to prod using the Web UI"
+		description="Avoid Git and deploy directly from the Web UI"
+		href="/docs/core_concepts/staging_prod"
+	/>
+</div>
+
+## CI test scripts
+
+You can attach test scripts to any [script](../../script_editor/index.mdx) or [flow](../../flows/1_flow_editor.mdx) so they run automatically on each deployment, catching regressions before they reach production.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="CI test scripts"
+		description="Add test annotations to scripts so they run automatically when the tested script or flow is deployed."
+		href="/docs/advanced/ci_tests"
+	/>
+</div>

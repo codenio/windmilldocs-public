@@ -1,0 +1,73 @@
+---
+description: How do I import custom React components in Windmill apps? Add your own React components that interact with the rest of the app.
+---
+
+# Import custom React components
+
+Windmill already provides over [sixty components](./4_app_configuration_settings/1_app_component_library.mdx) for its users, accessible with a simple drag-and-drop. For more control and standardization with your existing stack, you might want to import your own components in React.
+
+:::info React & Windmill
+
+If you're looking for a way to:
+
+- Build a complete React or Svelte app with Windmill backend runnables, see [Full-code apps](../full_code_apps/index.mdx).
+- Import whole react apps to Windmill, see [React app import](../react_vue_svelte_apps/react.md).
+- Integrate Windmill applications into React-based project, see [Windmill React SDK](../misc/15_react_sdk/index.md).
+
+:::
+
+Importing Custom React Components is a [Cloud and Self-Hosted-Enterprise-Only](/pricing) feature
+
+Once imported to Windmill, custom React components will be able to interact with the rest of the app.
+
+There are 3 main benefits of using your own components:
+
+1. Reusing react components you've already written in other codebases.
+2. Controlling fully the component including theming, inputs and outputs allowing for more complex components and interactions.
+3. Embedding very complex components such as a code editor.
+
+If that's not sufficient you can even [build your own app in React](../react_vue_svelte_apps/react.md), or use [full-code apps](../full_code_apps/index.mdx) to build a complete React or Svelte frontend connected to Windmill backend runnables.
+
+## How to import React components to App editor
+
+<iframe
+	style={{ aspectRatio: '16/9' }}
+	src="https://www.youtube.com/embed/LO83BKAe6zg"
+	title="YouTube video player"
+	frameBorder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	allowFullScreen
+	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
+></iframe>
+
+<br/>
+
+1. Clone the [template project](https://github.com/windmill-labs/windmill-custom-component-template).
+2. Install the dependencies:
+
+```bash
+npm install
+```
+
+3. Start the development server:
+
+```bash
+npm run dev
+```
+
+4. Open your browser to see the live result.
+
+5. Start editing the `src/Component.tsx` file to start building your component.
+
+6. Edit COMPONENT_NAME in `vite.config.ts` to match your component name. It will
+   be useful later.
+
+7. Build the IIFE using:
+
+```bash
+npm run build
+```
+
+8. Upload the `dist/cc.iife.js` to Windmill and name the component as it has been named in `vite.config.ts`.
+
+![Custom component example](../../blog/2023-11-23-1-react-components/custom_example.png 'Custom component example')

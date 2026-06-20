@@ -1,0 +1,36 @@
+---
+description: How do I manage worker groups from the Windmill UI?
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Worker groups management UI
+
+Workers are autonomous processes that run one script at a time using the full
+machines resources available to them. They are at the basis of [Windmill's architecture](../10_architecture/index.md).
+
+Worker groups can be managed through the Windmill UI. In the Community Edition, you can create worker group configs and edit their tags. Advanced features like [dedicated workers](../../core_concepts/25_dedicated_workers/index.mdx), custom environment variables, and [init/periodic scripts](../../advanced/8_preinstall_binaries/index.mdx#init-scripts) require [Cloud plans & Self-Hosted Enterprise license](/pricing).
+
+You can group the workers into worker groups, groups for which you can [manage the tags](../../core_concepts/9_worker_groups/index.mdx) they listen to, [assignment to a single script](../../core_concepts/25_dedicated_workers/index.mdx), or the [worker init scripts](../../advanced/8_preinstall_binaries/index.mdx#init-scripts), from the UI.
+
+![Worker Group edit config](../../core_concepts/9_worker_groups/worker_group_ui.png.webp)
+
+More at:
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Workers and worker groups"
+		description="Worker Groups allow users to run scripts and flows on different machines with varying specifications."
+		href="/docs/core_concepts/worker_groups"
+	/>
+	<DocCard
+		title="Dedicated workers / High throughput"
+		description="Dedicated Workers are workers that are dedicated to a particular script."
+		href="/docs/core_concepts/dedicated_workers"
+	/>
+	<DocCard
+		title="Init scripts"
+		description="Init scripts are executed at the beginning when the worker starts."
+		href="/docs/advanced/preinstall_binaries#init-scripts"
+	/>
+</div>

@@ -1,0 +1,84 @@
+---
+description: How do I run Docker containers from Windmill scripts? Run any container image sandboxed with the `# sandbox <image>` annotation, daemonless.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Run Docker containers
+
+Windmill can run any container image directly from a [Bash](../../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx) script with the `# sandbox <image>` annotation. It is daemonless (no Docker socket, no Docker-in-Docker sidecar) and runs the image inside the job's own [nsjail](../security_isolation/index.mdx) sandbox, so it is safe to run untrusted multi-tenant code and is available on [Windmill Cloud](/pricing).
+
+## Using it
+
+Put the image reference on a `# sandbox` annotation line and the rest of the script runs **inside** that image:
+
+```bash
+# shellcheck shell=bash
+# sandbox python:3.12-slim
+# The "# sandbox <image>" annotation runs this script INSIDE the image above,
+# sandboxed via nsjail. The body runs with the image's /bin/sh and windmill args
+# bind positionally as $1, $2, ...
+
+name="$1"
+python3 -c "import sys; print('hello', sys.argv[1])" "$name"
+```
+
+- The body runs via the image's `/bin/sh -c`, so the image needs a shell.
+- An **empty** body runs the image's `ENTRYPOINT` + `CMD`.
+- Windmill arguments (declared `x="$1"`, …) bind positionally.
+- The image's `Env` and `WorkingDir` are applied, and the windmill reserved variables (`WM_TOKEN`, `BASE_INTERNAL_URL`, …) are injected so [`wmill`](../3_cli/index.mdx) and API calls work from inside the container.
+- [`# volume`](../../core_concepts/56_volumes/index.mdx) mounts and the same-worker `/tmp/shared` folder apply inside the container.
+
+`# sandbox <image>` and a bare `# sandbox` are distinct: a bare `# sandbox` runs the bash script itself under nsjail, while `# sandbox <image>` runs that image's command under nsjail.
+
+## How it works
+
+1. **Pull/extract**: [`crane`](https://github.com/google/go-containerregistry) exports the image's flattened root filesystem to a tar (layers and whiteouts applied, like `docker export`) and reads its OCI config. The tar and config are cached content-addressed by image digest, so unchanged digests reuse the cache across jobs. `crane` is a single static binary; the image is never *run* by it (nsjail does), so no container engine, daemon, or root is needed.
+2. **Run**: nsjail binds the rootfs as the container's `/`, mounts the standard pseudo-filesystems (`/proc` from the jail's pid namespace, a tmpfs `/tmp`, `/dev` nodes), maps uid/gid 0 inside to the unprivileged worker user outside, and runs the command. The container *is* the jail.
+
+Because the run is just the job's own nsjail with the image's filesystem as root, the container inherits exactly the job's confinement:
+
+- **Filesystem**: only the rootfs and the job's mounts are visible. No host `/`, no other job directories, no dependency cache, nothing to bind-mount escape to.
+- **/proc**: the jail's own pid namespace, so the worker and other jobs aren't visible.
+- **uid**: a single-uid jail. An escape lands as the unprivileged worker user.
+- **Network**: the job's network, same as any bash job.
+
+## Requirements
+
+- [`crane`](https://github.com/google/go-containerregistry) and `tar` on the worker for image pull/extract (a single static binary, no daemon, root, or privileged container).
+- `nsjail` on the worker, which **is** the sandbox. If nsjail is absent, a `# sandbox <image>` job errors clearly. Set `DISABLE_NSJAIL=false` to enable nsjail (see [Self-host](../1_self_host/index.mdx)).
+
+The default Windmill worker image ships `crane`, and no Docker socket or Docker-in-Docker sidecar is needed.
+
+## Image storage, freshness and limits
+
+These are configured as [instance settings](../18_instance_settings/index.mdx) in the superadmin settings and are hot-reloaded without a worker restart.
+
+- **Where pulls live**: a content-addressed cache of flattened rootfs tars keyed by image digest, persistent and deduped across jobs. The per-job extracted rootfs is removed with the job.
+- **Pull policy** (`sandbox_image_pull_policy`, default `newer`): the cache is keyed by digest, so a moving tag like `:latest` whose digest changed re-pulls automatically. `newer`/`always` re-resolve the digest each job (one cheap manifest fetch); `missing` reuses a cached digest without hitting the registry; `never` only uses the cache. Pinning a digest (`img@sha256:…`) is immutable and never stale.
+- **Per-image size cap** (`sandbox_image_max_size_mb`, default off): images whose compressed download size exceeds the cap are rejected before any layer is downloaded.
+- **Cache size cap** (`sandbox_image_cache_max_mb`, default off): best-effort eviction of the oldest cached rootfs tars after a run, until the cache is back under the cap.
+- **Default registry** (`sandbox_image_default_registry`): prepended to unqualified image references (`alpine` → `<registry>/alpine`); fully-qualified references are untouched.
+- **Private registry auth** (`sandbox_registry_auth`): a docker/podman `auth.json` blob, written to a per-job credentials file (mode `0600`, removed with the job) and passed to the puller for private registries.
+
+## Limitations
+
+The runtime is daemonless and run-to-completion by design:
+
+- No `docker run -d` with later `exec`/`attach`/`logs -f`, no `docker build`, `compose`, swarm, or healthchecks.
+- No arbitrary `-v` host bind mounts, `--privileged`, `--cap-add`, `--device`, or host namespace sharing.
+- Images that drop to a non-root uid or chown to arbitrary uids inside need a subuid range in the jail (single-uid only today).
+- The script result is a completion message; capture output via stdout/logs or `./result.json`.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Docker quickstart"
+		description="Run any Docker image as a Windmill script via Bash support."
+		href="/docs/getting_started/scripts_quickstart/docker"
+	/>
+	<DocCard
+		title="Security and process isolation"
+		description="How Windmill isolates jobs with nsjail and PID namespaces."
+		href="/docs/advanced/security_isolation"
+	/>
+</div>

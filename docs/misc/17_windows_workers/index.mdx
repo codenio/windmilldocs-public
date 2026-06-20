@@ -1,0 +1,387 @@
+---
+description: How do I set up native Windows workers to run Windmill scripts without Docker or WSL?
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Windows workers
+
+Windows workers enable you to run Windmill scripts and flows directly on Windows machines without requiring Docker or WSL, supporting Python, Bun, PowerShell, C#, and Nu executors for native Windows execution.
+
+Windows Native Workers are a [Self-Hosted Enterprise](/pricing) feature. In terms of [billing](/pricing), they count as 1 Compute Unit, unless you are using them for compute on a large machine, in which case they count as 2 Compute Units.
+
+You can connect Windows workers to your existing Dockerized or cloud self-hosted PostgreSQL database and Windmill server.
+
+### Setting up Windmill worker executable
+
+1. **Set up a working directory**:
+   - Create a directory from where you want to run the Windmill worker, e.g., `C:\Users\Alex\windmill`.
+
+2. **Download Windmill executable**:
+   - Download the `windmill-ee.exe` file into the newly created directory from the [releases page](https://github.com/windmill-labs/windmill/releases).
+
+3. **Set basic environment variables**:
+   - Set the following [environment variables](../../core_concepts/47_environment_variables/index.mdx) (replace the placeholders with your specific values):
+     ```powershell
+     # Replace these variables with your specific configuration
+     $env:MODE="worker"
+     $env:DATABASE_URL="postgres://postgres:changeme@172.12.0.1:5432/windmill?sslmode=disable"
+     $env:SKIP_MIGRATION="true"
+     ```
+     More environment variables and worker settings can be found [here](https://github.com/windmill-labs/windmill?tab=readme-ov-file#environment-variables).
+
+4. **Run windmill-ee.exe**:
+   ```powershell
+   PS C:\Users\Alex\windmill> .\windmill-ee.exe
+   ```
+   We recommend running Windmill as a service on your Windows environment using `sc` or `NSSM` to monitor the Windmill worker, start it at system boot, and manage the restart policy.
+
+After the basic setup, follow these steps for each language your worker should support.
+
+### Python executor
+
+1. **Install uv**:
+   ```powershell
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+   ```
+You can also check other installation methods in uv`s [official documentation](https://docs.astral.sh/uv/getting-started/installation/).
+
+### Bun executor
+
+1. **Install Bun**: Follow the official [documentation](https://bun.sh/docs/installation) for Windows.
+2. **Locate Bun installation**:
+   - Find where Bun is installed by running:
+     ```powershell
+     where.exe bun
+     ```
+     Example output:
+     ```plaintext
+     C:\Users\Alex\.bun\bin\bun.exe
+     ```
+
+3. **Set environment variables**:
+   - Add the following environment variables (replace the placeholders with your specific values):
+     ```powershell
+     # Replace these variables with your specific configuration
+     $env:BUN_PATH="C:\Users\Alex\.bun\bin\bun.exe"
+     ```
+### PowerShell executor
+1. **Install PowerShell 7+ (stable)**: Ensure you have the latest stable release of PowerShell by following the [official documentation](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows).
+   - Start PowerShell 7 and verify you're running PowerShell 7 by checking `$PSVersionTable`:
+     ```powershell
+     $PSVersionTable
+     PSVersion 7.4.5
+     ```
+
+2. **Locate PowerShell 7 installation**:
+   - Find where PowerShell 7 is installed by running:
+     ```powershell
+     where.exe pwsh.exe # Note: previous versions used powershell.exe
+     ```
+     Example output:
+     ```plaintext
+     C:\Program Files\PowerShell\7\pwsh.exe
+     ```
+
+3. **Set environment variables**:
+   - Add the following environment variables (replace the placeholders with your specific values):
+     ```powershell
+     # Replace these variables with your specific configuration
+     $env:POWERSHELL_PATH="C:\Program Files\PowerShell\7\pwsh.exe"
+     ```
+
+### C# executor
+
+1. **Install .NET 9.0 SDK**: Follow [Microsoft instructions](https://learn.microsoft.com/en-us/dotnet/core/install/windows) and make sure you have .NET 9.0 installed.
+   - You can check it by listing the installed SDKs:
+     ```powershell
+     dotnet --list-sdks
+     ```
+2. **Locate your .NET installation**:
+   - Find where .NET is installed by running:
+     ```powershell
+     where.exe dotnet
+     ```
+
+3. **Set environment variables**:
+   - Add the following environment variables (replace with your values if needed):
+     ```powershell
+     # Replace these variables with your specific configuration
+     $env:DOTNET_ROOT="C:\Program Files\dotnet"
+     $env:DOTNET_PATH="C:\Program Files\dotnet\dotnet.exe"
+     ```
+
+
+### Nu executor
+
+1. **Nu**: Ensure you have installed Nu by following the [official documentation](https://www.nushell.sh/book/installation.html#package-managers).
+   - Start PowerShell and verify you can enter Nushell:
+     ```powershell
+     nu
+     ```
+
+2. **Locate Nu installation**:
+   - Find where Nu is installed by running:
+     ```powershell
+     where.exe nu.exe 
+     ```
+
+3. **Set environment variables**:
+   - Add the following environment variables (replace the placeholders with your specific values):
+     ```powershell
+     # Replace these variables with your specific configuration
+     $env:NU_PATH="C:\..\..\nu.exe"
+     ```
+### Java executor
+
+1. **Install Java**: Ensure you have installed Java. You can use any Java version, but OpenJDK-22 is recommended and tested by Windmill.
+   - Start PowerShell and verify you have working `java` and `javac`:
+     ```powershell
+     java --version && javac --version
+     ```
+
+2. **Install Coursier**:
+   - Open PowerShell and fetch .jar:
+     ```powershell
+      Start-BitsTransfer -Source https://github.com/coursier/launchers/raw/master/coursier -Destination coursier
+     ```
+
+3. **Set environment variables**:
+   - Add the following environment variables (replace the placeholders with your specific values):
+     ```powershell
+     # Replace these variables with your specific configuration.
+     # Make sure you provide **full** path!
+     $env:COURSIER_PATH="C:\..\..\coursier"
+     ```
+
+### Ruby executor
+
+1. **Install Ruby**: For Ruby you will need to have `ruby.exe`, `bundler.bat` and `gem.cmd` in `PATH`. You can use [RubyInstaller](https://rubyinstaller.org/) for this.
+   - Start PowerShell and verify you have working executables:
+     ```powershell
+     ruby --version && bundler --version && gem --version
+     ```
+
+### R executor
+
+1. **Install R**: Download and install R from the [official CRAN website](https://cran.r-project.org/bin/windows/base/). During installation, ensure R is added to the system PATH.
+   - Start PowerShell and verify you have a working R installation:
+     ```powershell
+     Rscript --version
+     ```
+
+2. **Install Pak and Renv**:
+   - Run:
+     ```powershell
+     Rscript -e "install.packages(c('pak', 'renv'), lib=Sys.getenv('R_LIBS_USER'), repos='https://cloud.r-project.org')"
+     ```
+
+
+## Running as a Windows service
+
+For production environments, it's strongly recommended to run `windmill-ee.exe` as a Windows service. This ensures the Windmill process starts automatically at system boot, restarts on failure, and runs reliably in the background.
+
+Windmill supports three different modes of operation:
+- **Worker mode** (`MODE=worker`): Executes jobs from the queue
+- **Server mode** (`MODE=server`): Runs the API server and web interface
+- **Agent mode** (`MODE=agent`): Connects to a remote Windmill server to execute jobs
+
+### Understanding Windmill modes
+
+#### Worker mode
+Worker mode is used to execute jobs from the Windmill queue. Workers connect directly to the PostgreSQL database and pull jobs to execute.
+
+**Required environment variables:**
+- `MODE=worker`
+- `DATABASE_URL`: PostgreSQL connection string
+
+#### Server mode
+Server mode runs the Windmill API server and web interface. This mode handles all HTTP requests, serves the UI, and manages the job queue.
+
+**Required environment variables:**
+- `MODE=server`
+- `DATABASE_URL`: PostgreSQL connection string
+
+#### Agent mode
+Agent mode allows workers to connect to a remote Windmill server via HTTP instead of directly to the database. This is useful for running workers in isolated networks or when you want centralized control over worker authentication. See the [Agent workers documentation](../../core_concepts/28_agent_workers/index.mdx) for more details.
+
+**Required environment variables:**
+- `MODE=agent`
+- `BASE_INTERNAL_URL`: URL of the Windmill server (e.g., `http://your-windmill-server:8000`)
+- `AGENT_TOKEN`: JWT token for authenticating with the server (obtain this from your Windmill server's worker management page)
+
+The agent token encodes the worker group and optionally worker tags, allowing fine-grained control over which jobs the agent can execute.
+
+### Setting up the Windows service
+
+Windows natively supports running executables as services. The `windmill-ee.exe` binary automatically detects when it's running as a Windows service and adjusts its behavior accordingly.
+
+#### Step 1: Create the service
+
+Use the Windows `sc` command to create a service. Run PowerShell as Administrator:
+
+**For Worker mode:**
+```powershell
+sc.exe create WindmillWorker `
+  binPath= "C:\Users\Alex\windmill\windmill-ee.exe" `
+  start= auto `
+  DisplayName= "Windmill Worker"
+
+# Set environment variables for the service
+$regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\WindmillWorker"
+$envVars = @(
+    "MODE=worker",
+    "DATABASE_URL=postgres://postgres:changeme@172.12.0.1:5432/windmill?sslmode=disable",
+)
+Set-ItemProperty -Path $regPath -Name "Environment" -Value $envVars -Type MultiString
+```
+
+**For Server mode:**
+```powershell
+sc.exe create WindmillServer `
+  binPath= "C:\Users\Alex\windmill\windmill-ee.exe" `
+  start= auto `
+  DisplayName= "Windmill Server"
+
+# Set environment variables for the service
+$regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\WindmillServer"
+$envVars = @(
+    "MODE=server",
+    "DATABASE_URL=postgres://postgres:changeme@172.12.0.1:5432/windmill?sslmode=disable"
+)
+Set-ItemProperty -Path $regPath -Name "Environment" -Value $envVars -Type MultiString
+```
+
+**For Agent mode:**
+```powershell
+sc.exe create WindmillAgent `
+  binPath= "C:\Users\Alex\windmill\windmill-ee.exe" `
+  start= auto `
+  DisplayName= "Windmill Agent"
+
+# Set environment variables for the service
+$regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\WindmillAgent"
+$envVars = @(
+    "MODE=agent",
+    "BASE_INTERNAL_URL=http://your-windmill-server:8000",
+    "AGENT_TOKEN=jwt_agent_your_token_here"
+)
+Set-ItemProperty -Path $regPath -Name "Environment" -Value $envVars -Type MultiString
+```
+
+:::tip
+Add any additional environment variables (like `WORKER_GROUP`, executor paths, etc.) to the `$envVars` array before setting them.
+:::
+
+#### Step 2: Configure service recovery
+
+Configure the service to restart automatically on failure:
+
+```powershell
+# Replace WindmillWorker with WindmillServer or WindmillAgent as appropriate
+sc.exe failure WindmillWorker reset= 86400 actions= restart/60000/restart/60000/restart/60000
+```
+
+This configures the service to restart after 60 seconds on each of the first three failures.
+
+#### Step 3: Start the service
+
+```powershell
+# Replace WindmillWorker with WindmillServer or WindmillAgent as appropriate
+sc.exe start WindmillWorker
+```
+
+#### Step 4: Verify the service is running
+
+```powershell
+# Check service status
+sc.exe query WindmillWorker
+
+# View service logs in Event Viewer
+# Navigate to: Event Viewer > Windows Logs > Application
+# Look for events from source "WindmillWorker"
+```
+
+### Managing the service
+
+**Stop the service:**
+```powershell
+sc.exe stop WindmillWorker
+```
+
+**Restart the service:**
+```powershell
+sc.exe stop WindmillWorker
+sc.exe start WindmillWorker
+```
+
+**Update environment variables:**
+```powershell
+# Stop the service first
+sc.exe stop WindmillWorker
+
+# Update environment variables
+$regPath = "HKLM:\SYSTEM\CurrentControlSet\Services\WindmillWorker"
+$envVars = @(
+    "MODE=worker",
+    "DATABASE_URL=postgres://postgres:changeme@172.12.0.1:5432/windmill?sslmode=disable",
+    "SKIP_MIGRATION=true",
+    "WORKER_GROUP=my-group"  # Add or modify variables as needed
+)
+Set-ItemProperty -Path $regPath -Name "Environment" -Value $envVars -Type MultiString
+
+# Start the service
+sc.exe start WindmillWorker
+```
+
+**Delete the service:**
+```powershell
+# Stop the service first
+sc.exe stop WindmillWorker
+
+# Delete the service
+sc.exe delete WindmillWorker
+```
+
+### Alternative: Using NSSM
+
+If you prefer a GUI-based approach or need more advanced service management features, you can use [NSSM (Non-Sucking Service Manager)](https://nssm.cc/):
+
+1. **Download and install NSSM**
+2. **Run NSSM GUI:**
+   ```powershell
+   nssm install WindmillWorker
+   ```
+3. **Configure in the GUI:**
+   - **Application tab:** Set path to `windmill-ee.exe`
+   - **Details tab:** Set display name and description
+   - **Environment tab:** Add your environment variables (one per line, format: `KEY=VALUE`)
+   - **I/O tab:** Optionally configure log file paths
+   - **Exit actions tab:** Configure restart behavior
+
+4. **Start the service:**
+   ```powershell
+   nssm start WindmillWorker
+   ```
+
+### Troubleshooting
+
+**Service fails to start:**
+- Check Event Viewer (Windows Logs > Application) for error messages
+- Verify all environment variables are set correctly
+- Ensure the `windmill-ee.exe` path in `binPath` is correct and accessible
+- For agent mode, verify `BASE_INTERNAL_URL` is reachable and `AGENT_TOKEN` is valid
+
+**Checking service status and logs:**
+- Check service status: `sc.exe query WindmillWorker` or open Services GUI with `services.msc`
+- **Windmill writes logs to**: `C:\tmp\windmill\logs\` by default
+  - Check this directory for log files generated by the Windmill service
+  - Make sure this directory exists and the service has write permissions to it
+- For **stdout/stderr console output** (startup errors, etc.), the output is not captured by default when using `sc.exe`. To capture console output:
+  - Use NSSM instead of `sc.exe` and configure log file paths in the I/O tab (recommended - see [Alternative: Using NSSM](#alternative-using-nssm) section)
+
+**Getting agent tokens:**
+- Agent tokens must be generated from your Windmill server. See the [Agent workers documentation](../../core_concepts/28_agent_workers/index.mdx) for detailed instructions
+- Navigate to the worker management section in your Windmill instance
+- Create a new agent token with the appropriate worker group and tags
+- The token format is `jwt_agent_<suffix>_<actual_jwt_token>`

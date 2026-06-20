@@ -1,0 +1,432 @@
+---
+description: How do I sync Windmill with Git? Set up bi-directional sync with automatic commits on deploy and CI/CD integration.
+---
+
+import DocCard from '@site/src/components/DocCard';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Git sync
+
+Git sync lets Windmill workspaces be tracked by git. Each time an item is deployed, Windmill will create and push a commit to the specified repository. It is also possible, and recommended, to setup CI/CD actions that will deploy items on windmill when a new commit is detected, enabling bi-directional synchronization.
+
+:::tip Git sync is stage 3 of the collaboration guide
+
+Enabling Git Sync on a workspace corresponds to **stage 3** of the [collaboration and deployment stages](../23_canonical_deployment_setups/index.mdx#stage-3--add-git-sync) guide. [Git Promotion](#git-promotion-workflow-cross-instance-deployment-using-a-git-workflow) is the basis of **stage 4** (multi-workspace with promotion).
+
+:::
+
+:::tip Version control
+
+For all details on Version control in Windmill, see [Version control](../../advanced/13_version_control/index.mdx).
+
+:::
+
+This feature is available on [Cloud and Enterprise Self-Hosted](/pricing), and on Community Edition for workspaces with up to 2 users.
+
+![Git sync diagram](/images/basic_git_sync.png 'Git sync diagram')
+
+## Setup - Git sync from Windmill
+
+This video shows how to set up a Git repository for a workspace.
+
+<iframe
+	style={{ aspectRatio: '16/9' }}
+	src="https://www.youtube.com/embed/cHrREDmrnUM?vq=hd1080&hd=1&quality=highres"
+	title="Git sync"
+	frameBorder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	allowFullScreen
+	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
+></iframe>
+
+<br />
+
+### 1. Initialize Git repository
+
+First, create a Git repository to store your Windmill workspace:
+
+**Option A: Create empty repository (Recommended)**
+
+Create an empty Git repository on your Git provider (GitHub, GitLab, etc.) without any initial files. Windmill will populate it automatically in the next step.
+
+**Option B: Manual CLI setup**
+
+For more control, you can set up the repository manually using the [Windmill CLI](../3_cli/index.mdx):
+
+1. Use [Windmill CLI](../3_cli/index.mdx) to pull the workspace locally:
+
+```bash
+wmill sync pull
+```
+
+Configure your [`wmill.yaml`](../3_cli/sync.mdx#wmillyaml) file with the desired filter settings before pushing to Git.
+
+![Pull workpsace](./pull_workspace.png 'Pull workspace')
+
+2. Create a Git repository (in the example, on GitHub) and push the initial workspace content:
+
+```bash
+git init
+git remote add origin https://github.com/username/reponame.git
+git add .
+git commit -m 'Initial commit'
+git push -u origin main
+```
+
+You now have your Windmill workspace on a GitHub repository.
+
+### 2. Setup in Windmill
+
+1. Go to workspace settings → Git Sync tab
+2. Click **+ Add connection**
+3. Create or select a [git_repository](../../integrations/git_repository.mdx) resource pointing to your Git repository. You have two authentication options:
+   - **GitHub App**: Use the [GitHub App](../../integrations/git_repository.mdx#github-app) for simplified authentication and enhanced security
+   - **GitHub Enterprise Server App**: Use a [self-managed GitHub App](../../integrations/git_repository.mdx#self-managed-github-app) for GHES or custom GitHub instances (Enterprise only)
+   - **Personal Access Token**: Use a [token](https://github.com/settings/tokens) with Read-and-write on "Contents". Your URL should be `https://[USERNAME]:[TOKEN]@github.com/[ORG|USER]/[REPO_NAME].git`
+4. Complete the configuration of the connection and save
+
+![Git sync Setup](./git_sync_setup.png 'Git sync Setup')
+
+If you chose Option A (empty repository), use the "Initialize Git repository" operation to automatically:
+
+- Create the `wmill.yaml` configuration file with your filter settings
+- Push the entire workspace content to the Git repository
+
+If the repository already contains a `wmill.yaml` file, the settings will be automatically imported and applied to your workspace configuration.
+
+**Configuration settings**: Git sync filter settings are pulled from the [`wmill.yaml`](../3_cli/sync.mdx#wmillyaml) file in your repository. Once the connection is saved, you can update settings by changing `wmill.yaml` and pulling the settings via the corresponding button.
+
+![Git sync Settings](./settings_pull.png 'Git sync Settings Pull')
+
+### Signing commits with GPG
+
+If your repo requires signed commits, you can set up GPG on your Windmill instance.
+
+1. Generate a GPG key pair:
+
+```
+gpg --full-generate-key
+```
+
+2. Add the key to your GitHub account:
+
+```
+gpg --armor --export <key_id>
+```
+
+Go to your GitHub account settings => "SSH and GPG keys" and add the GPG public key.
+
+3. Add the private key to your Windmill instance:
+
+```
+gpg --armor --export-keys <key_id>
+```
+
+In the Windmill workspace "Git Sync" settings, edit the "GPG key" field with the GPG private key. Use the email address associated with the key and set the passphrase if you added one.
+
+![GPG key](./add_gpg_key.png 'GPG key')
+
+:::caution Key ID and Email
+
+Make sure to double check that the email address associated with the key is the same as the one you use to commit to the repo. Furthermore, double check that the key id is the same as the one you see in the "GPG key" field on your GitHub account.
+
+<br />
+All commits will now be signed and commited as the user matching the email address associated with the
+key.
+:::
+
+### Azure DevOps with Service Principal setup
+
+In Microsoft Entra ID, create an application and a secret (also known as Service Principal - an identity used by applications to access Azure resources).
+Create an `azure` resource on your Windmill instance with the application's `client_id`, `client_secret` and `tenant_id`.
+On Azure DevOps, add the application to the DevOps organization with the appropriate permissions.
+In Git sync settings of your Windmill instance, define a new repository with URL:
+
+```
+https://AZURE_DEVOPS_TOKEN(<path_to_the_azure_resource>)@dev.azure.com/<organization>/<project>/_git/<repository>
+```
+
+## Setup - CI/CD from git repository
+
+To allow for bidirectional sync, CI/CD can be configured to sync back changes to Windmill anytime a commit is made.
+
+### Github Actions
+
+1. Add [GitHub Actions](https://github.com/features/actions) to your repository. You will find the necessary actions in the [windmill-sync-example repository](https://github.com/windmill-labs/windmill-sync-example).
+2. Create a `.github/workflows` directory in your repository and add the following files:
+   - `open-pr-on-fork-commit.yaml`: This action automatically creates a PR when Windmill commits a change to a workspace fork. Workspace forks are explained in a section below.
+   - `push-on-merge.yaml`: This action automatically pushes the content of the repo to the Windmill prod workspace when a PR is merged. Update the `WMILL_WORKSPACE` variable to the name of your prod workspace.
+   - Optionnaly, if you want to add a staging workspace, copy the previous GitHub action/workflow file but now set the `WMILL_WORKSPACE` variable to the id of the staging workspace and the `WMILL_URL` variable to the base URL of the Windmill instance if different than the one for prod. Also changes the trigger to listen to the branches: 'staging'.
+   - `push-on-merge-to-forks.yaml`: This does the same as `push-on-merge.yaml` but for all [Workspace Forks](../20_workspace_forks/index.mdx), enabling the full power of the feature.
+3. In GitHub, [allow actions](https://docs.github.com/en/enterprise-server@3.10/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository#preventing-github-actions-from-creating-or-approving-pull-requests) to create and approve pull requests.
+4. Create a [user token](../../core_concepts/4_webhooks/index.mdx#user-token) in Windmill and save it as a [secret](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository) named `WMILL_TOKEN` in your GitHub repository Settings > "Secret and Variable" > "Actions". An unscoped token is the simplest choice; if you need a scoped one, see [CLI and git sync](../../core_concepts/59_user_tokens/index.mdx#cli-and-git-sync) for the required scopes.
+
+On top of `WMILL_TOKEN`, 2 other variables need to be set in the GitHub action workflow file:
+
+- `WMILL_WORKSPACE`: the name of the workspace
+- `WMILL_URL`: the base URL of the Windmill instance (e.g. https://app.windmill.dev/)
+
+<Tabs className="unique-tabs">
+<TabItem value="open-pr-on-fork-commit.yaml" label="open-pr-on-commit.yaml" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+```yaml
+name: "Open pull request for workspace forks"
+on:
+  push:
+    branches:
+      - wm-fork/**
+
+env:
+TARGET_BRANCH: main
+
+jobs:
+submit_pull_requests:
+runs-on: ubuntu-latest
+permissions:
+contents: read
+pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create pull request
+        run: |
+          gh pr view ${{ github.ref_name }} \
+          && gh pr reopen ${{ github.ref_name }} \
+          || gh pr create -B ${{ env.TARGET_BRANCH }} -H ${{ github.ref_name }} \
+          --title "${{github.event.head_commit.message }}" \
+          --body "PR created by Github action '${{ github.workflow }}'"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+````
+</TabItem>
+<TabItem value="push-on-merge.yaml" label="push-on-merge.yaml" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+```yaml
+name: "Push main to Windmill workspace"
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+    # if the windmill workspace is persisted in a subfolder of this repos, you can add the following to avoid pushing to windmill when there's no change
+    # paths:
+    #   - wm/**
+
+env:
+  WMILL_URL: https://app.windmill.dev/
+  WMILL_WORKSPACE: github-sync-example-prod
+
+jobs:
+  sync:
+    environment: windmill
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # We check the commit to make sure it doesn't start with [WM] which commits coming from Windmill Git Sync do.\
+      # If that's the case, then we stop the workflow as we want to avoid overwriting changes that are out-of-sync
+      # (for instance if one were to deploy in quick succession)
+      - name: Check commit message
+        id: check_message
+        run: |
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          if [[ "$COMMIT_MESSAGE" =~ ^\[WM\] ]]; then
+            echo "Commit message starts with '[WM]', skipping push to Windmill to avoid overwriting deploy that immediately follows it"
+            echo "skip=skip" >> $GITHUB_OUTPUT
+          fi
+
+      # (push will pull first to detect conflicts and only push actual changes)
+      - name: Push changes
+        if: steps.check_message.outputs.skip != 'skip'
+        run: |
+          npm install -g windmill-cli@1.682.0
+          wmill sync push --yes --skip-variables --skip-secrets --skip-resources --workspace ${{ env.WMILL_WORKSPACE }} --token ${{ secrets.WMILL_TOKEN }} --base-url ${{ env.WMILL_URL }}
+````
+
+</TabItem>
+<TabItem value="push-on-merge-to-forks.yaml" label="push-on-merge-to-forks.yaml" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+```yaml
+name: "Push forks to Windmill workspace forks"
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - wm-fork/**
+
+env:
+WMILL_URL: https://app.windmill.dev/
+
+jobs:
+sync:
+environment: windmill
+runs-on: "ubuntu-latest"
+steps: - name: Checkout
+uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Extract workspace from branch name
+        id: workspace
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          WORKSPACE=$(echo "$BRANCH_NAME" | sed 's|wm-fork/|wm-fork-|' | sed 's|/|-|g')
+          echo "workspace=$WORKSPACE" >> $GITHUB_OUTPUT
+
+      # We check the commit to make sure it doesn't start with [WM] which commits coming from Windmill Git Sync do.\
+      # If that's the case, then we stop the workflow as we want to avoid overwriting changes that are out-of-sync
+      # (for instance if one were to deploy in quick succession)
+      - name: Check commit message
+        id: check_message
+        run: |
+          COMMIT_MESSAGE="${{ github.event.head_commit.message }}"
+          if [[ "$COMMIT_MESSAGE" =~ ^\[WM\] ]]; then
+            echo "Commit message starts with '[WM]', skipping push to Windmill to avoid overwriting deploy that immediately follows it"
+            echo "skip=skip" >> $GITHUB_OUTPUT
+          fi
+
+      # (push will pull first to detect conflicts and only push actual changes)
+      - name: Push changes
+        if: steps.check_message.outputs.skip != 'skip'
+        run: |
+          npm install -g windmill-cli@1.682.0
+          wmill sync push --yes --skip-variables --skip-secrets --skip-resources --workspace ${{ steps.workspace.outputs.workspace }} --token ${{ secrets.WMILL_TOKEN }} --base-url ${{ env.WMILL_URL }}
+
+````
+</TabItem>
+</Tabs>
+
+### Other Git hosting platforms
+
+If you are using a different git hosting platform, such as GitLab or Codeberg, you just need to setup similar actions in your CI/CD. There are currently no detailed instructions for other platforms so you will need to use the provided GitHub ones and adpapt it to your needs.
+
+## Filters
+
+### Path filters
+
+Only scripts, flows and apps with their path matching one of the set filters will be synced to the Git repositories below. The filters allow `*` and `**` characters, with `*` matching any character allowed in paths until the next slash (`/`) and `**` matching anything including slashes.
+By default everything in folders (with rule `f/**`) will be synced.
+
+You can configure:
+
+- **Include paths**: Primary patterns for what to sync (e.g., `f/**`)
+- **Exclude paths**: Patterns to exclude after include checks
+
+### Type filters
+
+On top of the filter path [above](#path-filters), you can include only certain type of object to be synced with the Git repository.
+By default everything is synced.
+
+You can filter on:
+
+- **Scripts** - Individual scripts
+- **Flows** - Workflow definitions
+- **Apps** - Application definitions
+- **Folders** - Folder structure
+- **Resources** - Resource instances
+- **Variables** - Workspace variables
+  - **Include secrets** - Option to include secret variables
+- **Schedules** - Scheduled job definitions
+- **Resource types**
+- **Users** - User definitions
+- **Groups** - Group definitions
+- **Triggers** - Event triggers (HTTP routes, WebSocket, Postgres, Kafka, NATS, SQS, GCP Pub/Sub, MQTT)
+- **Workspace settings** - Global workspace configuration
+- **Encryption key** - Workspace encryption key
+- **[Workspace dependencies](../../core_concepts/55_workspace_dependencies/index.mdx)** - Shared dependency files. Creating, archiving, or deleting workspace dependencies triggers deployment callbacks for git sync.
+
+## Workspace forks integration
+
+Git sync automatically creates corresponding git branches for [workspace forks](../20_workspace_forks/index.mdx). When you fork a workspace with git sync enabled, Windmill creates a branch with the naming pattern `wm-fork/<parent-branch>/<fork-name>` and keeps it synchronized with the forked workspace.
+
+This enables parallel development workflows where multiple developers can work on separate workspace forks, each with its own git branch, and merge changes back to the parent workspace either through the UI or via pull requests.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Workspace forks"
+		description="Create workspace forks for parallel development workflows"
+		href="/docs/advanced/workspace_forks"
+	/>
+</div>
+
+![Workspace Forks and Git Sync](/images/workspace_forks.png)
+
+## Adding secondary sync repositories
+
+You can add secondary sync repositories if you need to. Just go to Git sync settings, press `+ Add secondary sync repo` and follow the same instructions as for the first one.
+
+Windmill pushes workspace changes to secondary repositories the same way it does to the primary one, each with their own [path](#path-filters) and [type](#type-filters) filters. The difference is the direction of sync: only the primary repository supports pulling changes from git back into the workspace (true bidirectional sync). Secondary repositories receive pushes from Windmill but are never read back into the workspace, so their git copy stays in sync with the workspace but cannot be used to modify it.
+
+The two main use cases for secondary repositories are:
+
+- **Read-only backup storage**: keep an additional copy of the workspace in another repository for backup or mirroring.
+- **Partitioning the workspace**: use per-repository [include/exclude path filters](#path-filters) to sync different folders to different repositories. For example, configure one secondary repository per team, each filtered to that team's folders, so every team gets an isolated repository with its own CI/CD pipelines.
+
+## Repository operations
+
+Each configured repository supports several operations:
+
+- **Test connection**: Verify repository access and credentials
+- **Preview changes**: Perform a dry-run to see what would be synced
+- **Push to repository**: Send workspace content to git repository
+- **Pull from repository**: Get changes from git repository to workspace
+- **Pull settings**: Get only wmill.yaml configuration changes
+- **Initialize repository**: Set up new git repository with Windmill structure
+
+## wmill.yaml integration
+
+Git sync settings can be controlled via the [`wmill.yaml`](../3_cli/sync.mdx#wmillyaml) file in your repository root. This enables:
+
+- **CLI compatibility**: Settings configured in the UI are compatible with [Windmill CLI](../3_cli/index.mdx)
+- **Version-controlled configuration**: Your sync settings are stored in git alongside your code
+- **Workspace-specific overrides**: Different sync behavior per workspace (resolved from the current git branch or `--workspace`)
+- **Git promotion-specific settings**: Special configuration for deployment workflows
+- **[Workspace-specific items](../3_cli/environment-specific-items.mdx)**: Different versions of resources and variables per workspace
+
+The frontend will detect existing `wmill.yaml` files and merge settings appropriately.
+
+## Exclude specific types for this repository only
+
+You can exclude specific types per repository, overriding the global workspace filters.
+
+## Local development
+
+Once git sync is set up, the git repository becomes the entry point for [local development](../4_local_development/index.mdx). You can edit scripts, flows, and apps in any environment that works against the repository:
+
+- Your IDE of choice, with the [Windmill CLI](../3_cli/index.mdx) (`wmill sync pull` / `wmill sync push`) or the [VS Code extension](../../cli_local_dev/1_vscode-extension/index.mdx).
+- [Agentic coding tools](../../misc/9_guides/local_dev_with_ai/index.mdx) such as Claude Code, Cursor, or any MCP-compatible client. `wmill init` generates an `AGENTS.md` and skill files that give these agents the context they need to write Windmill-native scripts and flows.
+
+Changes committed and pushed to git are replayed back into the workspace by the CI/CD workflow, closing the loop.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Local development"
+		description="Edit Windmill scripts and flows locally using the CLI and your IDE."
+		href="/docs/advanced/local_development"
+	/>
+	<DocCard
+		title="Local development with AI"
+		description="Use agentic coding tools like Claude Code with the Windmill CLI, VS Code extension, and MCP server."
+		href="/docs/misc/guides/local_dev_with_ai"
+	/>
+</div>
+
+## Git Promotion workflow: Cross-instance deployment using a git workflow
+
+One option you will see in the Git Sync settings tab, is to add a Git Promotion target. This is an advanced setup that leverages the feature to create deployements from one workspace to another.
+
+Learn how to setup Git Promotion:
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Git Promotion workflow"
+		description="Windmill integration with Git makes it possible to have a robust git-based deployment workflow"
+		href="/docs/advanced/deploy_gh_gl"
+	/>
+</div>

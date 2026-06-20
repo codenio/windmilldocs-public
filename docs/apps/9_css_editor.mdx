@@ -1,0 +1,142 @@
+---
+description: How do I style Windmill apps with CSS? Define global styles, reusable themes and per-component CSS rules.
+---
+
+# CSS editor
+
+Custom styling is essential for aligning internal tools with your brand image. While [component-level CSS](../apps/4_app_configuration_settings/4_app_styling.mdx#component-level) has always been possible in Windmill App editor, CSS can also be defined globally: for an entire app and across all apps as themes.
+
+This CSS is editable from a dedicated CSS editor, a centralized location for defining, managing, and applying CSS rules.
+
+With this feature, you can ensure consistent styling and create [reusable themes](#themes) for different teams, projects, clients etc.
+Not only that, but we also took care of doing an exhaustive hierarchy of [classes](#class-identifiers) that correspond to the structure ou our components, enabling to customize any aspect of them.
+
+The Global CSS editor is a feature exclusive to [Cloud & Enterprise Self-Hosted](/pricing). However, users on the Community Edition can still access and experiment with this tool directly in the editor for evaluation purposes, although these changes will not be reflected in the app preview.
+
+<iframe
+	style={{ aspectRatio: '16/9' }}
+	src="https://www.youtube.com/embed/6_MjKgbdCFQ"
+	title="YouTube video player"
+	frameBorder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	allowFullScreen
+	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
+></iframe>
+
+## Class identifiers
+
+For a more granular control, specific classes have been added to each component. These class identifiers make it easier to target and globally style individual components across your app. Here are examples of classes, and are listed in the [Helper Block](#class-identifiers-helpers) as well:
+
+- `wm-container`
+- `wm-list`
+- `wm-list-pagination`
+- `wm-list-pagination-buttons`
+- `wm-drawer`
+- `wm-drawer-button`
+- `wm-drawer-button-container`
+- `wm-button`
+- `wm-button-wrapper`
+- `wm-button-container`
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	autoPlay
+	loop
+	src="/videos/css_editor.mp4"
+/>
+
+## Class identifiers helpers
+
+In addition to the core features of the Global CSS editor, the Helper Block is designed to assist you in the styling process. This searchable list of components provides quick access to all the class identifiers and CSS variables associated with each component. It also includes a convenient "Insert" button for each item, allowing you to quickly insert the class or variable into your CSS code.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	src="/videos/css-helper-box.mp4"
+/>
+
+## How to use the helper block
+
+1. Search for components: Use the search bar to quickly find the component you are interested in styling.
+2. View class identifiers and variables: Once you select a component, a list of its specific classes and modifiable CSS variables will be displayed.
+3. Insert to code: Next to each class and variable, there is an "Insert" button. Clicking this will automatically insert the relevant item into the code editor.
+
+![Use helper](../assets/apps/9_css_editor/use_helper.png 'Use helper')
+
+## Themes
+
+Themes are saved configurations of your global CSS. They allow you to define the appearance of all the desired components with a single click.
+
+To create a theme, fork another theme (by default, the `default` theme).
+
+Then make your modifications and either update another theme or create a dedicated theme.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	src="/videos/app_themes.mp4"
+/>
+
+<br />
+
+You can preview each theme with 'Preview' and then choose one with 'Apply'.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	autoPlay
+	loop
+	src="/videos/themes.mp4"
+/>
+
+<br />
+
+All workspace themes can be found with [Resource Type](../core_concepts/3_resources_and_types/index.mdx) `theme`, in [Folder](../core_concepts/8_groups_and_folders/index.mdx) `themes`.
+
+![Saved themes](../assets/apps/9_css_editor/themes_resources.png 'Saved themes')
+
+## Migrating component-level styles to global CSS
+
+In the Cloud & Enterprise Self-Hosted of the Global CSS editor, you can migrate component-level styles to the global level, streamlining the process of achieving consistent design across your application. This feature allows for two types of component-level styles to be migrated:
+
+1. Navigate to the component whose styles you wish to migrate. Select the option to 'Move to CSS editor', which will open a modal window.
+
+2. In the modal, you will see a list of all the CSS rules that can be moved to the global level. These are the styles you've previously set either for a specific component or for every component of a particular kind.
+
+3. You can preview the css rules that will be migrated. If the class already exists in the global CSS, the rule will be appended to the existing class. If the class does not exist, it will be created.
+
+4. Once you are satisfied with the changes, click the 'Migrate' button. This will move the styles to the global level and remove them from the component-level.
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	src="/videos/css-migration.mp4"
+/>
+
+## Handling CSS specificity
+
+When working with the CSS editor, you might encounter situations where some styles don't take effect as expected. This can happen because of CSS specificity rules or styles being set elsewhere in the application.
+
+As a temporary solution, you can use the `!important` declaration to ensure your styles take precedence. For example:
+
+```css
+.wm-button {
+  border-radius: 40px !important;
+}
+
+.wm-tabs-selectedTab {
+  font-size: 50px !important;
+}
+```
+## Dark mode
+
+In dark mode, Windmill adds a `dark` class to the document root. To provide alternate styling, prefix your CSS selectors with `.dark` in the CSS editor.
+
+```css
+.dark .wm-button-blue {
+  background-color: green !important;
+}
+
+.wm-button-blue {
+  background-color: red !important;
+}
+```

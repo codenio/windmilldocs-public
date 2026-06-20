@@ -1,0 +1,367 @@
+---
+title: Local development
+description: How do I develop Windmill scripts and flows locally using the CLI and VS Code?
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Local development
+
+Windmill has [its own integrated development environment](../../code_editor/index.mdx), but you can also develop and run scripts locally, both with [self-hosted](../1_self_host/index.mdx) and cloud instances.
+
+To simply create and edit scripts and flows locally, you can directly go to the [Develop Locally](#develop-locally) section.
+
+:::tip Local development fits into stage 3 of the collaboration guide
+
+Local development through the CLI assumes you have [git sync](../11_git_sync/index.mdx) configured on your workspace. This corresponds to **stage 3** of the [collaboration and deployment stages](../23_canonical_deployment_setups/index.mdx#stage-3--add-git-sync) guide. If your team has not yet set up git sync, start there.
+
+:::
+
+Usually however, you will need for a robust setup to enable collaboration and compatibility with version control tools like git. The recommended approach for this is to use [Workspace Forks](../20_workspace_forks/index.mdx) and [Git Sync](../11_git_sync/index.mdx).
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Workspace forks"
+		description="Create workspace forks for parallel development workflows"
+		href="/docs/advanced/workspace_forks"
+	/>
+	<DocCard
+		title="Git sync"
+		description="Automatically commit and push workspace changes to your Git repository."
+		href="/docs/advanced/git_sync"
+	/>
+</div>
+
+Another advanced workflow that doesn't use workspace forks is explained here:
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Git Promotion workflow"
+		description="Windmill integration with Git makes it possible to have a robust git-based deployment workflow"
+		href="/docs/advanced/deploy_gh_gl"
+	/>
+</div>
+
+## Develop locally
+
+You can develop locally by using [Windmill CLI](../3_cli/index.mdx) to clone a workspace and edit scripts and flows in your favorite IDE.
+
+Here is a quickstart video:
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	id="Local development quickstart"
+	src="/videos/local_dev_quickstart.mp4"
+/>
+
+<br />
+
+All details and commands are available [below](#editing-and-creating-scripts-locally).
+
+### Setting up the workspace folder
+
+Developing Windmill scripts and flows from your favorite IDE is made easy by using Windmill CLI. Here we will go through the full process of cloning a Windmill workspace locally, creating and editing new scripts and flows, and pushing them back the Windmill workspace.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Command-line interface (CLI)"
+		description="The Windmill CLI, `wmill` allows you to interact with Windmill instances right from your terminal."
+		href="/docs/advanced/cli"
+	/>
+</div>
+
+The first step is to clone an existing Windmill workspace into a local folder.
+
+Create an empty folder:
+
+```bash
+mkdir myworkspace
+cd myworkspace
+```
+
+Add the workspace and pull its the content using the [CLI `pull` command](../3_cli/sync.mdx):
+
+```bash
+wmill workspace add myworkspace [workspace_id] [remote]
+wmill sync pull
+```
+
+This will download the content of the workspace into your local folder. You will see an `f/` and a `u/` folder appearing, replicating the folder structure of the workspace.
+
+:::caution
+
+[`wmill sync pull`](../3_cli/sync.mdx) will pull everything from the Windmill workspace, including resources and variables, even secrets. If you're planning to use Git as explained below, we recommend only pulling scripts, flows and apps, skipping the rest. It can be done with:
+
+```bash
+wmill sync pull --skip-variables --skip-secrets --skip-resources
+```
+
+:::
+
+Each script will be represented by a content file (`.py`, `.ts`, `.go` depending on the language) plus a metadata file (ending with `.script.yaml`). This file contains various metadata about the script, like a summary and description, but also the content of the lockfile and the schema of the script (i.e. the signature of its `main` method). We will come back to this later.
+For flows, one flow will be represented by a folder, containing a `flow.yaml` file being the definition of the flow, and additional files for inline scripts.
+
+:::tip
+
+The metadata file schema is available [here](../../core_concepts/13_json_schema_and_parsing/index.mdx).
+
+:::
+
+### Editing and creating scripts locally
+
+To summarize, here are the canonical process to edit and create scripts locally using [Windmill CLI](../3_cli/index.mdx) (details below):
+
+```bash
+# optional - create a new script using the CLI (can be done manually)
+wmill script bootstrap f/my_space/example_script python3
+
+# edit the script content manually, writing your python code within your IDE
+
+# edit the script metadata (required if you made edits to the dependencies or the main signature method)
+wmill generate-metadata
+
+# optional - specify the path to the script adding f/my_space/example_script.py
+wmill generate-metadata f/my_space/example_script.py
+
+# push your changes to the Windmill workspace
+wmill sync push
+```
+
+... and for flows:
+
+```bash
+# optional - create a new script using the CLI (can be done manually)
+wmill flow bootstrap f/my_space/groundbreaking_flow
+
+# edit the flow definition manually, or using the VSCode extension
+
+# push your changes to the Windmill workspace
+wmill sync push
+```
+
+Once the workspace folder is pulled, edits can be made using any IDE (including the [VS Code extension](../../cli_local_dev/1_vscode-extension/index.mdx)).
+
+When created and edited through the UI (Windmill App), the lockfile is automatically generated. On local development, each script gets:
+- a content file (`script_path.py`, `script_path.ts`, `script_path.go`, etc.) that contains the code of the script,
+- a metadata file (`script_path.yaml`) that contains the metadata of the script,
+- a lockfile (`script_path.lock`) that contains the dependencies of the script.
+
+You can get those 3 files for each script by pulling your workspace with command [`wmill sync pull`](../3_cli/sync.mdx).
+
+Editing a script is as simple as editing its content. The code can be edited freely in your IDE, and there are possibilities to even run it locally if you have the correct development environment setup for the script language.
+
+#### Metadata file and lockfile
+
+Some fields of the metadata file can also be edited by hand, like the summary of the description fields. If you update the dependencies of your script, or the signature of the `main` method, the lockfile and/or the script schema will need to be updated. We do not recommend doing it by hand.
+
+[Windmill CLI](../3_cli/index.mdx) comes with a [`wmill generate-metadata`](../3_cli/generate-metadata.md) command that will read all the files that have been edited and gracefully update the metadata file and lockfile accordingly.
+This command is mainly used update the lockfile and schema inplace. Be re-assured, any manual update to other files like summary and description will be kept:
+
+_Generate metadata command:_
+
+![Generate Metadata](./generate_metadata.png 'Generate Metadata')
+
+_And the modified files:_
+
+![Modified Files](./modified_files.png 'Modified Files')
+
+Note that you can explicitly exclude (or include) specific files or folders to be taken into account by this command, with a [`wmill.yaml` file](https://github.com/windmill-labs/windmill-sync-example/blob/main/wmill.yaml).
+
+You can also generate metadata for a single script with `wmill generate-metadata <path>`.
+
+The lockfile is not meant to be edited manually. It is generated by Windmill when the script is created or edited through the UI and updated locally with the `wmill generate-metadata` command. However, it is useful to check [versions](../6_imports/index.mdx) changes.
+
+For each language, there is a way to [pin the version directly within script](../14_dependencies_in_typescript/index.mdx#lockfile-per-script-inferred-from-imports-standard). This is the recommended way of managing dependencies.
+Locally, the lockfile is respected. It "wins" over the dependencies pinned via the script. Hence the need of the `generate-metadata` command to update the lockfile and metadata files.
+
+Locally, flows and apps are stored in a folder ending with `.flow` and `.app` respectively. They include a `flow.yaml` and `app.yaml` file respectively, and the 3 files mentioned [above](#editing-and-creating-scripts-locally) for each inline script they contain.
+
+For centralized dependency management, see [workspace dependencies](../../core_concepts/55_workspace_dependencies/index.mdx).
+
+But what if you want to create a new script from scratch? It's also easy, just create a file with the correct extension (or run `wmill script bootstrap <path> <language>`), and simply run `generate-metadata` command to generate the metadata file. The name of the file and its location in the folder will become the script path in Windmill.
+
+<details>
+  <summary>File extension per script language</summary>
+
+| **Script language** | **Expected file extension** |
+| ------------------- | --------------------------- |
+| TypeScript (deno)   | `.ts`                       |
+| Python              | `.py`                       |
+| TypeScript (bun)    | `.bun.ts`                   |
+| Bash                | `.sh`                       |
+| Go                  | `.go`                       |
+| REST                | `.fetch.ts`                 |
+| PostgreSQL          | `.pg.sql`                   |
+| MySQL               | `.my.sql`                   |
+| BigQuery            | `.bq.sql`                   |
+| Snowflake           | `.sf.sql`                   |
+| MS SQL Server       | `.ms.sql`                   |
+| GraphQL             | `.gql`                      |
+| PowerShell          | `.ps1`                      |
+| Nu                  | `.nu`                       |
+
+</details>
+
+Similar for flow, you can manually create a folder ending with `.flow` and containing a `flow.yaml` file.
+
+<details>
+  <summary>`flow.yaml` initial content</summary>
+
+```yaml
+summary: ''
+description: ''
+value:
+  modules: []
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  order: []
+  properties: {}
+  required: []
+ws_error_handler_muted: false
+```
+
+More info [here](../../core_concepts/13_json_schema_and_parsing/index.mdx).
+
+</details>
+
+Flows can be more difficult to edit at the beginning because ones need to be familiar with the OpenFlow definitions to be able to write the YAML file. To help you with that, you can use our [VS Code extension](../../cli_local_dev/1_vscode-extension/index.mdx).
+
+:::tip CLI Bootstrap
+
+Windmill CLI also has a `bootstrap` command (both for `wmill script` and `wmill flow`) which can be used to create a new script in the desired language or flow. All files will be automatically created and the script content will be a simply "Hello world" in the desired language, which can then be updated.
+
+:::
+
+Lastly, it is possible to execute scripts locally and even plug them to any unit testing framework. More info on the [Run locally documentation page](../4_local_development/run_locally.mdx).
+
+### Live preview with `wmill dev`
+
+`wmill dev` starts a local live-reload server and opens a Windmill dev page that renders your local flow, script, or raw app. Edits on disk reload the page; edits in the page round-trip back to the local files (`flow.yaml`, inline scripts, `app.yaml`, etc.).
+
+```bash
+# Workspace picker — flows, scripts, and raw apps grouped by folder / user
+wmill dev
+
+# Jump straight into a flow
+wmill dev --path f/my_flows/etl
+
+# Auto-detected when run from inside a flow folder
+cd f/my_flows/etl__flow && wmill dev
+```
+
+The same command powers the [VS Code extension](../../cli_local_dev/1_vscode-extension/index.mdx) iframe and the [Claude Code](../../misc/9_guides/local_dev_with_ai/index.mdx) preview pane (via `--proxy-port`), so you get the same live editing experience whether you work from a browser, VS Code, or an AI coding assistant.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Dev & preview"
+		description="Live-reload preview, round-trip editing, and one-shot script / flow previews from the CLI."
+		href="/docs/advanced/cli/dev-preview"
+	/>
+</div>
+
+### VS Code extension
+
+The Windmill VS Code extension allows you to build scripts and flows in the comfort of your VS Code or Cursor editor, while leveraging Windmill UIs for test & flows edition.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="VS Code extension"
+		description="Build scripts and flows in the comfort of your VS Code or Cursor editor, while leveraging Windmill UIs for test & flows edition."
+		href="/docs/cli_local_dev/vscode-extension"
+	/>
+</div>
+
+![VS Code extension](../../../blog/2023-11-20-vscode/vscode_extension.png 'VS Code extension')
+
+## Mocked API files
+
+Simulate API interactions locally by using a JSON file to store and retrieve variables and resources.
+
+The file should conform to the following interface:
+
+```typescript
+interface MockedApi {
+  variables: Record<string, string>;
+  resources: Record<string, any>;
+}
+```
+
+Use the file by setting the `WM_MOCKED_API_FILE` [environment variable](../../core_concepts/47_environment_variables/index.mdx) to the path of your JSON file. For example:
+
+```ts
+import * as wmill from "windmill-client@1.450.0-beta.2"
+
+export async function main(x: string) {
+  await Bun.write("./foo.json", '{}')
+  process.env["WM_MOCKED_API_FILE"] = "./foo.json"
+  await wmill.setVariable("foo", "foobar")
+  await wmill.setResource({ "we": 42}, "foo")
+  console.log(await wmill.getResource("foo"))
+  return x
+}
+```
+
+If WM_MOCKED_API_FILE is present, [`getVariable`](../../core_concepts/2_variables_and_secrets/index.mdx#accessing-a-variable-from-a-script) / [`getResource`](../../core_concepts/3_resources_and_types/index.mdx#fetching-them-from-within-a-script-by-using-the-wmill-client-in-the-respective-language) will look up first in that object if the value exists. `setVariable` / `setResource` will set it there. If the environment variable is set but no file exists, it is set to an empty mocked API.
+
+## Deploy from GitHub/GitLab with Staging/Prod
+
+Syncing directly from the CLI is great, but instead of using the CLI directly, you should combine it with your CI/CD and set up a full productive Git workflow with a Staging and Prod workspaces and [Git sync](../11_git_sync/index.mdx). See more details here:
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Deploy to prod using a git workflow"
+		description="Windmill integration with Git repositories makes it possible to adopt a robust development process for your Windmill scripts, flows and apps."
+		href="/docs/advanced/deploy_gh_gl"
+	/>
+</div>
+
+## Project files generated by `wmill init`
+
+[`wmill init`](../3_cli/index.mdx) bootstraps a project with a `wmill.yaml` file and generates several helper files that improve the local editing experience. Each set follows a managed / user-owned split: wmill-managed files are refreshed on every run and are not meant to be edited, while user-owned files are created once, never overwritten, and reference the managed ones. You can refresh them at any time, and safely delete any you don't use.
+
+### AI coding assistant context
+
+`wmill init` runs `wmill refresh prompts`, which generates context files for AI assistants like [Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [Cursor](https://www.cursor.com):
+
+- `AGENTS.cli.md` (managed) - describes the Windmill file structure and how to create and edit scripts, flows and apps.
+- `AGENTS.md` and `CLAUDE.md` (user-owned) - reference the managed file (`@AGENTS.cli.md`) and hold your own project-specific instructions.
+- `.claude/skills/` and `.agents/skills/` - per-task skill files.
+
+Refresh them with `wmill refresh prompts`. You can safely delete them if you do not use AI assistants locally.
+
+### TypeScript editor configuration
+
+`wmill init` runs `wmill refresh tsconfig`, which lets your editor resolve cross-script [absolute imports](../5_sharing_common_logic/index.mdx#deno-or-bun-relative-imports-for-sharing-common-logic) (`/f/...`, `/u/...`):
+
+- `tsconfig.wmill.json` (managed) - maps `/f/*` and `/u/*` to your local script folders.
+- `tsconfig.json` (user-owned) - extends the managed file; add your own compiler options here.
+
+For [Deno](../../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx#deno) projects it generates `import_map.wmill.json` (managed) wired through `deno.json` instead. Refresh with `wmill refresh tsconfig`.
+
+### Resource type definitions
+
+When a workspace is bound, `wmill init` also runs `wmill resource-type generate-namespace`, which pulls your workspace [resource types](../../core_concepts/3_resources_and_types/index.mdx) and writes `rt.d.ts` - a TypeScript declaration file exposing them under an `RT` namespace for type hints in your editor.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Local development with AI"
+		description="Use AI coding assistants with Windmill CLI, VS Code extension, and MCP server."
+		href="/docs/misc/guides/local_dev_with_ai"
+	/>
+</div>
+
+## Run locally
+
+Windmill has its [own integrated development environment](../../code_editor/index.mdx). But for iteration, integration with CI/CD and testing purposes you may need to run a script locally that also interacts with Windmill (for example, to retrieve resources). It will allow you to integrate Windmill with any testing framework.
+
+To setup a local development environment for Windmill, see the dedicated Local development page (above).
+
+To [run scripts locally](../4_local_development/run_locally.mdx), you will need to fill out the context variables that would otherwise be filled out by the Windmill runtime for you.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Run locally"
+		description="Run scripts locally that interact with a Windmill instance."
+		href="/docs/advanced/local_development/run_locally"
+	/>
+</div>

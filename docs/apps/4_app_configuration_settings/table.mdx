@@ -1,0 +1,83 @@
+---
+description: What is the TanStack table component in Windmill? Deprecated table display component, use AgGrid or Database studio instead.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# TanStack table (depreciated)
+
+:::note Depreciated
+
+TanStack Table has been depreciated and will be removed in the future. Please use the [AgGrid table](./aggrid_table.mdx) or [Database studio](./database_studio.mdx) components instead.
+
+:::
+
+The table component allows you to display a table.
+
+![Table API](../../assets/apps/4_app_component_library/table.png.webp)
+
+:::tip Guide
+If you are new to Tables, check out our [Introduction guide](../../misc/9_guides/table/index.md).
+:::
+
+The following section details Table component's specific settings. For more details on the App editor, check the [dedicated documentation](../0_app_editor/index.mdx) or the App editor [Quickstart](../../getting_started/7_apps_quickstart/index.mdx):
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		color="orange"
+		title="App editor Documentation"
+		description="The app editor is a low-code builder to create custom User Interfaces with a mix of drag-and-drop and code."
+		href="/docs/apps/app_editor"
+	/>
+	<DocCard
+		color="orange"
+		title="Apps quickstart"
+		description="Learn how to build your first app in a matter of minutes."
+		href="/docs/getting_started/apps_quickstart"
+	/>
+</div>
+
+## Table input
+
+|      Type       | Connectable | Templatable | Default | Description     |
+| :-------------: | :---------: | :---------: | :-----: | --------------- |
+| `Array<Object>` |    true     |    false    |         | The table data. |
+
+:::info
+The columns are automatically generated from all the keys of the objects in the array.
+:::
+
+## Controls
+
+This component can be controlled by [frontend scripts](../3_app-runnable-panel.mdx#frontend-scripts) using these functions:
+
+- [setSelectedIndex](../3_app-runnable-panel.mdx#setselectedindex): Use the `setSelectedIndex` function to select a row in a table or an AG Grid table.
+
+## Table configuration
+
+| Name                        |                   Type                    | Connectable | Templatable |  Default   | Description                                                                                                                                                                            |
+| --------------------------- | :---------------------------------------: | :---------: | :---------: | :--------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| search                      | 'Disabled', 'By Runnable', 'By component' |    false    |    false    | 'Disabled' | The search query to filter the table.                                                                                                                                                  |
+| Download button             |                  boolean                  |    false    |    false    |   false    | Whether to display a download button.                                                                                                                                                  |
+| Initial state               |                  object                   |    false    |    false    |            | The initial state of the table: any configuration that can be passed to the tanstack table component as initial state (https://tanstack.com/table/v8/docs/api/core/table#initialstate) |
+| Select First Row By Default |                  boolean                  |    false    |    false    |   false    | Whether you want the first row to be selected by default.                                                                                                                              |
+
+Search can be configured in the following ways:
+
+- **Disabled**: The search is disabled.
+- **By Runnable**: The search is done in the backend.
+- **By component**: The search is done in the frontend.
+
+## Table actions
+
+`Table` can define actions that will be displayed in each row of the table. An action is a [Button](./button.mdx) component that cannot be moved.
+
+## Outputs
+
+| Name             |  Type   | Description                              |
+| ---------------- | :-----: | ---------------------------------------- |
+| result           | Object  | The table data.                          |
+| loading          | boolean | The loading state of the table component |
+| selectedRow      | Object  | The selected row                         |
+| selectedRowIndex | number  | The selected row index                   |
+| search           | string  | The search query                         |

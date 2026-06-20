@@ -1,0 +1,97 @@
+---
+description: What are assets in Windmill and how do they track S3 objects and resources referenced in scripts?
+---
+
+# Assets
+
+Assets are designed to track data flows and visualize data sets, automatically detecting when you reference them in your code. Assets can be detected both during static code analysis and at runtime. Assets are referenced with URIs and include:
+
+- [S3 objects](../38_object_storage_in_windmill/index.mdx#workspace-object-storage) : s3://storage/path/to/file.csv
+- [Resources](../3_resources_and_types/index.mdx) : res://path/to/resource
+- [Volumes](../56_volumes/index.mdx) : volume://name
+
+![Assets in script editor](./assets_in_script_editor.png 'Assets in script editor')
+
+As of writing this, assets are supported for the following languages:
+
+- [Python](../../getting_started/0_scripts_quickstart/2_python_quickstart/index.mdx)
+- [JavaScript / TypeScript](../../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx)
+- [DuckDB](../../getting_started/0_scripts_quickstart/5_sql_quickstart/index.mdx#duckdb)
+
+When the asset is a database resource or an S3 file, an explore button will appear next to the asset with access to the [database manager](../3_resources_and_types/index.mdx#database-manager).
+
+## Asset detection
+
+Assets are detected in two ways:
+
+### Static code analysis
+Assets are detected during deployment when they are referenced directly in your code. The Read / Write mode is inferred from code context. For example, a `COPY (...) TO file` statement is always `Write`. Sometimes the Read / Write mode cannot be inferred, in which case you are able to manually select it.
+
+### Runtime detection
+Assets can also be detected at runtime in two ways:
+1. **When using an SDK function** - For example, when using `wmill.datatable()` or when reading/writing S3 objects. In this case, Windmill can track which jobs accessed which asset and whether it was a Read or Write operation.
+2. **When passing a resource as a job argument** - Resources passed as job arguments are automatically detected as assets at runtime.
+
+You can use the Add Resource / S3 Object buttons in the editor bar for convenience :
+
+<video
+	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
+	controls
+	id="main-video"
+	src="/videos/assets_demo.mp4"
+/>
+<br />
+
+The python and Typescript/Javascript clients now support the new URI syntax :
+
+```python
+wmill.get_resource('res://path/to/resource')
+wmill.load_s3_file('s3://storage/path/to/file.csv')
+
+# Not using the URI syntax still works for back-compatibility,
+# and is detected as an asset
+wmill.load_s3_file('storage/path/to/file.csv')
+```
+
+## Asset nodes in flows
+
+In flows, your assets will show up as asset nodes, making data flow easy to visualize :
+
+![Asset nodes](./asset_nodes.png 'Asset nodes')
+
+The Read/Write mode is used to show the asset as an input or output node.
+
+When running a flow and passing an asset as an input, it will appear as an input of the flow in the preview graph :
+
+![Flow input assets](./flow_input_assets.png 'Flow input assets')
+
+## Column-level tracking
+
+For [DuckDB](../../integrations/duckdb.md) and [data table](../11_persistent_storage/data_tables.mdx) assets, Windmill tracks which columns are accessed by each script or flow step. The SQL parser detects column references in `SELECT`, `INSERT`, and `UPDATE` statements and records whether each column is read or written.
+
+Column information is displayed:
+- In the [flow editor](../../flows/1_flow_editor.mdx) as column badges on asset nodes, showing which columns each step reads or writes.
+- In the asset usage drawer, alongside the script/flow path and read/write mode.
+
+## Tracking where your assets are used
+
+Assets are stored in the database upon script / flow deployment.
+You can see a list of all assets used in your workspace by going to the Assets tab in the sidebar.
+
+Clicking on the `usages` link will show the list of scripts and flows that use the asset.
+
+![Assets page](./assets_page.png 'Assets page')
+
+## Assets exploration
+
+The Assets page provides an overview of all workspace data sources organized by category:
+
+- **Data tables**: Lists all [data tables](../11_persistent_storage/data_tables.mdx) in the workspace with an explore button to open them in the [database manager](../3_resources_and_types/index.mdx#database-manager).
+- **Ducklakes**: Lists all [Ducklake](../../integrations/duckdb.md) tables with explore access.
+- **Workspace object storages**: Lists primary and [secondary S3 storages](../38_object_storage_in_windmill/index.mdx) configured in the workspace.
+
+Below the exploration cards, a table of "Latest assets used" shows recent asset activity with filters for asset path, usage path, and asset kind.
+
+## Favorite assets
+
+You can star/favorite individual tables within data tables and Ducklakes directly from the [database manager](../3_resources_and_types/index.mdx#database-manager). Starred tables appear in the favorites menu for quick access. Clicking a favorite opens the database manager directly to that table.

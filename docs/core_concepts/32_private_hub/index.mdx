@@ -1,0 +1,171 @@
+---
+description: How do I set up a Private Hub to share approved scripts, flows, and apps across Windmill instances?
+---
+
+# Private Hub
+
+[Windmill Hub](https://hub.windmill.dev/) is the community website of Windmill where you can find and share your Scripts, Flows, Apps and Resource types with every Windmill user. 
+The best submissions get approved by the Windmill Team and get integrated directly in the app for everyone to reuse easily.
+
+![Example of Hub scripts suggested in flow editor](./hub_suggested.png "Example of Hub scripts suggested in flow editor")
+
+> Example of Hub scripts suggested in flow editor
+
+<br/>
+
+On [Enterprise Edition](/pricing) and [Whitelabelling](/pricing), you can have your own Private Hub. 
+You decide which scripts, flows, apps and resource types are approved and are shared with your Windmill instances, appearing directly in the app.
+
+## Setup
+
+### Docker
+
+1. Clone the [Private Hub repository](https://github.com/windmill-labs/windmillhub-ee-public).
+2. Fill in the `.env` file with your desired database password, the URL of your Windmill instance and your license key.
+3. Run `docker-compose up -d` to start the hub and database.
+4. Update the hub base URL field in the [instance settings](../../advanced/18_instance_settings/index.mdx#private-hub-base-url) on your Windmill instance to point to the Private Hub URL.
+
+If users access the Windmill instance from a different URL than the one configured in `APP_URL` (e.g. a public-facing URL vs. an internal one), set `APP_ACCESSIBLE_URL` in your `.env` file (exposed as `PUBLIC_APP_ACCESSIBLE_URL`). The Hub will use this URL when redirecting users to the Windmill instance for authentication.
+
+The `docker-compose.yml` and `Caddyfile` contain commented-out examples for enabling HTTPS, either via automatic Let's Encrypt certificates or custom certificate files.
+
+### Kubernetes
+
+We provide [values in our Helm chart](https://github.com/windmill-labs/windmill-helm-charts/blob/main/charts/windmill/values.yaml) for including the Private Hub in a Kubernetes cluster.
+
+:::warning
+Authentication on the Hub is performed via the Windmill instance.
+The Hub and Windmill instances must have the same root domain name for authentication to work.
+For example, if the Windmill instance is available on windmill.example.com, the Hub must be accessible on a similar sub-domain such as hub.example.com.
+You'll also need to set the COOKIE_DOMAIN [environment variable](../47_environment_variables/index.mdx) of the Windmill instance (server) to the root domain name (e.g. example.com).
+If you're using the [Helm chart](https://github.com/windmill-labs/windmill-helm-charts/blob/main/charts/windmill/values.yaml#L50), there is a built-in `cookieDomain` value for this.
+**Make sure to log out and log back in after setting the cookie domain.**
+:::
+
+If you are interested in having your own Private Hub, please [contact us](mailto:contact@windmill.dev).
+
+### Custom CA certificates
+
+If your Windmill instance uses a self-signed or internal CA certificate, the Hub server (Node.js) needs to trust that CA. Set the `NODE_EXTRA_CA_CERTS` environment variable on the hub service and mount the CA certificate file.
+
+With Docker, add to the hub service in `docker-compose.yml`:
+
+```yaml
+# docker-compose.yml – hub service
+environment:
+  - NODE_EXTRA_CA_CERTS=/certs/ca.pem
+volumes:
+  - ./certs/ca.pem:/certs/ca.pem:ro
+```
+
+With the Helm chart, use `extraEnv`, `volumes` and `volumeMounts` on the `hub` values:
+
+```yaml
+hub:
+  extraEnv:
+    - name: NODE_EXTRA_CA_CERTS
+      value: /certs/ca.pem
+  volumes:
+    - name: ca-cert
+      secret:
+        secretName: my-ca-cert
+  volumeMounts:
+    - name: ca-cert
+      mountPath: /certs/ca.pem
+      subPath: ca.pem
+      readOnly: true
+```
+
+### Debugging
+
+- Enable debug logs by setting `DEBUG_LOG=true` in the environment section of the hub service in `docker-compose.yml` (or via `hub.extraEnv` in the Helm chart).
+- The hub exposes a debug page at `/debug` that displays the configuration and status of the hub.
+- If you need more support, share the logs and the debug page output with the Windmill team.
+
+## Multiple Windmill instances
+
+A single Private Hub can serve multiple Windmill instances. One instance must be designated as the **main instance** — this is the instance the Hub uses for authentication.
+
+- The Hub must be configured to authenticate against the main instance. The main instance's `COOKIE_DOMAIN` and root domain requirements described above still apply.
+- Additional Windmill instances can connect to the same Private Hub by setting their [hub base URL](../../advanced/18_instance_settings/index.mdx#private-hub-base-url) to the Private Hub URL. No further configuration is required on those instances.
+
+## Restricting access to your Private Hub
+
+To restrict access to your Private Hub, you need to set the `API_SECRET` environment variable on your Private Hub instance.
+You will also need to set the `Private Hub api secret` field in the [instance settings](../../advanced/18_instance_settings/index.mdx#private-hub-api-secret) on your Windmill instance to the same value.
+
+When an `API_SECRET` is set, the Private Hub will only be accessible to logged in users or to requests authenticated with the `X-api-secret` header.
+
+## First steps
+
+### Script asks and versions
+
+Scripts on the Hub are organized around **script asks**. A script ask defines the goal of a script. It contains:
+
+- A **summary**: what the script does (e.g. "A script that sends a Stripe invoice").
+- An **integration**: a folder/category grouping related scripts (e.g. `stripe` for Stripe-related scripts, or `hiring` for a group of hiring scripts). Use `snake_case` for integration names.
+
+Each script ask has one **approved version** — the actual code that is available on connected [Windmill instances](../../advanced/18_instance_settings/index.mdx#private-hub-base-url).
+
+### Submit a new script
+
+To add a script to your Private Hub, click **+ Add** then **Submit a new script**. Fill in the summary and integration, then write the code. This automatically creates both the script ask and its first version.
+
+![Submit a new script from the Hub](./hub_add_script.png "Submit a new script from the Hub")
+
+### Approve a script
+
+Navigate to the submitted script and click the **Approve** button to make it available on all connected Windmill instances.
+
+![Approve a script on the Hub](./hub_approve_script.png "Approve a script on the Hub")
+
+### Edit a script
+
+On the script ask page, the version toolbar contains an **Edit** button that lets you modify the code. Editing creates a new version that must be approved again. Once approved, the new version replaces the previous one as the version offered when selecting that script from a Windmill instance. Existing [flows](../../flows/1_flow_editor.mdx) that already use the script are not affected — each version has a unique ID, and previously used versions remain available.
+
+To rewrite a script in another language, use the **Submit your script** button above the version toolbar instead — this creates a new script version, which also needs to be approved.
+
+### Search availability
+
+After approving scripts, search results may take some time to update:
+
+- **Hub search**: up to 1 hour (embeddings are recomputed hourly).
+- **Windmill instance search**: up to 1 day (embeddings are fetched daily).
+
+See [Hub scripts search and embeddings](#hub-scripts-search-and-embeddings) for details on overriding these intervals.
+
+## Local syncing and syncing with the public Hub
+
+We provide a [CLI](https://www.npmjs.com/package/@windmill-labs/hub-cli) to sync your Private Hub with your local file system. To use the CLI, set the following environment variables:
+
+1. `HUB_URL`: The URL of your Private Hub
+2. `TOKEN`: A superadmin user token
+
+Use the commands `wmill-hub pull` and `wmill-hub push` for pulling and pushing, respectively.
+The CLI will create a `hub` folder on your local system with all the integration folders inside.
+
+If you want to partially or fully sync your private hub with the public one:
+
+1. Pull the scripts locally from the public hub using `wmill-hub wm-pull`. This will pull the scripts to a folder named `hub`.
+2. Delete any integration folders you don’t want to add to your Private Hub.
+3. Push the scripts to your Private Hub using `wmill-hub push`.
+
+:::info
+If for some reason you can't pull from the official hub with `wmill-hub wm-pull`, we can provide you with a zip file of the public hub scripts.
+Once extracted, you will see a hub folder with all the integration folders inside. Drag and drop those folders into your `hub` folder.
+You can then push as usual using `wmill-hub push`.
+:::
+
+## Hub scripts search and embeddings
+
+The search on your private hub and on your Windmill instance is powered by vector search.
+Vector search requires embeddings of the hub scripts which are computed by your private hub every hour. 
+Your Windmill instance then fetches those embeddings once a day and uses them for search in the app.
+
+You can modify the embeddings computation and the embeddings retrieval frequencies.
+
+- To update the embedding computation frequency, set the environment variable `EMBEDDINGS_REFRESH_INTERVAL_SECS` on your Hub server. We do not recommend setting this value to less than 3600 seconds, as it can be resource-intensive, especially for large hubs.
+- To update the frequency of embedding retrieval, set the environment variable `HUB_EMBEDDINGS_PULLING_INTERVAL_SECS` on your Windmill server(s).
+
+
+Both values are in seconds.

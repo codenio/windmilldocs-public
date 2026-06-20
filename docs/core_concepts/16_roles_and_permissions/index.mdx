@@ -1,0 +1,242 @@
+---
+description: How do I manage permissions in Windmill? Control access to scripts, flows, apps and resources at instance and workspace level.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Roles and permissions
+
+Windmill provides a roles and permissions system that allows you to control access and manage permissions within your instance and workspaces. Different roles have different levels of access to scripts, flows, apps, and other entities in Windmill.
+
+Everybody having access to a Windmill instance is considered a User.
+
+Recap of how roles within an instance and a workspace are structured:
+
+![Recap Instances and Members](./instance_members.png 'Recap Instances and Members')
+
+Recap of how are permissioned items (scripts, flows, apps, resources, variables, schedules, jobs) within a workspace:
+
+![Recap Item Permissions](./permissions.png 'Recap Item Permissions')
+
+## Users
+
+Users are uniquely identified globally by their email. They also have a unique username with respect to each workspace they are members of.
+
+In terms of billing for Windmill [Enterprise Edition](/pricing), we only count active users, i.e. users who have at least logged in to the platform in the last 30 days according to the audit logs. [Operators](#operator) (i.e. users who are Operators in all workspaces they are members of) are counted as half of a regular seat. For [external JWT](../../advanced/16_external_auth_with_jwt/index.mdx) authentication, a unique JWT user is counted per (username/email, scope, instance) tuple used in the last 30 days - the same email with two different scopes, or on two different instances, counts as two JWT users. Each unique JWT user is billed as half a seat (same as an operator). Logging in once in 30 days is enough to be considered 'Active'.
+
+## Workspace
+
+Every nameable or pathable entity in Windmill has a workspace attached to it.
+This includes:
+
+- users
+- groups
+- scripts
+- resources
+- variables
+- schedules
+- jobs
+
+Windmill's entire database is partitioned by workspaces such that users, teams
+and orgs can safely co-locate without risk of leakage.
+
+Any user can create their own workspace. When a user creates a workspace, the user is an
+admin of such workspace and he can invite others to join his workspace.
+
+## Roles in Windmill
+
+Users can be given different levels of permissions:
+
+### Superadmin
+
+The superadmin role has the highest level of access and can manage the entire Windmill instance. Only superadmins can access the dedicated 'admins' workspace. Also by default, superadmins have access to all workspaces as admins of those workspaces. When an admin does an action as a user of a workspace he is not a member of and as such as no username in, their email is used in lieu of the username. Windmill can be configured to remove the ability for non-superadmins to create workspace using the: CREATE_WORKSPACE_REQUIRE_SUPERADMIN env variable.
+
+### Devops
+
+The devops role is also set at the instance level. Conceptually, it can be understood as a "readonly Superadmin". Devops users have read rights over what is usually only visible to [superadmins](#superadmin), such as [Service Logs](../36_service_logs/index.mdx) or [Critical Alerts](../37_critical_alerts/index.mdx) while keeping write operations to a minimum. Contrary to the superadmin, this role does not supersede other roles like [workspace admins](#admin).
+
+### Instance-level roles via instance groups
+
+Superadmin and devops roles can also be assigned to [instance groups](../8_groups_and_folders/index.mdx#instance-groups). When an instance group has an instance role, all members of that group automatically receive that role. This is particularly useful with [SCIM](../../misc/14_saml_and_scim/index.md#scim) — for example, an "infrastructure" group in your identity provider can automatically grant devops access to all its members.
+
+**Role precedence rules:**
+- If a user belongs to multiple instance groups with different roles, the highest role wins (superadmin > devops > user).
+- Manually-set elevated roles (superadmin or devops) always take precedence over group-assigned roles. A superadmin manually promoted by another superadmin will not be demoted if their instance group only grants devops.
+- To demote a user whose role is set by an instance group, the user must be removed from the group (or the group's instance role must be changed).
+
+In the [instance settings](../../advanced/18_instance_settings/index.mdx) users list, roles set by instance groups are indicated with a "Set by instance group" label.
+
+### Admin
+
+At the [workspace](#workspace) level, admins have the ability to manage a specific Windmill workspace and users within that workspace. They can see and edit all scripts, flows, apps, and other entities within the workspace. Admins have the power to create, modify, and delete entities and can manage permissions within the workspace.
+
+At the [folder](../8_groups_and_folders/index.mdx#folders) level, an admin of a folder has read, write and archive access to all the elements inside the folders ([scripts](../../getting_started/0_scripts_quickstart/index.mdx), [flows](../../getting_started/6_flows_quickstart/index.mdx), [apps](../../getting_started/7_apps_quickstart/index.mdx), [resources](../3_resources_and_types/index.mdx), [schedules](../1_scheduling/index.mdx)) and can manage the permissions as well as add new admins.
+
+### Developer
+
+Developers can execute and view scripts, flows, and apps within a workspace. Developers see the full interface of Windmill and contrary to the Operators, they have the ability to create and edit scripts, flows and apps. Developers have read and write access to the entities they create or have been [granted access to by others](../8_groups_and_folders/index.mdx).
+
+### Operator
+
+Operators have limited access within a workspace. They can only execute and view scripts, flows, and apps that they have visibility on, and only those that are within their allowed path or [folders](../8_groups_and_folders/index.mdx). Operators do not have the ability to create or modify entities.
+The recommended way to share scripts and flows with operators is through [auto-generated apps](../6_auto_generated_uis/index.mdx).
+With the second option being of sharing the script and [variables](../2_variables_and_secrets/index.mdx) it depends on (but operators won't be able to load variable directly from the UI/API, only use them within the scripts they have access to).
+
+From the workspace settings, you can configure the operator visibility settings for your workspace. In particular, you can allow/disallow operators to view:
+
+- [Runs](../5_monitor_past_and_future_runs/index.mdx)
+- [Schedules](../1_scheduling/index.mdx)
+- [Resources](../3_resources_and_types/index.mdx)
+- [Variables](../2_variables_and_secrets/index.mdx)
+- [Triggers](../../getting_started/8_triggers/index.mdx)
+- [Audit logs](../14_audit_logs/index.mdx)
+- [Groups](../8_groups_and_folders/index.mdx#groups)
+- [Folders](../8_groups_and_folders/index.mdx#folders)
+- [Workers](../9_worker_groups/index.mdx)
+
+Regarding to [Pricing](/pricing), operators are counted as half of a regular seat ([developers](#developer)) as long as they are operators in all workspaces they are members of. Operators are not set as the instance-level. On the billing side, 1 developer seat or 2 operator/[external JWT](../../advanced/16_external_auth_with_jwt/index.mdx) user seats count as 1 seat. Each unique external JWT user (counted per username/email + scope + instance, active in the last 30 days) also counts as half a seat. There is no need to differentiate between developers, operators and external JWT users when purchasing the license.
+
+### Service accounts
+
+Service accounts are workspace-scoped automation identities that cannot log in directly. They are always [operators](#operator) and are intended for CI/CD pipelines, scheduled jobs, or API integrations that need workspace-scoped permissions without a real user login.
+
+Service accounts are an [Enterprise](/pricing) feature. Create them from workspace settings under user management by toggling the "Service Account" option. Only a username is required (no email).
+
+Admins can **impersonate** a service account to act as that identity and verify its permissions.
+
+### Anonymous app viewers
+
+Anonymous app viewers are individuals who can access and view Windmill apps without being a user but by knowing the [secret URL](../../apps/0_toolbar.mdx#deploy) that allows app viewing. They do not have any editing or privileges to execute scripts and flows. The apps that they see execute the scripts and flows that are part of the app but only on behalf of the app author. The anonymous user cannot execute any of the scripts and flows part of the apps outside of the inputs authorized by the app through a policy that is automatically generated by the app.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Groups and folders"
+		description="Groups classify users with shared permissions, while folders group items and assign role-based access control."
+		href="/docs/core_concepts/groups_and_folders"
+	/>
+	<DocCard
+		color="orange"
+		title="Publish Publicly (App editor)"
+		description="The app can be accessed by anyone who knows the secret URL."
+		href="/docs/apps/toolbar#deploy"
+	/>
+</div>
+
+## Permissions and access control
+
+Windmill implements a fine-grained Access Control List (ACL) by default, allowing you to define permissions for various entities within the system, including:
+
+- [groups](../8_groups_and_folders/index.mdx#groups)
+- [folders](../8_groups_and_folders/index.mdx#folders)
+- [scripts](../../getting_started/0_scripts_quickstart/index.mdx)
+- [resources](../3_resources_and_types/index.mdx)
+- [variables](../2_variables_and_secrets/index.mdx)
+- [schedules](../1_scheduling/index.mdx)
+- [jobs](../20_jobs/index.mdx)
+
+There are 3 possible roles for each item:
+
+- **Admin** (Owner): has read, write and archive access. Admins of an item can't delete it unless they are admins of the workspace.
+- **Writer**: has read, write and archive access. They can't archive nor change the [path](#path) of the item.
+- **Viewer**: has read-only access to the item.
+
+Admins of a workspace have elevated privileges and can read and write over everything within the workspace, disregarding ACLs.
+
+The ACLs are defined by the path of the item.
+
+### Path
+
+Windmill uniquely identifies [scripts](../../getting_started/0_scripts_quickstart/index.mdx), [variables](../2_variables_and_secrets/index.mdx), [resources](../3_resources_and_types/index.mdx), [schedules](../1_scheduling/index.mdx) - and in general almost everything - using their path. The paths are globally unique within the category of entities they represent. In short, a Resource and a Schedule for example can have the same path, without conflict.
+
+Each entity's ACL defines its owner and specifies the read and write permissions. By default, only the owner of an entity has read and write access to it. Entities can be explicitly shared with other [groups](../8_groups_and_folders/index.mdx#groups) and users in either read-only or read and write mode through [folders](../8_groups_and_folders/index.mdx#folders). Write mode implicitly includes read permission.
+
+A path is either inside a user space `u/<user>/<path>` or inside a folder `f/<folder>/<path>`. The path defines permissions with:
+
+- a User: that user will be by default given read, write and archive access on the item (`u/henri/amazed_postgresql`).
+- a Folder: the item will be available to the users having access to the folder, with its own levels of permissions (`f/data_team/amazed_postgresql`).
+
+You can modify paths, but this may break other dependent entities. For scripts, flows, and apps, you will see a warning with a list of affected entities:
+
+![Path Renaming](./path_renaming.png 'Path Renaming')
+
+### Extra permissions
+
+For each item (script, flow, app, resource, variable, schedule), you can define extra permissions clicking on the `⋮` icon, then `Share`.
+
+Extra permissions can be given to a user or a group, with the possibility to give them the role of Viewer, or Writer.
+
+![Extra Permissions](./share.png 'Extra Permissions')
+
+![Share Menu](./share_menu.png 'Share Menu')
+
+### Example of permissions
+
+For example here a new SQL Resource is being given access to a user `username` with view, write and archive access:
+
+![Add User to Resource](./add_user_path.png.webp 'Resource given to a User')
+
+Here the new SQL Resource is being given access to a folder `data_team`...
+
+![Add Folder to Resource](./add_folder.png.webp 'Resource given to a Folder')
+
+... folder that can give Admin, Writer or Viewer accesses to users or [groups](../8_groups_and_folders/index.mdx#groups).
+
+![Add Users to Folder](./add_users.png.webp 'Folder having its own levels of permission')
+
+Also, [extra permission](#extra-permissions) was given to Ruben as viewer.
+
+![Extra Permissions Example](./extra_example.png 'Extra Permissions Example')
+
+<br />
+
+## Run on behalf of
+
+Scripts and flows can be configured to run **on behalf of** a specific user. When set, that user's permissions are used during execution — the runnable can only access the resources, variables, and folders that user has rights to — and all runs are attributed to that user in the [audit logs](../14_audit_logs/index.mdx).
+
+For **apps**, run on behalf of is always enabled: app executions always use the permissions of the set user (usually the app's last editor).
+
+**Schedules and triggers** work in a similar manner: they use the `edited_by` user as the owner of the executions they create.
+
+## Permission compartmentalization with virtual users
+
+By combining the run on behalf of mechanism with dedicated users, you can implement fine-grained permission compartmentalization. Instead of running everything as a single admin or shared account, create users scoped to specific logical modules. For example:
+
+- A `billing-bot` user with access only to billing-related resources and folders
+- A `data-pipeline` user scoped to data processing folders and their associated variables
+
+Then set scripts, flows, schedules, and triggers to run on behalf of these virtual users. A script running on behalf of `billing-bot` cannot accidentally read or modify resources outside its scope, even if the script code itself contains a bug or misconfiguration. The audit logs will also clearly show which virtual user initiated each execution.
+
+Combined with the ["run on behalf of" selector during deployments](../12_staging_prod/index.md#run-on-behalf-of), this pattern extends across workspaces: when deploying to a production workspace, you can assign each item to the appropriate virtual user in the target environment.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Groups and folders"
+		description="Groups classify users with shared permissions, while folders group items and assign role-based access control."
+		href="/docs/core_concepts/groups_and_folders"
+	/>
+	<DocCard
+		title="Deploy to staging/prod"
+		description="Deploy items to another workspace with control over which user they run as."
+		href="/docs/core_concepts/staging_prod"
+	/>
+</div>
+
+## User offboarding
+
+When removing a user, you can reassign all their items to another user or [folder](../8_groups_and_folders/index.mdx#folders) so that [schedules](../1_scheduling/index.mdx), [triggers](../../getting_started/8_triggers/index.mdx), and everything else keeps working.
+
+From **Workspace settings** > **Users**, click **Remove** on a user. The modal shows what they own, what runs on their behalf, and what references their paths. Pick a target user or folder, confirm, and everything is moved in one step.
+
+![Offboard user](./offboard_user.png 'Offboard user')
+
+You can also use **Reassign** to transfer ownership without removing the user — useful when moving personal scripts into shared folders.
+
+![Reassign user items](./reassign_user_items.png 'Reassign user items')
+
+If the target already has items at the same paths, the operation is blocked until you resolve the conflicts.
+
+### Instance-level offboarding
+
+[Superadmins](#superadmin) can offboard a user across all workspaces at once from **Instance settings** > **Users**, with a different reassignment target per workspace.
+
+![Global offboard](./global_offboard.png 'Reassign user items globally')
