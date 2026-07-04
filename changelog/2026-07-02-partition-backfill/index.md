@@ -13,6 +13,6 @@ features:
     'Cancel stops after the in-flight partition and cancels its job',
     'Headless alternative: wmill pipeline run <folder> --partition <value>',
   ]
-docs: /docs/core_concepts/pipelines#partition-status-and-backfill
+docs: /docs/core_concepts/pipelines/materialization#partition-status-and-backfill
 image: ./backfill_range_preview.png
 ---

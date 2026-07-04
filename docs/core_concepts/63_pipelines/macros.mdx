@@ -1,0 +1,49 @@
+# Macro libraries (DuckDB)
+
+Shared SQL logic can be factored into workspace **macro libraries** — engine-native DuckDB `CREATE MACRO` definitions rather than text templating, the pipeline equivalent of dbt macros. A DuckDB script annotated `// macros` is a macro library: its body is `CREATE OR REPLACE MACRO` statements (scalar or `AS TABLE`), plus optional plain setup statements (`ATTACH`, `INSTALL`/`LOAD`, `SET`, `CREATE TEMP TABLE`). Deploying is publishing: the macros are callable from every DuckDB script in the workspace the instant the deploy commits, and macro names are workspace-unique.
+
+```sql
+-- macros
+CREATE OR REPLACE MACRO safe_div(a, b, fallback := 0) AS
+  CASE WHEN b = 0 THEN fallback ELSE a / b END;
+
+CREATE OR REPLACE MACRO pct(part, total) AS round(100 * safe_div(part, total), 2);
+
+CREATE OR REPLACE MACRO sample_rows(src, n) AS TABLE
+  SELECT * FROM query_table(src) LIMIT n;
+```
+
+In the pipeline editor, the "+" script creator has a **Macro library** output kind that scaffolds one. Deploy validates the library with precise errors: only macro definitions plus setup are allowed, a macro must be defined before a macro that calls it, and a name may not collide with another library's macro or shadow a DuckDB built-in function.
+
+## Calling a macro
+
+No import, no annotation, no config: any DuckDB script that calls a registered macro just works, in deployed runs, editor tests and previews alike. At job time the worker detects the calls, resolves transitive macro dependencies (`pct` pulls in `safe_div`), and injects the definitions — and the providing library's setup statements — ahead of your statements.
+
+```sql
+-- pipeline
+SELECT safe_div(revenue, users) AS arpu,
+       pct(paid, total) AS conversion
+FROM sample_rows('lake.events', 10000);
+```
+
+Macros are late-bound, like dbt packages: redeploy the library and the very next run of every consumer uses the new definition, without redeploying the consumers. To opt a script out, define your own macro with the same name — a local `CREATE MACRO` always wins and its name is excluded from injection entirely.
+
+Detection is lexical, so a call hidden inside a string — for example dynamic SQL built with `query('…')` — is not seen. For that case, `// use <lib_path>` force-injects a whole library (definitions and setup). Libraries can declare `// use` themselves and it is honored transitively, so a library whose macros build SQL strings calling another library declares the dependency once and every consumer inherits it.
+
+## Discovering macros
+
+- The DuckDB editor autocompletes every workspace macro while you type, showing the signature, scalar/table kind and provider path, with the full definition on hover.
+- The **Macros** button on the pipeline page toolbar opens a workspace-wide explorer drawer: every macro grouped by library, with signature, body preview, copy-call button and filter. It only lists libraries in folders you can read.
+- In the pipeline graph, a library renders as a node with a ƒ ×N badge and dashed edges to each consumer, labeled with the detected calls (or "uses lib" for `// use`). Selecting the library shows a signature strip above its source.
+
+![A macro library node in the pipeline graph with its signature strip and consumer edges](./macro_lib_details.png 'A macro library selected in the pipeline graph')
+
+![The workspace macros explorer drawer](./macro_explorer_drawer.png 'The workspace macros explorer drawer')
+
+:::warning Trust model
+
+Macro libraries are workspace-trusted code: a deployed library is injected into other DuckDB scripts in the workspace and runs with the consuming job's permissions, the same boundary as a dbt package. Control who can deploy library scripts with [folder permissions](../8_groups_and_folders/index.mdx).
+
+:::
+
+Calling a macro that does not exist (a typo, or a library not deployed yet) fails at run time with DuckDB's `Catalog Error`. Agent (HTTP) workers cannot read the macro registry: implicit macro calls fail there with the same error and `// use` errors explicitly.

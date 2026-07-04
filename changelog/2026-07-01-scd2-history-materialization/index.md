@@ -14,5 +14,5 @@ features:
     'Idempotent by construction: an unchanged snapshot writes 0 rows and advances no DuckLake snapshot',
     'Built-in `// data_test` checks scope to current rows on SCD2 targets, so `unique(<key>)` keeps passing as history accumulates',
   ]
-docs: /docs/core_concepts/pipelines#scd2-history-slowly-changing-dimensions
+docs: /docs/core_concepts/pipelines/materialization#scd2-history-slowly-changing-dimensions
 ---

@@ -18,15 +18,15 @@ Pipelines are a modern take on asset-based data orchestration, in the spirit of 
 
 ### The canonical stack: DuckDB + DuckLake + materialize
 
-Any language works through the same annotations - a `// pipeline` Python, TypeScript or Bash script that reads and writes [assets](../52_assets/index.mdx) is a first-class step. But the way to build a *powerful* pipeline is [DuckDB](../../integrations/duckdb.md) transformations that [materialize](#materialization) into a managed [DuckLake](../11_persistent_storage/ducklake.mdx) table: you write the query for one slice and Windmill owns the write. That single choice unlocks the rest of the feature set:
+Any language works through the same annotations - a `// pipeline` Python, TypeScript or Bash script that reads and writes [assets](../52_assets/index.mdx) is a first-class step. But the way to build a *powerful* pipeline is [DuckDB](../../integrations/duckdb.md) transformations that [materialize](./materialization.mdx) into a managed [DuckLake](../11_persistent_storage/ducklake.mdx) table: you write the query for one slice and Windmill owns the write. That single choice unlocks the rest of the feature set:
 
-- [Managed, idempotent materialization](#materialization) into DuckLake - Windmill generates the write (replace / merge / append), captures a snapshot and tracks the row count, so re-runs, retries and backfills are safe by construction.
-- [Versioning and time-travel](#versioning-and-time-travel) on every write, for free - read a table as of a past snapshot, roll back, reproduce a past run.
-- [SCD2 history](#scd2-history-slowly-changing-dimensions) - keep every version of every row and do effective-dated as-of joins.
-- [Column-level lineage](#column-level-lineage) inferred automatically from the SQL - no annotation needed in the common case.
-- [Data tests](#data-tests) (`unique`, `not_null`, `accepted_values`, `relationships`) that run against the freshly-materialized slice and fail the run on violation.
-- [One-click backfill](#partition-status-and-backfill) over a range of [partitions](#partitioned-pipelines) from the pipeline graph.
-- [Macro libraries](#macro-libraries-duckdb) - shared, engine-native DuckDB macros callable from every script in the workspace.
+- [Managed, idempotent materialization](./materialization.mdx) into DuckLake - Windmill generates the write (replace / merge / append), captures a snapshot and tracks the row count, so re-runs, retries and backfills are safe by construction.
+- [Versioning and time-travel](./materialization.mdx#versioning-and-time-travel) on every write, for free - read a table as of a past snapshot, roll back, reproduce a past run.
+- [SCD2 history](./materialization.mdx#scd2-history-slowly-changing-dimensions) - keep every version of every row and do effective-dated as-of joins.
+- [Column-level lineage](./materialization.mdx#column-level-lineage) inferred automatically from the SQL - no annotation needed in the common case.
+- [Data tests](./materialization.mdx#data-tests) (`unique`, `not_null`, `accepted_values`, `relationships`) that run against the freshly-materialized slice and fail the run on violation.
+- [One-click backfill](./materialization.mdx#partition-status-and-backfill) over a range of [partitions](./partitioning.mdx) from the pipeline graph.
+- [Macro libraries](./macros.mdx) - shared, engine-native DuckDB macros callable from every script in the workspace.
 
 Materialization, column lineage, data tests and macros are DuckDB-specific; from Python or TypeScript you get the same managed DuckLake write through the `wmill.ducklake` helpers.
 
@@ -79,7 +79,7 @@ GROUP BY kind;
 
 That is the whole model: mark scripts with `-- pipeline`, declare inputs with `-- on`, produce tables with `-- materialize`, and Windmill wires the rest from [asset](../52_assets/index.mdx) lineage. Because every write is a managed DuckLake snapshot, you get idempotent re-runs, time-travel, column lineage, data tests and backfill for free (see [the canonical stack](#the-canonical-stack-duckdb--ducklake--materialize)). The sections below cover every option. For a guided walkthrough see the [pipeline quickstart](../../getting_started/10_pipeline_quickstart/index.mdx).
 
-Materialization is optional. The base model is any-language scripts (`-- pipeline`, `// pipeline`, `# pipeline`) that read and write [assets](../52_assets/index.mdx) - S3 objects, resources, data tables or volumes - wired by the datasets they exchange; a Python or TypeScript step that just reads and writes an S3 file is a first-class pipeline member. `-- materialize` (and the DuckDB-only [data tests](#data-tests), [column lineage](#column-level-lineage) and [macros](#macro-libraries-duckdb)) is a managed layer you add on top when a step produces a DuckLake table. Everything below - [marking a script](#marking-a-script-as-part-of-a-pipeline), [inputs and outputs](#inputs-and-outputs-assets), [triggers](#triggering-a-pipeline), [joins](#joining-inputs-any-vs-all), [debounce](#debounce), [partitions](#partitioned-pipelines) - applies to both, with or without materialization.
+Materialization is optional. The base model is any-language scripts (`-- pipeline`, `// pipeline`, `# pipeline`) that read and write [assets](../52_assets/index.mdx) - S3 objects, resources, data tables or volumes - wired by the datasets they exchange; a Python or TypeScript step that just reads and writes an S3 file is a first-class pipeline member. `-- materialize` (and the DuckDB-only [data tests](./materialization.mdx#data-tests), [column lineage](./materialization.mdx#column-level-lineage) and [macros](./macros.mdx)) is a managed layer you add on top when a step produces a DuckLake table. Everything below - [marking a script](#marking-a-script-as-part-of-a-pipeline), [inputs and outputs](#inputs-and-outputs-assets), [triggers](#triggering-a-pipeline), [joins](#joining-inputs-any-vs-all), [debounce](#debounce), [partitions](./partitioning.mdx) - applies to both, with or without materialization.
 
 ## An end-to-end example
 
@@ -87,12 +87,12 @@ The rest of this page uses a complete e-commerce analytics pipeline as its runni
 
 ![The f/ecommerce pipeline graph](./pipeline_graph.png 'The f/ecommerce pipeline graph')
 
-- `ingest_orders` (DuckDB, scheduled, `partitioned daily`) materializes one day of orders per run into `ducklake://main/raw_orders`, with `not_null` / `unique` / `accepted_values` [data tests](#data-tests) on the slice.
+- `ingest_orders` (DuckDB, scheduled, `partitioned daily`) materializes one day of orders per run into `ducklake://main/raw_orders`, with `not_null` / `unique` / `accepted_values` [data tests](./materialization.mdx#data-tests) on the slice.
 - `ingest_events` (Python, scheduled) pulls a JSON-lines dump from the event tracker and writes it to `s3:///ecommerce/raw/events.json` with `wmill.write_s3_file`.
 - `stg_events` (DuckDB) fires whenever that dump is written, and merge-materializes it into `ducklake://main/stg_events` keyed on `event_id` - overlapping exports dedupe on re-run.
-- `dim_customers` (DuckDB, scheduled) is an [SCD2 history](#scd2-history-slowly-changing-dimensions) dimension: every tier or city change closes the prior version and opens a new one, and the `dim_customers_current` companion view always holds the live slice.
+- `dim_customers` (DuckDB, scheduled) is an [SCD2 history](./materialization.mdx#scd2-history-slowly-changing-dimensions) dimension: every tier or city change closes the prior version and opens a new one, and the `dim_customers_current` companion view always holds the live slice.
 - `fct_orders` (DuckDB, `partitioned daily`) joins the day's orders with the tracked events and `ASOF JOIN`s the customer dimension to record the tier each customer had when the order was placed. A `relationships` data test checks referential integrity against `dim_customers`.
-- `daily_kpis` and `revenue_by_tier` aggregate the fact table, calling `pct()` and `aov()` from the `shop_macros` [macro library](#macro-libraries-duckdb) (the ƒ node in the graph) - no import needed.
+- `daily_kpis` and `revenue_by_tier` aggregate the fact table, calling `pct()` and `aov()` from the `shop_macros` [macro library](./macros.mdx) (the ƒ node in the graph) - no import needed.
 - `publish_report` (DuckDB) exports the KPI table to a CSV on S3, and `notify_finance` (TypeScript) fires when that file is written - the kind of leaf step you would point at Slack or email.
 
 Running the top of the pipeline cascades through the whole graph: each write fires its subscribers, the partition travels with the run, and every node shows live status as the wave propagates.
@@ -191,7 +191,7 @@ Output edges drive the cascade, so they must be statically visible in your code.
 - A path built at runtime (a template literal, an f-string, string concatenation) is invisible to detection - the call is skipped.
 - A bare string constant anywhere in the file that looks like an asset URI (`"s3:///lake/raw/{partition}/orders.json"`) is detected as an asset with an ambiguous access type, and the editor's asset panel lets you set it to read or write.
 
-The last two rules combine into the pattern for producers that write a different file per run (per partition, per tenant): declare the path once as a URI constant - which makes it a detected asset - mark it as a write in the asset panel, and build the concrete key from that same constant at run time. See [partitioned pipelines](#partitioned-pipelines) for the full example.
+The last two rules combine into the pattern for producers that write a different file per run (per partition, per tenant): declare the path once as a URI constant - which makes it a detected asset - mark it as a write in the asset panel, and build the concrete key from that same constant at run time. See [partitioned pipelines](./partitioning.mdx) for the full example.
 
 :::info Cascade safety
 
@@ -203,7 +203,7 @@ The asset cascade is depth-capped so a cycle or a runaway fan-out cannot loop fo
 
 Open the folder and select the pipeline view to see the graph ([the example above](#an-end-to-end-example) shows it for `f/ecommerce`). Script nodes are connected to the assets they read and write, so you can see the full lineage at a glance: schedule nodes at the top, run-count and `daily` badges on scripts, test and column badges on write edges, and dashed ƒ edges from macro libraries to their consumers. From any node you can run a single step or a step and everything downstream of it, and the [Activity panel](#an-end-to-end-example) streams live run status as a cascade progresses.
 
-Selecting a node opens its details pane: source and annotations for a script, and for a materialized asset its [partition grid](#partition-status-and-backfill), [captured schema](#schema-capture) and [column lineage](#column-level-lineage). When a selected script declares inputs (for example a `partition` argument, see below), a compact arguments form appears under the Test button so the run can be parameterized before launching it from the graph.
+Selecting a node opens its details pane: source and annotations for a script, and for a materialized asset its [partition grid](./materialization.mdx#partition-status-and-backfill), [captured schema](./materialization.mdx#schema-capture) and [column lineage](./materialization.mdx#column-level-lineage). When a selected script declares inputs (for example a `partition` argument, see below), a compact arguments form appears under the Test button so the run can be parameterized before launching it from the graph.
 
 Pipelines are first-class items on the home page and in search: each pipeline shows as a single entry (member scripts are folded into it), including pipelines that only exist as a draft. They can also be built and edited from the [AI chat](../22_ai_generation/index.mdx): when a pipeline editor (or an in-session pipeline preview) is open, the chat gains tools to read the graph and build, edit, remove or test pipeline steps; changes apply as ordinary unsaved drafts, like in the flow and script editors.
 
@@ -316,436 +316,15 @@ export async function main() {
 
 ## Partitioned pipelines
 
-Many pipelines materialize one dataset per time bucket (a day, an hour) or per key (a tenant, a shard). Declare this with `// partitioned <kind> [options]` and use the literal `{partition}` token in asset paths.
-
-The canonical partitioned step is a DuckDB script that materializes one slice of a DuckLake table per run - the `ingest_orders` step of [the example](#an-end-to-end-example):
-
-```sql
--- pipeline
--- on schedule
--- partitioned daily
--- materialize ducklake://main/raw_orders
-
--- Pull one day of orders from the shop API. `'{partition}'` is replaced
--- with the run's partition value, e.g. '2026-05-16'.
-SELECT *
-FROM shop_api_orders()
-WHERE created_at::DATE = '{partition}';
-```
-
-For a step that writes one S3 file per partition from Python or TypeScript, declare the path once as a URI constant containing the token. The constant is [detected as an asset](#how-outputs-are-detected) (mark it as a write in the editor's asset panel), and the code derives the concrete key from it at run time:
-
-```python
-# pipeline
-# partitioned daily
-import wmill
-
-# Detected as an asset; set its access to "write" in the asset panel.
-ORDERS_URI = "s3:///lake/raw/orders/{partition}/orders.json"
-
-
-def main(partition: str):
-    # `partition` is injected by Windmill, e.g. "2026-05-16"
-    data = fetch_orders_for(partition)
-    wmill.write_s3_file(ORDERS_URI.replace("{partition}", partition), data)
-```
-
-The `{partition}` token stays literal in the lineage graph, so the graph is partition-agnostic. At run time Windmill resolves the concrete partition value once and injects it into the script as a `partition` argument. The same value is then carried down the whole chain, so every step of one pipeline run materializes the same partition.
-
-Grammar: `// partitioned <kind> [option="value" ...]`. At most one `// partitioned` per script; if several are present the first wins.
-
-### Partition kinds
-
-| Kind | Default format | Example value |
-| --- | --- | --- |
-| `daily` | `%Y-%m-%d` | `2026-05-16` |
-| `hourly` | `%Y-%m-%dT%H` | `2026-05-16T09` |
-| `weekly` | `%G-W%V` (ISO week-year/week) | `2026-W20` |
-| `monthly` | `%Y-%m` | `2026-05` |
-| `dynamic key="<path>"` | n/a (value comes from the payload) | `acme` |
-
-`daily`, `hourly`, `weekly`, `monthly` are time kinds. `dynamic` requires a `key` and reads the value from the triggering payload.
-
-### Options by kind
-
-| Option | Applies to | Default | Meaning |
-| --- | --- | --- | --- |
-| `tz="<IANA tz>"` | time kinds | `UTC` | Resolve the bucket in this timezone. Matters at boundaries: 00:30 UTC can still be the previous local day. An invalid timezone fails the run with a clear error. |
-| `format="<strftime>"` | time kinds | per-kind (table above) | Override the rendered string with a standard strftime pattern, e.g. `%Y/%m/%d`. |
-| `start="YYYY-MM-DD"` | time kinds | none | Backfill anchor. A run whose computed partition is strictly before this date resolves to no partition: the run is not failed, but it is also not auto-skipped — it proceeds without a `partition` argument (a warning is logged), so guard on the argument in your code if you rely on the anchor. An invalid `start` fails the run with a clear error. |
-| `key="<json path>"` | `dynamic` (required) | none | Where in the triggering payload the value is. Minimal `$.a.b.c` dotted path only: no array indexing, wildcards or filters. The leaf must be a scalar (string, number or bool). A missing key, a non-scalar leaf, or no payload fails the run with a clear error. |
-
-### How the value is resolved
-
-The concrete partition is resolved exactly once, at the top of a chain, by this precedence:
-
-1. An explicit `partition` argument on the run (a manual run, a backfill, or a value already propagated from upstream). It is used as-is and never re-resolved. This is what makes the whole chain consistent.
-2. Otherwise, for time kinds: the run's fire time, localized to `tz` and rendered with `format`. The anchor is the schedule fire time for a scheduled run and the upstream trigger time for a cascaded run (so a chain that crosses midnight stays on one partition).
-3. Otherwise, for `dynamic`: the value extracted from the triggering payload (`trigger` object if present, otherwise the run arguments) at `key`.
-
-The resolved value is injected into the script as a `partition` argument and persisted, so every downstream step of the same run receives the identical value.
-
-In a `// partitioned` DuckDB script, the `partition` argument is declared automatically, so the SQL can reference `$partition` directly without a manual `-- $partition (text)` declaration (an explicit declaration still wins). The auto-declared argument is optional in run forms since the platform resolves it at run start.
-
-### The `{partition}` token
-
-Use the literal token `{partition}` inside asset paths, both in `// on` declarations and in the URI constants your code derives its write paths from. It stays literal in the lineage graph (the graph is partition-agnostic) and is substituted with the resolved value when the cascade fires. An `// on` whose path contains `{partition}` is a partition-bearing input (relevant to [joins](#joining-inputs-any-vs-all)).
-
-In DuckDB SQL, the token is substituted in the text of [managed materialize](#materialization) scripts, always as a complete quoted literal:
-
-- `'{partition}'` (the whole literal is the token) becomes `'2026-05-16'` - use it in comparisons: `WHERE created_at::DATE = '{partition}'`.
-- To build an S3 path around it, concatenate: `read_json('s3:///lake/raw/orders/' || '{partition}' || '/orders.json')`. A token in the middle of a longer literal (`'s3:///lake/{partition}/x'`) is not substituted cleanly - keep the token a standalone literal.
-- The `partition` argument is also auto-declared for `// partitioned` DuckDB scripts, so the SQL can bind `$partition` like any other argument where a bound parameter is accepted.
-
-Partition kinds and options, with the polyglot URI-constant pattern:
-
-<Tabs className="unique-tabs">
-<TabItem value="daily" label="Daily (defaults)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
-
-```ts
-// pipeline
-// partitioned daily
-import * as wmill from 'windmill-client';
-
-// Detected as an asset; mark it as a write in the editor's asset panel.
-const EVENTS_URI = 's3:///datasets/raw/{partition}/events.parquet';
-
-export async function main(partition: string) {
-	// partition e.g. "2026-05-16"
-	const key = EVENTS_URI.replace('s3:///', '').replace('{partition}', partition);
-	await wmill.writeS3File({ s3: key }, await fetchEventsFor(partition));
-}
-```
-
-</TabItem>
-<TabItem value="hourly" label="Hourly + start anchor" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
-
-```ts
-// pipeline
-// partitioned hourly start="2026-01-01"
-import * as wmill from 'windmill-client';
-
-const DATA_URI = 's3:///lake/{partition}/data.parquet';
-
-export async function main(partition: string) {
-	// partition e.g. "2026-05-16T09"; nothing materialized before 2026-01-01
-	const key = DATA_URI.replace('s3:///', '').replace('{partition}', partition);
-	await wmill.writeS3File({ s3: key }, await build(partition));
-}
-```
-
-</TabItem>
-<TabItem value="daily-tz" label="Daily, timezone + format" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
-
-```ts
-// pipeline
-// partitioned daily tz="America/New_York" format="%Y/%m/%d"
-import * as wmill from 'windmill-client';
-
-const DATA_URI = 's3:///lake/{partition}/data.parquet';
-
-export async function main(partition: string) {
-	// partition rendered as e.g. "2026/05/16" in America/New_York
-	const key = DATA_URI.replace('s3:///', '').replace('{partition}', partition);
-	await wmill.writeS3File({ s3: key }, await build(partition));
-}
-```
-
-</TabItem>
-<TabItem value="dynamic" label="Dynamic (per tenant)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
-
-```ts
-// pipeline
-// partitioned dynamic key="$.tenant_id"
-import * as wmill from 'windmill-client';
-
-const SUMMARY_URI = 's3:///lake/{partition}/summary.parquet';
-
-// Triggered with a payload like { "tenant_id": "acme", ... }
-// `partition` resolves to "acme"
-export async function main(partition: string, tenant_id: string) {
-	const key = SUMMARY_URI.replace('s3:///', '').replace('{partition}', partition);
-	await wmill.writeS3File({ s3: key }, await summarize(tenant_id));
-}
-```
-
-</TabItem>
-</Tabs>
-
-### Backfill and re-runs
-
-Because the partition is resolved once and travels with the run, you can backfill a historical partition by running the top of the pipeline manually with an explicit `partition` argument (for example `partition = "2026-01-10"`). That value is never re-resolved or overridden downstream, so the entire chain reprocesses exactly that partition. A retry of a failed step likewise reprocesses the run's partition rather than drifting to "now".
-
-For materialized assets, this is surfaced as a one-click [backfill](#partition-status-and-backfill) over a range of partitions ([Enterprise Edition](/pricing)).
+Materializing one dataset slice per time bucket or key - the `// partitioned` annotation, partition kinds and options, the `{partition}` token, and backfill semantics - is covered on the dedicated [Partitioned pipelines](./partitioning.mdx) page.
 
 ## Materialization
 
-A DuckDB script can declare that it **produces** a managed [DuckLake](../11_persistent_storage/ducklake.mdx) table with `// materialize`. This is the canonical, most powerful way to build a pipeline step (see [the canonical stack](#the-canonical-stack-duckdb--ducklake--materialize) above). Instead of writing the table yourself, you write the query for one *slice* and Windmill owns the write: it is idempotent, captured as a DuckLake snapshot, and tracked. A **slice** is one [partition](#partitioned-pipelines) when the script is also `// partitioned`, or the **whole table** when it isn't — `materialize` works either way (`// partitioned` is optional and independent; see [Strategy and unit](#strategy-and-unit) below).
-
-```sql
--- pipeline
--- materialize ducklake://main/orders_daily key=order_id
--- partitioned daily
-
-ATTACH 'ducklake://main' AS dl;
-
-SELECT order_id, amount, created_at
-FROM dl.orders
-WHERE created_at::date = '{partition}'
-```
-
-The script is *setup statements (ATTACH, SET, CREATE TEMP …) followed by one trailing `SELECT`*. Windmill wraps that SELECT in the write — creating the table on first run, partitioning it (when `// partitioned`), and reconciling the slice — then records the produced snapshot id and row count. Re-running the same slice is safe by construction (that is also how a backfill or a failed-run retry works). For a partitioned target the slice is tracked in a managed `_wm_partition` column appended to the table (it is also the Hive partition key of the parquet files on the underlying storage), so your SELECT never has to project the partition itself.
-
-The trailing `SELECT` may reference SQL arguments declared with `-- $name (type)` (for example `-- $cutoff (date)` then `WHERE created_at < $cutoff`); they bind at run time like any other DuckDB script argument, including `s3object` arguments translated to `s3://` URIs.
-
-### Grammar
-
-```
-// materialize ducklake://<name>/<table> [append] [key=<col>]                          # managed (default)
-// materialize ducklake://<name>/<table> key=<col> history [track=<c1,…>] [deletes=close]  # managed SCD2 history
-// materialize manual ducklake://<name>/<table>                                        # track-only escape hatch
-```
-
-- **Managed (default)** — Windmill generates the write. DuckDB-only; validated at deploy (a script that is not a single trailing SELECT is rejected with a clear error). The **strategy** decides how each slice is reconciled:
-  - *neither option* → **replace**: the slice becomes exactly what the SELECT returned. The whole table is rebuilt with `CREATE OR REPLACE` (so changing the `SELECT`'s columns between runs just works); a partition is reconciled with `DELETE` + `INSERT`.
-  - `key=<col>` → **merge**: upsert the slice on `<col>` (rows absent from the SELECT are left in place).
-  - `append` → **insert-only**: for immutable event logs. Re-running duplicates rows, so use only for append-only sources. (`append` wins over `key=` if both are given.)
-  - `key=<col> history` → **SCD2 history**: keep every version of every row instead of overwriting on change. See [SCD2 history](#scd2-history-slowly-changing-dimensions).
-- **`manual`** — the escape hatch: your script writes its own DDL and Windmill only records that the slice was materialized (no snapshot capture, no idempotency guarantee). Rare; explicit.
-
-`// materialize` is for DuckDB SQL. From **Python or TypeScript**, use the `wmill.ducklake` helpers (`upsert_partition`, `append_partition`, `read`) which give the same managed, idempotent write from arbitrary code.
-
-### Strategy and unit
-
-`materialize`, `partitioned`, `append` and `key` sit on **two independent axes**, and `materialize` runs the chosen strategy over the chosen unit:
-
-- **Strategy — *how* a slice is reconciled.** `append` / `key=` are options on the `// materialize` line (mutually exclusive); they have no meaning without `// materialize`.
-- **Unit — *what* a slice is.** `// partitioned` is a separate, optional annotation (it also drives the [cascade](#triggering-a-pipeline) and scheduling). With it, a slice is one partition; without it, a slice is the whole table.
-
-The two combine:
-
-| | replace (default) | `key=<col>` (merge) | `append` |
-| --- | --- | --- | --- |
-| **`// partitioned`** | replace the partition | upsert within the partition | append to the partition |
-| **whole table** (no `// partitioned`) | replace the whole table | upsert the whole table | append to the whole table |
-
-A whole-table materialization is just `// materialize` with no `// partitioned` — e.g. a dimension table rebuilt each run:
-
-```sql
--- pipeline
--- materialize ducklake://main/customer_dim key=customer_id
-
-ATTACH 'ducklake://main' AS dl;
-SELECT customer_id, name, tier FROM dl.customers
-```
-
-The `history` strategy is the exception: it is whole-table only, and combining it with `// partitioned` is rejected at deploy.
-
-### SCD2 history (slowly changing dimensions)
-
-Adding `history` to a keyed materialization turns the SCD1 merge (overwrite on change) into a type-2 slowly changing dimension: the runtime keeps every version of every row. When a tracked column changes, the prior version is closed and a new one is opened, so an entity's full version history stays queryable as rows. The leading keyword `scd2` is a recognized alias (`// materialize scd2 ducklake://… key=id`).
-
-```sql
--- pipeline
--- on ducklake://analytics/stg_customers
--- materialize ducklake://analytics/dim_customer key=id history track=name,tier
--- data_test not_null id
-
-ATTACH 'ducklake://analytics' AS dl;
-
-SELECT id, name, tier          -- the current snapshot, one row per key
-FROM dl.stg_customers;
-```
-
-The `SELECT` returns the current desired state, one row per key - exactly like `merge`. You never write validity columns; the runtime appends and manages three:
-
-| Column | Type | Meaning |
-| --- | --- | --- |
-| `valid_from` | `TIMESTAMP` | when this version became effective |
-| `valid_to` | `TIMESTAMP` | when it was superseded; `NULL` = still open |
-| `is_current` | `BOOLEAN` | `true` for the live version of each key |
-
-Options on the `// materialize` line:
-
-- `key=<col>` (required) - the natural/business key that identifies an entity across versions.
-- `track=<c1,c2,…>` (optional) - the columns whose change opens a new version. Default: all non-key columns. Bare comma list with no spaces (`track=name,tier`).
-- `deletes=close` (optional) - a key that disappears from the snapshot has its current version closed. Default is soft delete: absent keys stay current. A closed key that later reappears opens a fresh version, leaving a validity gap.
-
-Each run diffs the snapshot against the live rows: a changed tracked column closes the prior version (`valid_to` set, `is_current = false`) and opens a new one; a new key opens as current; a change to an untracked column is ignored; an unchanged snapshot writes 0 rows and advances no snapshot (idempotent). Within a run, the closed version's `valid_to` equals the new version's `valid_from`, so versions are contiguous and gap-free.
-
-Each run also maintains a companion view `<table>_current` containing only the `is_current` rows, so the common "give me the latest version" case needs no filter:
-
-```sql
--- pipeline
--- on ducklake://analytics/dim_customer_current
-ATTACH 'ducklake://analytics' AS dl;
-SELECT * FROM dl.dim_customer_current;
-```
-
-The payoff over [time-travel](#versioning-and-time-travel) (which is keyed by commit, not business-effective time) is the effective-dated as-of join - for each fact row, the dimension version that was current at that moment:
-
-```sql
--- pipeline
--- on ducklake://analytics/dim_customer
--- on ducklake://analytics/stg_orders
--- materialize ducklake://analytics/fct_orders
-ATTACH 'ducklake://analytics' AS dl;
-SELECT o.order_id, o.amount, o.ordered_at,
-       d.tier AS tier_at_order_time
-FROM dl.stg_orders o
-ASOF JOIN dl.dim_customer d
-  ON o.customer_id = d.id AND o.ordered_at >= d.valid_from;
-```
-
-Constraints:
-
-- Whole-table only: `// partitioned` + `history` is rejected at deploy.
-- `valid_from`, `valid_to` and `is_current` are reserved column names (a SELECT projecting one fails at run time), and the `<table>_current` suffix is reserved for the companion view.
-- The schema is frozen at first run: an append-only history cannot reshape closed versions, so changing the SELECT's projected columns later fails and needs a manual rebuild.
-
-Built-in [data tests](#data-tests) on an SCD2 target are scoped to current rows (`is_current`), so `unique(<key>)` keeps passing as closed versions accumulate in the history.
-
-### What a run returns
-
-A managed run returns a small summary — the asset it produced, the row count of the slice, and the DuckLake `snapshot_id` — and the run's **Result** panel renders a live, read-only preview of the materialized table beneath it. For a `// partitioned` target the preview adds a **This partition / Whole table** toggle, and the summary's row count is the slice (partition) the run wrote. The same values are recorded as the asset's [materialization state](#partition-status-and-backfill).
-
-To run a partitioned script manually (e.g. from the editor's **Test** panel), fill the **partition** field — Windmill surfaces it automatically for `// partitioned` DuckDB scripts, as a date picker for date kinds. In a pipeline the [cascade](#triggering-a-pipeline) injects it for you.
-
-### Versioning and time-travel
-
-Every managed write is a DuckLake commit, so versioning is free — you never annotate for it. Each run records the snapshot it produced, which means you can read a table as of a past snapshot (`FROM dl.orders_daily AT (VERSION => 42)`), roll back, and reproduce a past run. This is what `// materialize` gives you over hand-writing the same SQL.
-
-### Partition status and backfill
-
-Selecting a materialized `ducklake://` asset in the pipeline graph shows its **partition-status grid** — which partitions are materialized, their snapshot id, row count, and time — along with the producer's latest run and its data-test results.
-
-![Partition-status grid for a materialized asset](./partition_status_grid.png 'Partition-status grid for a materialized asset')
-
-From there, **Backfill** re-runs the materialization for a range of partitions; range backfill is an [Enterprise Edition](/pricing) feature (single-partition runs with an explicit `partition` argument remain available in all editions).
-
-The Backfill button opens a range picker that previews the status of every partition in `[from, to]` - missing, failed or materialized - so the missing/failed set is the backfill worklist. A toggle (on by default) restricts the run to missing and failed partitions; turn it off to re-run the whole range. Launching runs the producing script once per partition with an explicit `partition` argument, sequentially (concurrent materializations of one DuckLake table would contend on the catalog commit); each run is idempotent, and a failed partition does not stop the rest. Progress streams in the dialog and, when it is closed, in the asset drawer header, and the grid refreshes as each partition lands.
-
-![Backfill range picker previewing missing, failed and materialized partitions](./backfill_range_preview.png 'Backfill range picker with partition-status preview')
-
-The same backfill works headlessly from the CLI by passing an explicit partition per run: `wmill pipeline run <folder> --partition 2026-06-30` (see [local development](#local-development)).
-
-### Schema capture
-
-After a managed materialize run, Windmill captures the table's output schema (column names and types) and stores it as **versioned asset metadata**. Selecting a materialized `ducklake://` asset shows a **Schema** tab listing each captured version. A new version is recorded only when the column set actually changes (a column added, dropped, retyped, or reordered), so the tab is a compact schema-evolution history rather than one row per run.
-
-## Column-level lineage
-
-On top of asset-to-asset lineage, Windmill tracks **column-to-column** lineage for DuckLake pipelines: which source columns each output column is derived from. For DuckDB scripts this is **inferred automatically from the SQL** — Windmill walks the query's projection and maps every output column to the source columns its expression reads, both passthroughs and computed columns (`amount + tax AS order_total` records both `amount` and `tax` as sources). No annotation is needed in the common case.
-
-The deployed pipeline graph shows a **columns ×N** badge on the write edge into a materialized asset; hovering it lists every mapping, and selecting the asset opens a column-to-column diagram in the details pane.
-
-![Column-lineage badge on a pipeline write edge](./pipeline_graph_columns.png 'A columns badge on a write edge')
-
-![Column-to-column lineage diagram in the asset details pane](./column_lineage_view.png 'Column-to-column lineage diagram')
-
-When inference cannot reach a mapping — a polyglot transform (Python/TS/Bash has no SQL AST), dynamic SQL (`${sql.raw(...)}`), or a mis-inferred edge — declare it explicitly with `// column`:
-
-```
-// column <out_col> <- <asset-uri>.<col>[, <asset-uri>.<col> …]
-```
-
-Each line maps one output column to the source columns it derives from. Annotated and inferred lineage merge per output column, with the annotation winning. Column lineage is pure metadata — it drives the graph view and never runs a probe. The example below shows the annotation form on a plain SELECT for clarity; in practice you only annotate what inference can't derive (this particular mapping would be inferred automatically).
-
-```sql
--- pipeline
--- materialize ducklake://warehouse/orders_enriched
--- column order_total <- ducklake://warehouse/orders.amount, ducklake://warehouse/orders.tax
-
-ATTACH 'ducklake://warehouse' AS dl;
-SELECT order_id, amount + tax AS order_total FROM dl.orders
-```
-
-:::info Inference is server-side
-
-SQL-AST inference runs when a pipeline is deployed, so column lineage shows on **deployed** members. An unsaved draft shows `// column` annotations only.
-
-:::
-
-## Data tests
-
-A materialized asset can declare **data tests** that run against the freshly-materialized slice and **fail the pipeline run** on violation — propagating through the cascade like any other step failure. They are the pipeline equivalent of dbt/Dagster data tests.
-
-```
-// data_test unique <col>
-// data_test not_null <col>
-// data_test accepted_values <col> = a,b,c
-// data_test relationships <col> -> <asset-uri>.<col>
-// data_test <script_path>
-```
-
-- **`unique`** / **`not_null`** — column constraints.
-- **`accepted_values <col> = a,b,c`** — the column may only contain the listed values.
-- **`relationships <col> -> <asset-uri>.<col>`** — referential integrity: every value must exist in the referenced asset's column.
-- **`<script_path>`** — a custom DuckDB test script (the escape hatch), e.g. `// data_test f/tests/orders_amount_sane`.
-
-`// data_test` lines accumulate (a script can declare several) and malformed lines drop fail-safe. For a `// partitioned` target the built-in checks are scoped to the slice just written, and for an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target to the current rows (`is_current`). Data tests require managed `// materialize` (they are rejected on `// materialize manual` or a non-DuckLake target). The producer→asset edge shows a test-count badge, and the run result lists each test with a pass/fail outcome.
-
-```sql
--- pipeline
--- materialize ducklake://main/orders_daily key=order_id
--- partitioned daily
--- data_test not_null order_id
--- data_test unique order_id
--- data_test accepted_values status = paid,pending,refunded
-
-ATTACH 'ducklake://main' AS dl;
-SELECT order_id, status, amount FROM dl.orders WHERE created_at::date = '{partition}'
-```
+Managed DuckLake writes - the `// materialize` grammar and strategies, SCD2 history, versioning and time-travel, partition status and backfill, schema capture, column-level lineage and data tests - are covered on the dedicated [Materialization](./materialization.mdx) page.
 
 ## Macro libraries (DuckDB)
 
-Shared SQL logic can be factored into workspace **macro libraries** — engine-native DuckDB `CREATE MACRO` definitions rather than text templating, the pipeline equivalent of dbt macros. A DuckDB script annotated `// macros` is a macro library: its body is `CREATE OR REPLACE MACRO` statements (scalar or `AS TABLE`), plus optional plain setup statements (`ATTACH`, `INSTALL`/`LOAD`, `SET`, `CREATE TEMP TABLE`). Deploying is publishing: the macros are callable from every DuckDB script in the workspace the instant the deploy commits, and macro names are workspace-unique.
-
-```sql
--- macros
-CREATE OR REPLACE MACRO safe_div(a, b, fallback := 0) AS
-  CASE WHEN b = 0 THEN fallback ELSE a / b END;
-
-CREATE OR REPLACE MACRO pct(part, total) AS round(100 * safe_div(part, total), 2);
-
-CREATE OR REPLACE MACRO sample_rows(src, n) AS TABLE
-  SELECT * FROM query_table(src) LIMIT n;
-```
-
-In the pipeline editor, the "+" script creator has a **Macro library** output kind that scaffolds one. Deploy validates the library with precise errors: only macro definitions plus setup are allowed, a macro must be defined before a macro that calls it, and a name may not collide with another library's macro or shadow a DuckDB built-in function.
-
-### Calling a macro
-
-No import, no annotation, no config: any DuckDB script that calls a registered macro just works, in deployed runs, editor tests and previews alike. At job time the worker detects the calls, resolves transitive macro dependencies (`pct` pulls in `safe_div`), and injects the definitions — and the providing library's setup statements — ahead of your statements.
-
-```sql
--- pipeline
-SELECT safe_div(revenue, users) AS arpu,
-       pct(paid, total) AS conversion
-FROM sample_rows('lake.events', 10000);
-```
-
-Macros are late-bound, like dbt packages: redeploy the library and the very next run of every consumer uses the new definition, without redeploying the consumers. To opt a script out, define your own macro with the same name — a local `CREATE MACRO` always wins and its name is excluded from injection entirely.
-
-Detection is lexical, so a call hidden inside a string — for example dynamic SQL built with `query('…')` — is not seen. For that case, `// use <lib_path>` force-injects a whole library (definitions and setup). Libraries can declare `// use` themselves and it is honored transitively, so a library whose macros build SQL strings calling another library declares the dependency once and every consumer inherits it.
-
-### Discovering macros
-
-- The DuckDB editor autocompletes every workspace macro while you type, showing the signature, scalar/table kind and provider path, with the full definition on hover.
-- The **Macros** button on the pipeline page toolbar opens a workspace-wide explorer drawer: every macro grouped by library, with signature, body preview, copy-call button and filter. It only lists libraries in folders you can read.
-- In the pipeline graph, a library renders as a node with a ƒ ×N badge and dashed edges to each consumer, labeled with the detected calls (or "uses lib" for `// use`). Selecting the library shows a signature strip above its source.
-
-![A macro library node in the pipeline graph with its signature strip and consumer edges](./macro_lib_details.png 'A macro library selected in the pipeline graph')
-
-![The workspace macros explorer drawer](./macro_explorer_drawer.png 'The workspace macros explorer drawer')
-
-:::warning Trust model
-
-Macro libraries are workspace-trusted code: a deployed library is injected into other DuckDB scripts in the workspace and runs with the consuming job's permissions, the same boundary as a dbt package. Control who can deploy library scripts with [folder permissions](../8_groups_and_folders/index.mdx).
-
-:::
-
-Calling a macro that does not exist (a typo, or a library not deployed yet) fails at run time with DuckDB's `Catalog Error`. Agent (HTTP) workers cannot read the macro registry: implicit macro calls fail there with the same error and `// use` errors explicitly.
+Reusable DuckDB macros shared across the workspace are covered on the dedicated [Macro libraries](./macros.mdx) page.
 
 ## Joining inputs: any vs all
 
@@ -813,7 +392,7 @@ export async function main(partition: string) {
 </TabItem>
 </Tabs>
 
-The producers of the two partition-bearing inputs use the [URI-constant pattern](#partitioned-pipelines) so their writes are detected with the `{partition}` token. Reads need no such care: the `// on` lines are the input edges, and the code can build read paths dynamically.
+The producers of the two partition-bearing inputs use the [URI-constant pattern](./partitioning.mdx) so their writes are detected with the `{partition}` token. Reads need no such care: the `// on` lines are the input edges, and the code can build read paths dynamically.
 
 With this declaration, writing `events` for `2026-05-15` does not run the script yet (one of two partition-bearing inputs present). When `sessions` for `2026-05-15` is also written, the script runs exactly once for `2026-05-15`. Writing `events` for `2026-05-16` opens a separate, independent slot. Refreshing the unpartitioned `customers` reference does not fire past partitions.
 
@@ -916,7 +495,7 @@ wmill pipeline docs <folder>             # write PIPELINE.md describing the grap
 
 `wmill pipeline run` takes the same `--from`/`--to`/`--dry-run` bounds as [selective execution](#selective-execution-run-up-to-here), plus options to parameterize the cascade:
 
-- `--partition <value>` — run `// partitioned` scripts on an explicit partition. With `--local`, time kinds default to the current UTC period when the flag is absent; `dynamic` requires an explicit value. With an explicit value this doubles as a headless [backfill](#partition-status-and-backfill) (`--partition 2026-06-30`).
+- `--partition <value>` — run `// partitioned` scripts on an explicit partition. With `--local`, time kinds default to the current UTC period when the flag is absent; `dynamic` requires an explicit value. With an explicit value this doubles as a headless [backfill](./materialization.mdx#partition-status-and-backfill) (`--partition 2026-06-30`).
 - `--arg <script>:<param>=<value>` — pass a plain argument to one script in the cascade (repeatable; the value is parsed as JSON when possible, else taken as a string).
 - `--upload <script>=<file>` — upload a local file and bind it to the script's S3 object parameter.
 
@@ -930,7 +509,7 @@ wmill pipeline docs <folder>             # write PIPELINE.md describing the grap
 | `// freshness <duration>` | SLA | `<n>[s\|m\|h\|d]` | - | Planned: parsed and shown on the graph, but no watchdog runs yet (first wins) |
 | `// partitioned <kind> [opts]` | output | kinds `daily\|hourly\|weekly\|monthly\|dynamic`; opts `tz=`, `format=`, `start=`, `key=` (dynamic) | `tz=UTC`, per-kind `format`, no `start` | Materialize one dataset per partition (first wins) |
 | `// materialize [manual] <ducklake-uri> [opts]` | output | `manual` (track-only); opts `append`, `key=<col>`, `history` (SCD2, with `track=`, `deletes=close`) | managed, replace | Managed write into a DuckLake table — idempotent, snapshotted, tracked (first wins). DuckDB-only |
-| `// macros` | script | none (bare marker) | - | Mark a DuckDB script as a workspace [macro library](#macro-libraries-duckdb); its macros become callable from every DuckDB script |
+| `// macros` | script | none (bare marker) | - | Mark a DuckDB script as a workspace [macro library](./macros.mdx); its macros become callable from every DuckDB script |
 | `// use <lib_path>` | script | macro library script path | - | Force-inject a macro library (definitions + setup), for calls hidden in dynamic SQL (accumulate) |
 | `// column <out> <- <asset-uri>.<col>[, …]` | lineage | comma-separated source columns | inferred from SQL | Column-to-column lineage; inferred from SQL for DuckDB, override/declare for other languages. Metadata only (accumulate) |
 | `// data_test <kind> …` | test | `unique`, `not_null`, `accepted_values`, `relationships`, `<script_path>` | - | Test the materialized slice; fail the run on violation. Managed `// materialize` only (accumulate) |
@@ -950,7 +529,7 @@ Pipelines borrow the asset-and-lineage model that [dbt](https://www.getdbt.com/)
 - **dbt** transforms data with SQL and tracks lineage, but it is transform-only: it needs a separate orchestrator to run it on a schedule and a separate warehouse to run against. Windmill runs the transforms (DuckDB), owns the store and versioning ([DuckLake](../11_persistent_storage/ducklake.mdx)), and schedules and triggers them natively.
 - **Dagster** orchestrates assets and tracks metadata, but it relies on dbt (or your own code) for the transforms and a warehouse for compute. Windmill is the orchestrator, the compute (your own workers), and the transform engine at once.
 
-The equivalents map closely: [materializations](#materialization), [data tests](#data-tests), [macros](#macro-libraries-duckdb), [column lineage](#column-level-lineage), [selective runs](#selective-execution-run-up-to-here) and [backfill](#partition-status-and-backfill) all have counterparts, while the compute, scheduling and [triggers](../../getting_started/8_triggers/index.mdx) come from the same platform and run on your own infrastructure, in any language.
+The equivalents map closely: [materializations](./materialization.mdx), [data tests](./materialization.mdx#data-tests), [macros](./macros.mdx), [column lineage](./materialization.mdx#column-level-lineage), [selective runs](#selective-execution-run-up-to-here) and [backfill](./materialization.mdx#partition-status-and-backfill) all have counterparts, while the compute, scheduling and [triggers](../../getting_started/8_triggers/index.mdx) come from the same platform and run on your own infrastructure, in any language.
 
 Pipelines are in alpha and do not yet cover everything those tools do: [freshness](#freshness) policies are parsed but not enforced yet, and dbt's docs-site generation, seeds and semantic layer have no direct equivalent. The goal is not feature-for-feature parity but doing the whole asset-based workflow (transform, orchestrate, test, materialize, version) in a single platform, on your own compute.
 

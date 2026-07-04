@@ -13,5 +13,5 @@ features:
     'Deploy-time validation with precise errors: workspace-unique names, no shadowing of DuckDB built-ins, definition order checks',
     'Discovery: DuckDB editor autocomplete with signatures, a workspace macros explorer drawer on the pipeline page, and library nodes with consumer edges in the graph',
   ]
-docs: /docs/core_concepts/pipelines#macro-libraries-duckdb
+docs: /docs/core_concepts/pipelines/macros
 ---

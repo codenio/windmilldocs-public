@@ -1,6 +1,6 @@
 # Ingestion (EL)
 
-Most of the [pipelines](./index.mdx) page assumes data is already in the lake. This page covers the extract-load side: an entry script owns the extract in whatever language fits the source, and the load goes through a managed [materialization](./index.mdx#materialization) so it gets idempotent write strategies, snapshots and the partition grid.
+Most of the [pipelines](./index.mdx) page assumes data is already in the lake. This page covers the extract-load side: an entry script owns the extract in whatever language fits the source, and the load goes through a managed [materialization](./materialization.mdx) so it gets idempotent write strategies, snapshots and the partition grid.
 
 When the source is something DuckDB can query directly (an attached database, files in object storage), a single DuckDB step is both extract and load - see the first worked example below. For everything else (paginated or authenticated APIs, SaaS SDKs, streams), split the step in two:
 
@@ -11,7 +11,7 @@ When the source is something DuckDB can query directly (an attached database, fi
 - The entry script talks to the outside world and writes the raw batch to a landing object in [workspace storage](../38_object_storage_in_windmill/index.mdx) with `wmill.write_s3_file` / `wmill.writeS3File`.
 - The loader is a DuckDB script with `-- on s3:///...` and `-- materialize`: it re-runs whenever a new batch lands ([the cascade](./index.mdx#triggering-a-pipeline)) and owns idempotency, typing and history.
 
-Why two scripts instead of one script writing the lake directly: [`materialize`](./index.mdx#materialization) is DuckDB-only, and lake writes made through SDK helpers are not visible to the asset parser, so a single Python or TypeScript node would deploy with no output edge in the graph. The landing file is not overhead: it is a replayable raw zone that decouples source flakiness from load semantics.
+Why two scripts instead of one script writing the lake directly: [`materialize`](./materialization.mdx) is DuckDB-only, and lake writes made through SDK helpers are not visible to the asset parser, so a single Python or TypeScript node would deploy with no output edge in the graph. The landing file is not overhead: it is a replayable raw zone that decouples source flakiness from load semantics.
 
 ## Choosing the extract engine
 
@@ -36,7 +36,7 @@ wmill.set_state(max(r["id"] for r in rows))
 - Prefer a monotonic source column (`id`, `updated_at`). For `updated_at` cursors, overlap the window slightly and let a `key=` merge loader dedup, otherwise clock skew and late commits drop rows.
 - The lookback-window variant needs no state at all: re-read everything touched in the last N days and merge by key. This is the only option for pure-DuckDB entries (no `get_state` there) and is very robust; the first worked example uses it.
 
-To re-ingest from scratch, clear the state (run once with `wmill.set_state(None)`, or edit it in the script settings) and run the entry script. What happens on load depends on the [strategy](./index.mdx#strategy-and-unit): `key=` merge is safe, replace rebuilds, but append duplicates the table on a full re-ingest, so drop the table first or switch the loader to `key=` for the backfill. Re-loading without re-extracting is cheaper: re-run just the loader, or use [backfill](./index.mdx#partition-status-and-backfill) for partitioned targets.
+To re-ingest from scratch, clear the state (run once with `wmill.set_state(None)`, or edit it in the script settings) and run the entry script. What happens on load depends on the [strategy](./materialization.mdx#strategy-and-unit): `key=` merge is safe, replace rebuilds, but append duplicates the table on a full re-ingest, so drop the table first or switch the loader to `key=` for the backfill. Re-loading without re-extracting is cheaper: re-run just the loader, or use [backfill](./materialization.mdx#partition-status-and-backfill) for partitioned targets.
 
 ## Schema drift on load
 

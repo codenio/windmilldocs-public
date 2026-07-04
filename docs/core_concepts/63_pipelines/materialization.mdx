@@ -1,0 +1,218 @@
+# Materialization
+
+A DuckDB script can declare that it **produces** a managed [DuckLake](../11_persistent_storage/ducklake.mdx) table with `// materialize`. This is the canonical, most powerful way to build a pipeline step (see [the canonical stack](./index.mdx#the-canonical-stack-duckdb--ducklake--materialize)). Instead of writing the table yourself, you write the query for one *slice* and Windmill owns the write: it is idempotent, captured as a DuckLake snapshot, and tracked. A **slice** is one [partition](./partitioning.mdx) when the script is also `// partitioned`, or the **whole table** when it isn't — `materialize` works either way (`// partitioned` is optional and independent; see [Strategy and unit](#strategy-and-unit) below).
+
+```sql
+-- pipeline
+-- materialize ducklake://main/orders_daily key=order_id
+-- partitioned daily
+
+ATTACH 'ducklake://main' AS dl;
+
+SELECT order_id, amount, created_at
+FROM dl.orders
+WHERE created_at::date = '{partition}'
+```
+
+The script is *setup statements (ATTACH, SET, CREATE TEMP …) followed by one trailing `SELECT`*. Windmill wraps that SELECT in the write — creating the table on first run, partitioning it (when `// partitioned`), and reconciling the slice — then records the produced snapshot id and row count. Re-running the same slice is safe by construction (that is also how a backfill or a failed-run retry works). For a partitioned target the slice is tracked in a managed `_wm_partition` column appended to the table (it is also the Hive partition key of the parquet files on the underlying storage), so your SELECT never has to project the partition itself.
+
+The trailing `SELECT` may reference SQL arguments declared with `-- $name (type)` (for example `-- $cutoff (date)` then `WHERE created_at < $cutoff`); they bind at run time like any other DuckDB script argument, including `s3object` arguments translated to `s3://` URIs.
+
+## Grammar
+
+```
+// materialize ducklake://<name>/<table> [append] [key=<col>]                          # managed (default)
+// materialize ducklake://<name>/<table> key=<col> history [track=<c1,…>] [deletes=close]  # managed SCD2 history
+// materialize manual ducklake://<name>/<table>                                        # track-only escape hatch
+```
+
+- **Managed (default)** — Windmill generates the write. DuckDB-only; validated at deploy (a script that is not a single trailing SELECT is rejected with a clear error). The **strategy** decides how each slice is reconciled:
+  - *neither option* → **replace**: the slice becomes exactly what the SELECT returned. The whole table is rebuilt with `CREATE OR REPLACE` (so changing the `SELECT`'s columns between runs just works); a partition is reconciled with `DELETE` + `INSERT`.
+  - `key=<col>` → **merge**: upsert the slice on `<col>` (rows absent from the SELECT are left in place).
+  - `append` → **insert-only**: for immutable event logs. Re-running duplicates rows, so use only for append-only sources. (`append` wins over `key=` if both are given.)
+  - `key=<col> history` → **SCD2 history**: keep every version of every row instead of overwriting on change. See [SCD2 history](#scd2-history-slowly-changing-dimensions).
+- **`manual`** — the escape hatch: your script writes its own DDL and Windmill only records that the slice was materialized (no snapshot capture, no idempotency guarantee). Rare; explicit.
+
+`// materialize` is for DuckDB SQL. From **Python or TypeScript**, use the `wmill.ducklake` helpers (`upsert_partition`, `append_partition`, `read`) which give the same managed, idempotent write from arbitrary code.
+
+## Strategy and unit
+
+`materialize`, `partitioned`, `append` and `key` sit on **two independent axes**, and `materialize` runs the chosen strategy over the chosen unit:
+
+- **Strategy — *how* a slice is reconciled.** `append` / `key=` are options on the `// materialize` line (mutually exclusive); they have no meaning without `// materialize`.
+- **Unit — *what* a slice is.** `// partitioned` is a separate, optional annotation (it also drives the [cascade](./index.mdx#triggering-a-pipeline) and scheduling). With it, a slice is one partition; without it, a slice is the whole table.
+
+The two combine:
+
+| | replace (default) | `key=<col>` (merge) | `append` |
+| --- | --- | --- | --- |
+| **`// partitioned`** | replace the partition | upsert within the partition | append to the partition |
+| **whole table** (no `// partitioned`) | replace the whole table | upsert the whole table | append to the whole table |
+
+A whole-table materialization is just `// materialize` with no `// partitioned` — e.g. a dimension table rebuilt each run:
+
+```sql
+-- pipeline
+-- materialize ducklake://main/customer_dim key=customer_id
+
+ATTACH 'ducklake://main' AS dl;
+SELECT customer_id, name, tier FROM dl.customers
+```
+
+The `history` strategy is the exception: it is whole-table only, and combining it with `// partitioned` is rejected at deploy.
+
+## SCD2 history (slowly changing dimensions)
+
+Adding `history` to a keyed materialization turns the SCD1 merge (overwrite on change) into a type-2 slowly changing dimension: the runtime keeps every version of every row. When a tracked column changes, the prior version is closed and a new one is opened, so an entity's full version history stays queryable as rows. The leading keyword `scd2` is a recognized alias (`// materialize scd2 ducklake://… key=id`).
+
+```sql
+-- pipeline
+-- on ducklake://analytics/stg_customers
+-- materialize ducklake://analytics/dim_customer key=id history track=name,tier
+-- data_test not_null id
+
+ATTACH 'ducklake://analytics' AS dl;
+
+SELECT id, name, tier          -- the current snapshot, one row per key
+FROM dl.stg_customers;
+```
+
+The `SELECT` returns the current desired state, one row per key - exactly like `merge`. You never write validity columns; the runtime appends and manages three:
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `valid_from` | `TIMESTAMP` | when this version became effective |
+| `valid_to` | `TIMESTAMP` | when it was superseded; `NULL` = still open |
+| `is_current` | `BOOLEAN` | `true` for the live version of each key |
+
+Options on the `// materialize` line:
+
+- `key=<col>` (required) - the natural/business key that identifies an entity across versions.
+- `track=<c1,c2,…>` (optional) - the columns whose change opens a new version. Default: all non-key columns. Bare comma list with no spaces (`track=name,tier`).
+- `deletes=close` (optional) - a key that disappears from the snapshot has its current version closed. Default is soft delete: absent keys stay current. A closed key that later reappears opens a fresh version, leaving a validity gap.
+
+Each run diffs the snapshot against the live rows: a changed tracked column closes the prior version (`valid_to` set, `is_current = false`) and opens a new one; a new key opens as current; a change to an untracked column is ignored; an unchanged snapshot writes 0 rows and advances no snapshot (idempotent). Within a run, the closed version's `valid_to` equals the new version's `valid_from`, so versions are contiguous and gap-free.
+
+Each run also maintains a companion view `<table>_current` containing only the `is_current` rows, so the common "give me the latest version" case needs no filter:
+
+```sql
+-- pipeline
+-- on ducklake://analytics/dim_customer_current
+ATTACH 'ducklake://analytics' AS dl;
+SELECT * FROM dl.dim_customer_current;
+```
+
+The payoff over [time-travel](#versioning-and-time-travel) (which is keyed by commit, not business-effective time) is the effective-dated as-of join - for each fact row, the dimension version that was current at that moment:
+
+```sql
+-- pipeline
+-- on ducklake://analytics/dim_customer
+-- on ducklake://analytics/stg_orders
+-- materialize ducklake://analytics/fct_orders
+ATTACH 'ducklake://analytics' AS dl;
+SELECT o.order_id, o.amount, o.ordered_at,
+       d.tier AS tier_at_order_time
+FROM dl.stg_orders o
+ASOF JOIN dl.dim_customer d
+  ON o.customer_id = d.id AND o.ordered_at >= d.valid_from;
+```
+
+Constraints:
+
+- Whole-table only: `// partitioned` + `history` is rejected at deploy.
+- `valid_from`, `valid_to` and `is_current` are reserved column names (a SELECT projecting one fails at run time), and the `<table>_current` suffix is reserved for the companion view.
+- The schema is frozen at first run: an append-only history cannot reshape closed versions, so changing the SELECT's projected columns later fails and needs a manual rebuild.
+
+Built-in [data tests](#data-tests) on an SCD2 target are scoped to current rows (`is_current`), so `unique(<key>)` keeps passing as closed versions accumulate in the history.
+
+## What a run returns
+
+A managed run returns a small summary — the asset it produced, the row count of the slice, and the DuckLake `snapshot_id` — and the run's **Result** panel renders a live, read-only preview of the materialized table beneath it. For a `// partitioned` target the preview adds a **This partition / Whole table** toggle, and the summary's row count is the slice (partition) the run wrote. The same values are recorded as the asset's [materialization state](#partition-status-and-backfill).
+
+To run a partitioned script manually (e.g. from the editor's **Test** panel), fill the **partition** field — Windmill surfaces it automatically for `// partitioned` DuckDB scripts, as a date picker for date kinds. In a pipeline the [cascade](./index.mdx#triggering-a-pipeline) injects it for you.
+
+## Versioning and time-travel
+
+Every managed write is a DuckLake commit, so versioning is free — you never annotate for it. Each run records the snapshot it produced, which means you can read a table as of a past snapshot (`FROM dl.orders_daily AT (VERSION => 42)`), roll back, and reproduce a past run. This is what `// materialize` gives you over hand-writing the same SQL.
+
+## Partition status and backfill
+
+Selecting a materialized `ducklake://` asset in the pipeline graph shows its **partition-status grid** — which partitions are materialized, their snapshot id, row count, and time — along with the producer's latest run and its data-test results.
+
+![Partition-status grid for a materialized asset](./partition_status_grid.png 'Partition-status grid for a materialized asset')
+
+From there, **Backfill** re-runs the materialization for a range of partitions; range backfill is an [Enterprise Edition](/pricing) feature (single-partition runs with an explicit `partition` argument remain available in all editions).
+
+The Backfill button opens a range picker that previews the status of every partition in `[from, to]` - missing, failed or materialized - so the missing/failed set is the backfill worklist. A toggle (on by default) restricts the run to missing and failed partitions; turn it off to re-run the whole range. Launching runs the producing script once per partition with an explicit `partition` argument, sequentially (concurrent materializations of one DuckLake table would contend on the catalog commit); each run is idempotent, and a failed partition does not stop the rest. Progress streams in the dialog and, when it is closed, in the asset drawer header, and the grid refreshes as each partition lands.
+
+![Backfill range picker previewing missing, failed and materialized partitions](./backfill_range_preview.png 'Backfill range picker with partition-status preview')
+
+The same backfill works headlessly from the CLI by passing an explicit partition per run: `wmill pipeline run <folder> --partition 2026-06-30` (see [local development](./index.mdx#local-development)).
+
+## Schema capture
+
+After a managed materialize run, Windmill captures the table's output schema (column names and types) and stores it as **versioned asset metadata**. Selecting a materialized `ducklake://` asset shows a **Schema** tab listing each captured version. A new version is recorded only when the column set actually changes (a column added, dropped, retyped, or reordered), so the tab is a compact schema-evolution history rather than one row per run.
+
+## Column-level lineage
+
+On top of asset-to-asset lineage, Windmill tracks **column-to-column** lineage for DuckLake pipelines: which source columns each output column is derived from. For DuckDB scripts this is **inferred automatically from the SQL** — Windmill walks the query's projection and maps every output column to the source columns its expression reads, both passthroughs and computed columns (`amount + tax AS order_total` records both `amount` and `tax` as sources). No annotation is needed in the common case.
+
+The deployed pipeline graph shows a **columns ×N** badge on the write edge into a materialized asset; hovering it lists every mapping, and selecting the asset opens a column-to-column diagram in the details pane.
+
+![Column-lineage badge on a pipeline write edge](./pipeline_graph_columns.png 'A columns badge on a write edge')
+
+![Column-to-column lineage diagram in the asset details pane](./column_lineage_view.png 'Column-to-column lineage diagram')
+
+When inference cannot reach a mapping — a polyglot transform (Python/TS/Bash has no SQL AST), dynamic SQL (`${sql.raw(...)}`), or a mis-inferred edge — declare it explicitly with `// column`:
+
+```
+// column <out_col> <- <asset-uri>.<col>[, <asset-uri>.<col> …]
+```
+
+Each line maps one output column to the source columns it derives from. Annotated and inferred lineage merge per output column, with the annotation winning. Column lineage is pure metadata — it drives the graph view and never runs a probe. The example below shows the annotation form on a plain SELECT for clarity; in practice you only annotate what inference can't derive (this particular mapping would be inferred automatically).
+
+```sql
+-- pipeline
+-- materialize ducklake://warehouse/orders_enriched
+-- column order_total <- ducklake://warehouse/orders.amount, ducklake://warehouse/orders.tax
+
+ATTACH 'ducklake://warehouse' AS dl;
+SELECT order_id, amount + tax AS order_total FROM dl.orders
+```
+
+:::info Inference is server-side
+
+SQL-AST inference runs when a pipeline is deployed, so column lineage shows on **deployed** members. An unsaved draft shows `// column` annotations only.
+
+:::
+
+## Data tests
+
+A materialized asset can declare **data tests** that run against the freshly-materialized slice and **fail the pipeline run** on violation — propagating through the cascade like any other step failure. They are the pipeline equivalent of dbt/Dagster data tests.
+
+```
+// data_test unique <col>
+// data_test not_null <col>
+// data_test accepted_values <col> = a,b,c
+// data_test relationships <col> -> <asset-uri>.<col>
+// data_test <script_path>
+```
+
+- **`unique`** / **`not_null`** — column constraints.
+- **`accepted_values <col> = a,b,c`** — the column may only contain the listed values.
+- **`relationships <col> -> <asset-uri>.<col>`** — referential integrity: every value must exist in the referenced asset's column.
+- **`<script_path>`** — a custom DuckDB test script (the escape hatch), e.g. `// data_test f/tests/orders_amount_sane`.
+
+`// data_test` lines accumulate (a script can declare several) and malformed lines drop fail-safe. For a `// partitioned` target the built-in checks are scoped to the slice just written, and for an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target to the current rows (`is_current`). Data tests require managed `// materialize` (they are rejected on `// materialize manual` or a non-DuckLake target). The producer→asset edge shows a test-count badge, and the run result lists each test with a pass/fail outcome.
+
+```sql
+-- pipeline
+-- materialize ducklake://main/orders_daily key=order_id
+-- partitioned daily
+-- data_test not_null order_id
+-- data_test unique order_id
+-- data_test accepted_values status = paid,pending,refunded
+
+ATTACH 'ducklake://main' AS dl;
+SELECT order_id, status, amount FROM dl.orders WHERE created_at::date = '{partition}'
+```
