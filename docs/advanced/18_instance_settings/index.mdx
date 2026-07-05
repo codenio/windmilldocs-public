@@ -99,7 +99,7 @@ From there you also have two buttons:
 
 If your subscription is active, the key is automatically renewed everyday. A key is typically valid for 35 days.
 
-On [air-gapped](../../misc/19_enterprise_onboarding/index.mdx#air-gapped-environments) instances running an offline license key, this field also shows live usage against the caps embedded in the key (`Seats: x / y` and `CUs: x / y`). Exceeding either cap invalidates the license and halts jobs until usage drops back under cap. See [offline license caps](../../misc/19_enterprise_onboarding/index.mdx#offline-license-caps) for details.
+On [air-gapped](../../misc/19_enterprise_onboarding/index.mdx#air-gapped-environments) instances running an offline license key, this field also shows live usage against the caps embedded in the key (`Seats: x / y` and `CUs: x / y`). Exceeding either cap invalidates the license and halts jobs until usage drops back under cap. See [air-gapped environments](../../misc/19_enterprise_onboarding/index.mdx#air-gapped-environments) for details.
 
 ### Non-prod instance
 
@@ -175,7 +175,11 @@ This setting is only available on [Enterprise Edition](/pricing).
 | Field | Description |
 |-------|-------------|
 | Bucket | The name of your Google Cloud Storage bucket |
-| Service Account Key | The service account key for your Google Cloud Storage bucket in JSON format |
+| Service Account Key | The service account key for your Google Cloud Storage bucket in JSON format. Leave empty to use the instance's ambient GCP credentials instead (GKE Workload Identity or the GCP metadata server) |
+
+Leaving the Service Account Key empty is useful when Windmill runs in the same GCP project as the bucket: instead of managing a static key, grant the Kubernetes service account (via [GKE Workload Identity](https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity)) or the VM's service account access to the bucket, and Windmill will authenticate through the metadata server.
+
+For security reasons, testing GCS connectivity with an empty Service Account Key requires being a [superadmin](../../core_concepts/16_roles_and_permissions/index.mdx#superadmin): since a blank key falls back to the server's own GCP identity, the test buttons would otherwise let non-superadmin users probe arbitrary buckets with the instance's credentials.
 
 
 ### Store audit logs in object storage
