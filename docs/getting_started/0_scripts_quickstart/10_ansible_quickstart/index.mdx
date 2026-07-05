@@ -544,9 +544,28 @@ The worker looks for `requirements.yml`, `requirements.yaml`, `collections/requi
 
 This is independent of the `dependencies.galaxy` block in the script metadata: use whichever fits your workflow, or both.
 
+#### Using the repo's ansible.cfg
+
+Ansible loads a single configuration file, the first one found among `ANSIBLE_CONFIG`, the working directory, `~/.ansible.cfg` and `/etc/ansible/ansible.cfg`, without merging. Windmill runs `ansible-playbook` from the job directory, where it writes its own generated `ansible.cfg`, so a config file checked into the repository is normally ignored. Set `ansible_cfg` to a repo-relative path to make it the effective configuration instead:
+
+```yaml
+delegate_to_git_repo:
+  resource: u/user/git_repo_resource
+  playbook: playbooks/site.yml
+  ansible_cfg: ansible.cfg
+```
+
+When set, Windmill points `ANSIBLE_CONFIG` at that file so the repository's settings (roles paths, inventory plugins, callbacks, `host_key_checking`, ssh arguments, etc.) apply as they would outside Windmill. Only the settings that depend on runtime state are layered back on top, through environment variables:
+
+- Temp and home directories (`ANSIBLE_HOME`, `ANSIBLE_LOCAL_TEMP`, `ANSIBLE_REMOTE_TEMP`) point to the ephemeral job directory.
+- Vault settings declared in the script metadata ([`vault_password`, `vault_id`](#ansible-vault)) keep taking precedence over the repo config.
+- The directories where Windmill installs galaxy roles and collections are prepended to the `roles_path` and `collections_path` declared in your config, so dependencies installed by Windmill (via `dependencies.galaxy` or `install_requirements`) and those shipped in the repo both resolve.
+
+The job fails if the file does not exist in the cloned repository. Without `ansible_cfg`, Windmill's generated config takes precedence as before. Like git repo delegation in general, this requires workers running with `DISABLE_NSJAIL=true`.
+
 #### Dynamic field values
 
-The `playbook`, `commit`, and `inventories_location` fields accept `{{ argname }}` placeholders that are substituted from the script's arguments before the repo is cloned and the playbook runs. This lets a flow pick the playbook, branch, or inventory at runtime:
+The `playbook`, `commit`, `inventories_location`, and `ansible_cfg` fields accept `{{ argname }}` placeholders that are substituted from the script's arguments before the repo is cloned and the playbook runs. This lets a flow pick the playbook, branch, or inventory at runtime:
 
 ```yaml
 delegate_to_git_repo:
