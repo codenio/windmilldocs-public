@@ -215,7 +215,7 @@ We've taken a well-known benchmark dataset: the [TCP-H](https://www.tpc.org/tpch
 The following procedure was followed:
 
 - Datasets provided by TPC-H as CSVs were uploaded as parquet files on S3.
-- TPC-H provides a set of canonical queries. They perform numerous joins, aggregations, group-bys, etc. 8 of them were converted in the different dialects.
+- TPC-H provides a set of canonical queries. They perform numerous joins, aggregations, group-bys, etc. 9 of them (spec Q1, Q3, Q5, Q6, Q10, Q12, Q14, Q16, Q18) were converted in the different dialects.
 - Those queries were run sequentially as scripts in for-loop flow in Windmill, and this for each of the benchmark sets of data (1Gb, 5Gb, 10Gb, etc.). The memory of the Windmill server was recorded.
 - Each script was:
   - Reading the data straight from the S3 parquet files
@@ -228,62 +228,73 @@ A couple of notes before the results:
 - Polars comes with a lazy mode, in which it is supposed to be more memory efficient. We've benchmarked both normal and lazy mode.
 - We also ran those benchmarks on Spark, as a well-known and broadly used reference. To be as fair as possible, the Spark "cluster" was composed of a single node running also on an `m4.xlarge` AWS instance.
 
+:::info Updated July 2026
+
+The charts below have been **refreshed on current engine versions** (Polars 1.42, DuckDB 1.5, Spark 4.0 with AQE, JDK 17). A few honest corrections to the original 2023 run:
+
+- **This refresh is not comparable to the 2023 numbers.** It was re-run on a single local **AMD Ryzen 9 9900X** (12 cores / 24 threads, 60 GB RAM), reading Parquet from S3 (MinIO on localhost) — not AWS. Read the *relative* engine story, not the absolute seconds. The scale factors are now **1G / 10G / 50G / 100G** (the larger-than-memory regime only shows up past ~25G on a 60 GB box).
+- It is a **TPC-H-derived, unaudited** benchmark of **9 queries** (the original text's "8" was a miscount), and it benchmarks the *libraries* on one worker — Windmill supplies orchestration and S3 glue, not a compute speed-up.
+- **DuckDB now queries the Parquet directly** (projection/filter pushdown) instead of materializing every table first, which is ~10× faster at scale and the idiomatic way to write a DuckDB step. **Polars' new streaming engine** replaces the old, slow "lazy" mode.
+- **Polars "eager" still runs out of memory** once the working set exceeds RAM (now at 50G+, shown as 0) — that 2023 finding holds, it just scales with the box. We also fixed three real bugs in the 2023 query translations so all engines now return identical results.
+
+Full method, pinned versions, raw per-run data and a critical write-up: [windmill-labs/windmill-benchmarks](https://github.com/windmill-labs/windmill-benchmarks/tree/main/pipelines).
+
+:::
+
 <BarChart
-	title="Duration of the 8 queries ran sequentially (in seconds)"
+	title="Duration of the 9 queries ran sequentially (in seconds)"
 	yTitle="duration (in seconds)"
-	labels={['Bench 1G', 'Bench 5G', 'Bench 10G', 'Bench 25G']}
+	labels={['Bench 1G', 'Bench 10G', 'Bench 50G', 'Bench 100G']}
 	rawData={[
 		{
-			label: 'Spark',
-			data: [285, 720, 1170, 2505]
+			label: 'Spark (single node)',
+			data: [9.0, 24.0, 77.9, 149.1]
 		},
 		{
-			label: 'Windmill + Polars',
-			data: [42, 183, 370, 0]
+			label: 'Windmill + DuckDB',
+			data: [0.3, 2.0, 9.8, 20.3]
 		},
 		{
-			label: 'Windmill + Polars lazy',
-			data: [247, 1246, 2480, 6498]
+			label: 'Windmill + Polars (streaming)',
+			data: [0.5, 4.3, 27.3, 55.4]
 		},
 		{
-			label: 'Windmill + DuckDB in memory',
-			data: [61, 260, 560, 2767]
+			label: 'Windmill + Polars (eager)',
+			data: [0.5, 4.6, 0, 0]
 		}
 	]}
 />
 
 <BarChart
-	title="Memory peak for the run of the 8 queries ran sequentially (in GB)"
+	title="Memory peak for the run of the 9 queries ran sequentially (in GB)"
 	yTitle="Memory peak (in GB)"
-	labels={['Bench 1G', 'Bench 5G', 'Bench 10G', 'Bench 25G']}
+	labels={['Bench 1G', 'Bench 10G', 'Bench 50G', 'Bench 100G']}
 	rawData={[
 		{
-			label: 'Spark',
-			data: [7.26, 10.3, 11.7, 20.9]
+			label: 'Spark (single node)',
+			data: [7.1, 21.5, 24.6, 29.3]
 		},
 		{
-			label: 'Windmill + Polars',
-			data: [1.78, 12.2, 24.2, 0]
+			label: 'Windmill + DuckDB',
+			data: [0.5, 2.4, 10.2, 19.8]
 		},
 		{
-			label: 'Windmill + Polars lazy',
-			data: [2.11, 2.42, 10.4, 19.6]
+			label: 'Windmill + Polars (streaming)',
+			data: [0.9, 4.1, 19.0, 34.2]
 		},
 		{
-			label: 'Windmill + DuckDB in memory',
-			data: [2.94, 6.05, 12.3, 25.7]
+			label: 'Windmill + Polars (eager)',
+			data: [2.8, 21.8, 0, 0]
 		}
 	]}
 />
 
-Polars is the fastest at computing the results, but consumes slightly more memory than Spark (it OOMed for the 25G benchmark). Polars in lazy mode, however, is a lot more memory efficient and can process more data, at the expense of computation time.
-Overall, both Polars and DuckDB behave very well in terms of memory consumption and computation time. The 10G benchmark contains tables with up to 60 million rows, and we were far from using the most powerful AWS instance. So, it is true that
-this doesn't scale horizontally, but it also confirms that a majority of data pipelines can be addressed with a large enough instance. And when you think about it, what's more convenient? Managing a single beefy server or a fleet of small servers?
+On the refreshed run, **DuckDB (querying the Parquet directly) is fastest at every scale** and the most memory-efficient engine that still scales — the full 9-query workload over the 100G dataset runs in about **20 seconds using ~20 GB of RAM**. **Polars' streaming engine** finishes it in ~55 seconds at ~34 GB. Both beat the single-node Spark baseline (~150 seconds), which — even tuned with AQE — carries a large fixed overhead that makes it 20–50× slower at the smaller scales. Polars' **eager** mode is fast up to 10G but runs out of memory beyond that (shown as 0); this is where you reach for streaming.
+The 100G dataset contains a table with up to 600 million rows, on a single 60 GB desktop. So yes, this doesn't scale horizontally — but it confirms that the large majority of data pipelines can be handled by one large-enough node. And when you think about it, what's more convenient? Managing a single beefy server or a fleet of small servers?
 
-:::info
+:::info Larger than memory
 
-DuckDB offers the possibility to back its database with a file on disk to save some memory. This mode fits perfectly with Windmill flows using a shared directory between steps. We implemented a simple flow where the first step loads the DB in
-a file, and the following steps consume this file to run the queries. We were able to run the 8 queries on the 100Gb benchmark successfully. It took 40 minutes and consumed 29,1Gb at the peak.
+DuckDB and Polars both spill to disk when the working set exceeds RAM, so you can go well past what fits in memory. In the refresh, a memory-capped DuckDB configuration processed the full 100G workload at a **13 GB** peak by spilling (trading some speed for a tiny footprint), and Polars' streaming engine handled it out-of-core. This pairs naturally with Windmill flows that share a directory between steps. (The original 2023 post reported an on-disk DuckDB flow completing the 100G benchmark in 40 minutes at 29.1 GB; current versions are dramatically faster.)
 
 :::
 
