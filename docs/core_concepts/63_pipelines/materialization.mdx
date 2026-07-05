@@ -141,6 +141,25 @@ Every managed write is a DuckLake commit, so versioning is free — you never an
 
 Snapshots are kept forever by default. If [scheduled maintenance](../11_persistent_storage/ducklake.mdx#scheduled-maintenance) is enabled on the lake, snapshots older than its retention window are expired and can no longer be read with `AT (VERSION => n)`, so size the retention window to the history you need to query.
 
+## Upstream snapshots
+
+Snapshots are also recorded on the *read* side of the [cascade](./index.mdx#triggering-a-pipeline). When a run is dispatched because an upstream asset was written, Windmill captures the current DuckLake snapshot id of each of the run's direct upstream assets at dispatch time and stores it on the job. The run detail page then shows a read-only **Upstream snapshots** panel: one row per upstream asset (`<asset> @ <snapshot_id>`, plus the partition when the upstream is [partitioned](./partitioning.mdx)), with a copy button per row that puts the matching time-travel clause on your clipboard.
+
+![Upstream snapshots panel on a cascade-dispatched run](./upstream_snapshots_panel.png 'Upstream snapshots panel on a cascade-dispatched run')
+
+This answers "what data did this run actually see?" long after the upstream tables have moved on. When a nightly report comes out wrong, open its run, read `ducklake://main/raw_orders @ 34 · partition 2026-07-04`, and query the input exactly as the run saw it by pasting the copied clause into any DuckDB script:
+
+```sql
+SELECT * FROM dl.raw_orders AT (VERSION => 34)
+```
+
+Notes on semantics:
+
+- It is a debugging record, not a pin: the run still reads the latest data, and recording changes nothing about execution.
+- Only direct upstream assets with a materialized snapshot appear. Non-materialized upstreams (for example plain `s3://` objects) are skipped, and manual or non-cascade runs show no panel.
+- The raw record is stored in the job's `trigger` argument under `upstream_snapshots`, so it is also visible in the run's inputs table and through the API, wherever job arguments surface.
+- Recorded snapshots are subject to the lake's retention: if [scheduled maintenance](../11_persistent_storage/ducklake.mdx#scheduled-maintenance) expires a snapshot, its time-travel clause can no longer be queried.
+
 ## Partition status and backfill
 
 Selecting a materialized `ducklake://` asset in the pipeline graph shows its **partition-status grid** — which partitions are materialized, their snapshot id, row count, and time — along with the producer's latest run and its data-test results.

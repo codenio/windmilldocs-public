@@ -232,7 +232,7 @@ A step runs when any of its triggers fire. There are two trigger forms: asset wr
 // on <asset-uri> [debounce=<duration>]
 ```
 
-`// on <asset-uri>` runs the script whenever an upstream script writes that asset. `<asset-uri>` is any of the asset kinds in the table above. The optional trailing `debounce=` is the only inline option (see [debounce](#debounce)); it is meaningful for asset inputs only. This is the default way data flows through a pipeline.
+`// on <asset-uri>` runs the script whenever an upstream script writes that asset. `<asset-uri>` is any of the asset kinds in the table above. The optional trailing `debounce=` is the only inline option (see [debounce](#debounce)); it is meaningful for asset inputs only. This is the default way data flows through a pipeline. A cascade-dispatched run also records the DuckLake snapshot id of each direct upstream asset at dispatch time, shown as an [Upstream snapshots](./materialization.mdx#upstream-snapshots) panel on its run page, so you can query the inputs exactly as the run saw them.
 
 ```ts
 // pipeline
@@ -337,7 +337,7 @@ Materializing one dataset slice per time bucket or key - the `// partitioned` an
 
 ## Materialization
 
-Managed DuckLake writes - the `// materialize` grammar and strategies, SCD2 history, versioning and time-travel, partition status and backfill, schema capture, column-level lineage and data tests - are covered on the dedicated [Materialization](./materialization.mdx) page.
+Managed DuckLake writes - the `// materialize` grammar and strategies, SCD2 history, versioning and time-travel, upstream snapshots, partition status and backfill, schema capture, column-level lineage and data tests - are covered on the dedicated [Materialization](./materialization.mdx) page.
 
 ## Macro libraries (DuckDB)
 
