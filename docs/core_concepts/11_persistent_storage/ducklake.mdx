@@ -137,6 +137,41 @@ In your Ducklake settings, clicking the "Explore" button will open the database 
 
 ![Explore ducklake](./ducklake_images/ducklake_db_manager.png 'Explore ducklake')
 
+## Scheduled maintenance
+
+Scheduled lake maintenance is an [Enterprise Edition](/pricing) feature.
+
+A Ducklake grows unboundedly by default: every write advances a snapshot, and frequent incremental jobs (for example [scheduled](../1_scheduling/index.mdx) ingestions or [materializations](../63_pipelines/materialization.mdx)) accumulate many small parquet files. Windmill can run scheduled maintenance on each lake to keep it compact:
+
+- Snapshot expiry: snapshots older than the retention window are expired, so the files they reference can be reclaimed.
+- Compaction: adjacent small parquet files are merged into larger ones, which keeps queries fast.
+- Orphaned file cleanup: files on storage that are no longer referenced by the catalog (for example left behind by expired snapshots or failed writes) are deleted.
+
+### Configuration
+
+Maintenance is configured per lake from the Maintenance column of the Ducklake settings, in `workspace settings` -> `Object storage (S3)`:
+
+![Ducklake maintenance settings](./ducklake_images/ducklake_maintenance.png 'Ducklake maintenance settings')
+
+- Scheduled maintenance: enables maintenance for this lake. Snapshot expiry always runs when maintenance is enabled.
+- Snapshot retention (days): how long snapshots are kept before being expired. Defaults to 7 days.
+- Cadence (cron, UTC): when maintenance runs. Defaults to daily at 03h UTC, with a deterministic per-lake minute offset so all lakes do not run at the same time.
+- Compaction and Orphaned file cleanup: each operation can be toggled individually.
+
+Lakes with scheduled maintenance must have names made of letters, digits, underscores and hyphens only (`[A-Za-z0-9_-]+`); this is validated when saving the settings.
+
+### Maintenance jobs
+
+Saving the settings creates a managed [schedule](../1_scheduling/index.mdx) at the reserved path `f/ducklake_maintenance/<lake>`. Maintenance runs as normal jobs on the `duckdb` [worker tag](../9_worker_groups/index.mdx): each run is visible on the [Runs](../5_monitor_past_and_future_runs/index.mdx) page, and the run history serves as the audit trail of what maintenance did and when. Each run returns a one-row summary as its result: `expired_snapshots`, `compacted_file_groups`, `cleaned_files`, `orphaned_files_deleted` and `remaining_snapshots`.
+
+The schedule is fully managed by the Ducklake settings: it is hidden from the Schedules page, cannot be created, edited or deleted directly, and is removed when maintenance is disabled or the lake is deleted. It is also excluded from workspace exports and [workspace forks](../../advanced/20_workspace_forks/index.mdx).
+
+### Retention and time-travel
+
+Expired snapshots are gone for good: [time-travel](../63_pipelines/materialization.mdx#versioning-and-time-travel) reads (`AT (VERSION => n)`) and recorded snapshot references older than the retention window become non-queryable. Set the retention window at least as long as the history you need to query.
+
+File deletion is conservative: files released by expired snapshots are physically deleted with an extra one-day margin, so a long-running query reading a just-expired snapshot is not interrupted, and orphaned file cleanup never deletes files younger than one day, so files being written by a concurrent job are safe. Storage space is therefore reclaimed about a day after snapshots expire.
+
 ## Performance: Ducklake vs Snowflake
 
 import TpcDsBenchmarkSection from '@site/src/components/TpcDsBenchmarkSection.mdx';

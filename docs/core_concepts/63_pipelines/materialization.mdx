@@ -137,6 +137,8 @@ To run a partitioned script manually (e.g. from the editor's **Test** panel), fi
 
 Every managed write is a DuckLake commit, so versioning is free — you never annotate for it. Each run records the snapshot it produced, which means you can read a table as of a past snapshot (`FROM dl.orders_daily AT (VERSION => 42)`), roll back, and reproduce a past run. This is what `// materialize` gives you over hand-writing the same SQL.
 
+Snapshots are kept forever by default. If [scheduled maintenance](../11_persistent_storage/ducklake.mdx#scheduled-maintenance) is enabled on the lake, snapshots older than its retention window are expired and can no longer be read with `AT (VERSION => n)`, so size the retention window to the history you need to query.
+
 ## Partition status and backfill
 
 Selecting a materialized `ducklake://` asset in the pipeline graph shows its **partition-status grid** — which partitions are materialized, their snapshot id, row count, and time — along with the producer's latest run and its data-test results.
