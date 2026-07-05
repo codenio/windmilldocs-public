@@ -253,7 +253,7 @@ SQL-AST inference runs when a pipeline is deployed, so column lineage shows on *
 
 ## Data tests
 
-A materialized asset can declare **data tests** that run against the freshly-materialized slice and **fail the pipeline run** on violation — propagating through the cascade like any other step failure. They are the pipeline equivalent of dbt/Dagster data tests.
+A materialized asset can declare **data tests** that run against the freshly-materialized slice and **fail the pipeline run** on violation — propagating through the cascade like any other step failure. They are the pipeline equivalent of dbt/Dagster data tests. Whether the data written by a failing run stays visible depends on the edition - see [Failing tests: publish or roll back](#failing-tests-publish-or-roll-back-ce-vs-ee).
 
 ```
 // data_test unique <col>
@@ -281,6 +281,22 @@ A materialized asset can declare **data tests** that run against the freshly-mat
 ATTACH 'ducklake://main' AS dl;
 SELECT order_id, status, amount FROM dl.orders WHERE created_at::date = '{partition}'
 ```
+
+### Failing tests: publish or roll back (CE vs EE)
+
+What happens to the data written by a failing run depends on the edition:
+
+- On the Community Edition, materialization is commit-then-test, like dbt: the write is committed first, then the tests run. A failing test fails the run and stops the cascade, but the slice it wrote is already published - BI tools and ad-hoc readers see the failing data until the next successful run.
+- On Enterprise Edition, materialization uses write-audit-publish (WAP): the same checks are also evaluated inside the write transaction, just before commit. Any violation aborts the transaction before it commits, so the write is rolled back - readers keep the previous version and no DuckLake snapshot is created. This is automatic on EE; no configuration or annotation change is needed.
+
+| On a failing data test | CE (commit-then-test) | EE (write-audit-publish) |
+| --- | --- | --- |
+| Freshly written slice | Published: committed before the tests run, so readers see the failing data | Rolled back: readers keep the previous version |
+| DuckLake snapshot | New snapshot created (time-travel can inspect the bad write) | No snapshot created |
+| First run of a brand-new asset | Table created, filled with the failing data | No table created at all |
+| Job result, error message, cascade | Run fails with the per-test pass/fail breakdown; downstream cascade stops | Identical |
+
+Passing runs behave identically in both editions, and the run result shows the same per-test breakdown either way. The only difference is whether the data written by a failing run is visible afterwards.
 
 ## Materialization in workspace forks (dev data)
 
