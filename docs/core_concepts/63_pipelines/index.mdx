@@ -289,15 +289,11 @@ How to land external data in the lake - choosing the extract engine, incremental
 
 ## Freshness
 
-:::info Planned - parsed and shown on the graph, but no watchdog runs yet
-
 ```
 // freshness <duration>
 ```
 
-Declares a service-level objective: the script's outputs should be at most `<duration>` old. Windmill parses this annotation and shows it on the pipeline graph, but it does not run a freshness watchdog yet. Until watchdog runs are implemented, freshness is recognized metadata only.
-
-Planned behavior: freshness will be a backstop, not a schedule. If no other trigger has run the script within the window, a watchdog will re-run it; whenever any trigger does run it, the window will reset. Freshness is a consumer guarantee that applies regardless of which trigger last fired (a schedule is a producer cadence; the two are independent and can coexist).
+Declares a service-level objective: the script's outputs should be at most `<duration>` old. Freshness is a consumer guarantee, not a schedule: it applies regardless of which trigger last ran the script (a schedule is a producer cadence; the two are independent and can coexist). All editions show a fresh/stale verdict on the pipeline graph; on [Enterprise Edition](/pricing) a [watchdog](#freshness-watchdog-ee) also re-runs stale scripts automatically.
 
 - The duration is a plain string such as `30m`, `2h`, `1d`. Whitespace after the keyword is required; an empty value is ignored.
 - If several `// freshness` lines are present, the first one wins.
@@ -313,7 +309,27 @@ export async function main() {
 }
 ```
 
-:::
+### Fresh/stale badge
+
+On the pipeline graph, every script with a `// freshness` annotation carries a badge showing the window and a verdict computed from the script's run history:
+
+- Emerald (fresh): the script's most recent successful root run completed within the window.
+- Amber (stale): the last successful run is older than the window, or the script has never run successfully. The tooltip shows how long ago the last successful run completed, or "no successful run yet".
+- Neutral (no verdict): draft scripts and windows that cannot be parsed.
+
+![Pipeline graph nodes with freshness badges: emerald when the last successful run completed within the window, amber when stale](./freshness_badges.png 'Fresh (emerald) and stale (amber) freshness badges')
+
+Only root runs of the script itself count toward the verdict; a flow that contains a step on the same path does not make the script fresh. The verdict is computed from the runs you are allowed to see, so users without job visibility get no verdict. An open graph re-evaluates every 30 seconds, so a badge flips to stale as its window ages out and turns fresh shortly after a successful run.
+
+### Freshness watchdog (EE)
+
+On Enterprise Edition, a watchdog enforces the SLO as a backstop: if no successful root run of the script completed inside the window, it re-runs the script automatically. Whenever any trigger runs the script successfully, the window resets and the watchdog stays out of the way.
+
+- The watchdog checks deployed pipeline scripts about once a minute. [Partitioned](./partitioning.mdx) scripts are not covered in this version, and a script that already has a run queued and due (or running) is left alone.
+- Watchdog runs use the latest deployed version of the script with its own settings (worker tag, retries, ...), run with the deploying user's permissions, and are attributed to the pseudo-user `freshness-<path>` with trigger kind `freshness`, so they can be filtered on the [Runs](../5_monitor_past_and_future_runs/index.mdx) page.
+- They pass `_wmill_skip_asset_dispatch: true`: a watchdog run refreshes the script's own outputs but never fires the downstream [cascade](#triggering-a-pipeline).
+- If the script stays stale (for example because the re-run keeps failing), attempts back off exponentially starting at one minute and capped at the window, so a persistently failing hourly script converges to about one attempt per hour. A successful run resets the backoff.
+- Set the `DISABLE_FRESHNESS_WATCHDOG` [environment variable](../47_environment_variables/index.mdx) to `true` on servers to turn the watchdog off instance-wide.
 
 ## Partitioned pipelines
 
@@ -509,7 +525,7 @@ The full command reference (all options for `show`, `run`, `dev` and `docs`) is 
 | `// pipeline` | script | none (bare marker) | - | Include the script in its folder's pipeline graph |
 | `// on <asset-uri>` | input | `debounce=<duration>` | - | Run when the asset is written (cascade); `<asset-uri>`: `s3:///<key>` (workspace storage) or `s3://<storage>/<key>`, `$res:`, `datatable://`, `ducklake://`, `volume://` |
 | `// on <kind>` | trigger | none (marker-only) | - | Fire from a native trigger that targets the script; `<kind>`: `schedule`, `webhook`, `email`, `kafka`, `mqtt`, `nats`, `postgres`, `sqs`, `gcp`, `data_upload`. The cron and all other options live on the trigger row |
-| `// freshness <duration>` | SLA | `<n>[s\|m\|h\|d]` | - | Planned: parsed and shown on the graph, but no watchdog runs yet (first wins) |
+| `// freshness <duration>` | SLA | `<n>[s\|m\|h\|d]` | - | Fresh/stale badge on the graph; on EE a [watchdog](#freshness-watchdog-ee) re-runs stale scripts (first wins) |
 | `// partitioned <kind> [opts]` | output | kinds `daily\|hourly\|weekly\|monthly\|dynamic`; opts `tz=`, `format=`, `start=`, `key=` (dynamic) | `tz=UTC`, per-kind `format`, no `start` | Materialize one dataset per partition (first wins) |
 | `// materialize [manual] <ducklake-uri> [opts]` | output | `manual` (track-only); opts `append`, `key=<col>`, `history` (SCD2, with `track=`, `deletes=close`), `on_schema_change=ignore` | managed, replace | Managed write into a DuckLake table — idempotent, snapshotted, tracked (first wins). DuckDB-only |
 | `// macros` | script | none (bare marker) | - | Mark a DuckDB script as a workspace [macro library](./macros.mdx); its macros become callable from every DuckDB script |
@@ -532,9 +548,9 @@ Pipelines borrow the asset-and-lineage model that [dbt](https://www.getdbt.com/)
 - **dbt** transforms data with SQL and tracks lineage, but it is transform-only: it needs a separate orchestrator to run it on a schedule and a separate warehouse to run against. Windmill runs the transforms (DuckDB), owns the store and versioning ([DuckLake](../11_persistent_storage/ducklake.mdx)), and schedules and triggers them natively.
 - **Dagster** orchestrates assets and tracks metadata, but it relies on dbt (or your own code) for the transforms and a warehouse for compute. Windmill is the orchestrator, the compute (your own workers), and the transform engine at once.
 
-The equivalents map closely: [materializations](./materialization.mdx), [data tests](./materialization.mdx#data-tests), [macros](./macros.mdx), [column lineage](./materialization.mdx#column-level-lineage), [schema contracts](./materialization.mdx#schema-contracts), [selective runs](#selective-execution-run-up-to-here) and [backfill](./materialization.mdx#partition-status-and-backfill) all have counterparts, while the compute, scheduling and [triggers](../../getting_started/8_triggers/index.mdx) come from the same platform and run on your own infrastructure, in any language. Schema contracts differ in shape from dbt's: instead of a declaration you maintain by hand, the schema captured at materialization time is the contract, and consumer saves are checked against it with warnings only (there is no equivalent of dbt's `on_schema_change=fail`).
+The equivalents map closely: [materializations](./materialization.mdx), [data tests](./materialization.mdx#data-tests), [macros](./macros.mdx), [column lineage](./materialization.mdx#column-level-lineage), [schema contracts](./materialization.mdx#schema-contracts), [selective runs](#selective-execution-run-up-to-here), [backfill](./materialization.mdx#partition-status-and-backfill) and [freshness](#freshness) all have counterparts, while the compute, scheduling and [triggers](../../getting_started/8_triggers/index.mdx) come from the same platform and run on your own infrastructure, in any language. Schema contracts differ in shape from dbt's: instead of a declaration you maintain by hand, the schema captured at materialization time is the contract, and consumer saves are checked against it with warnings only (there is no equivalent of dbt's `on_schema_change=fail`).
 
-Pipelines are in alpha and do not yet cover everything those tools do: [freshness](#freshness) policies are parsed but not enforced yet, and dbt's docs-site generation, seeds and semantic layer have no direct equivalent. The goal is not feature-for-feature parity but doing the whole asset-based workflow (transform, orchestrate, test, materialize, version) in a single platform, on your own compute.
+Pipelines are in alpha and do not yet cover everything those tools do: dbt's docs-site generation, seeds and semantic layer have no direct equivalent. The goal is not feature-for-feature parity but doing the whole asset-based workflow (transform, orchestrate, test, materialize, version) in a single platform, on your own compute.
 
 ## Related
 

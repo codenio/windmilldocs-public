@@ -51,6 +51,7 @@ You can use them in a Script by clicking on "+Context Var":
 | QUEUE_LIMIT_WAIT_RESULT   | None                   | The number of max jobs in the queue before rejecting immediately the request in 'run_wait_result' endpoint. Takes precedence on the query arg. If none is specified, there are no limit.           | Worker                |
 | DENO_AUTH_TOKENS          | None                   | Custom DENO_AUTH_TOKENS to pass to worker to allow the use of private modules                                                                                                                      | Worker                |
 | DISABLE_RESPONSE_LOGS          | false                   | Disable response logs                                                   | Server                |
+| DISABLE_FRESHNESS_WATCHDOG | false | (ee only) Disable the [freshness watchdog](../63_pipelines/index.mdx#freshness-watchdog-ee) that re-runs stale pipeline scripts | Server |
 | CREATE_WORKSPACE_REQUIRE_SUPERADMIN | true | If true, only superadmins can create new workspaces | Server |
 | WM_MOCKED_API_FILE | /path/to/mocked_api.json | Path to the mocked API file | All |
 | MAX_SESSION_VALIDITY_SECONDS | 3 * 24 * 60 * 60    | Session will be invalidated after this amount of seconds of inactivity (default 3 days) 																											  | Server                |
