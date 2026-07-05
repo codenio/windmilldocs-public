@@ -56,6 +56,10 @@ Editing a flow or script from the dev page writes back to disk:
 
 When `--path` is set, edits to other files don't push to the page, so you can keep working on unrelated files in the same workspace folder.
 
+:::tip Data pipelines
+[Pipelines](../../core_concepts/63_pipelines/index.mdx) have their own analog: `wmill pipeline dev` watches a folder of `// pipeline` scripts and live-previews the pipeline graph in the browser on every save. See [Pipelines (CLI)](./pipeline.md#live-preview-with-wmill-pipeline-dev).
+:::
+
 ## `wmill script preview`
 
 Preview a local script file against the remote workspace. Supports both regular scripts and [codebase](../../core_concepts/33_codebases_and_bundles/index.mdx) scripts (which are bundled before running).

@@ -251,6 +251,8 @@ cd f/my_flows/etl__flow && wmill dev
 
 The same command powers the [VS Code extension](../../cli_local_dev/1_vscode-extension/index.mdx) iframe and the [Claude Code](../../misc/9_guides/local_dev_with_ai/index.mdx) preview pane (via `--proxy-port`), so you get the same live editing experience whether you work from a browser, VS Code, or an AI coding assistant.
 
+[Pipelines](../../core_concepts/63_pipelines/index.mdx) have the same loop: `wmill pipeline dev` watches a folder of `// pipeline` scripts and live-previews the pipeline graph in the browser on every save, and `wmill pipeline show / run / docs --local` inspect and run the working-tree pipeline without deploying. See [Pipelines (CLI)](../3_cli/pipeline.md).
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Dev & preview"
