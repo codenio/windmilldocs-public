@@ -268,7 +268,7 @@ A materialized asset can declare **data tests** that run against the freshly-mat
 - **`relationships <col> -> <asset-uri>.<col>`** — referential integrity: every value must exist in the referenced asset's column.
 - **`<script_path>`** — a custom DuckDB test script (the escape hatch), e.g. `// data_test f/tests/orders_amount_sane`.
 
-`// data_test` lines accumulate (a script can declare several) and malformed lines drop fail-safe. For a `// partitioned` target the built-in checks are scoped to the slice just written, and for an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target to the current rows (`is_current`). Data tests require managed `// materialize` (they are rejected on `// materialize manual` or a non-DuckLake target). The producer→asset edge shows a test-count badge, and the run result lists each test with a pass/fail outcome.
+`// data_test` lines accumulate (a script can declare several) and malformed lines drop fail-safe. For a `// partitioned` target the built-in checks are scoped to the slice just written, and for an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target to the current rows (`is_current`). Data tests require managed `// materialize` (they are rejected on `// materialize manual` or a non-DuckLake target). The producer→asset edge shows a test-count badge, and the run result lists each test with a pass/fail outcome; failed tests also include a [sample of their violating rows](#violating-row-samples).
 
 ```sql
 -- pipeline
@@ -281,6 +281,23 @@ A materialized asset can declare **data tests** that run against the freshly-mat
 ATTACH 'ducklake://main' AS dl;
 SELECT order_id, status, amount FROM dl.orders WHERE created_at::date = '{partition}'
 ```
+
+### Violating-row samples
+
+When a test fails, the result does not just report a count: each failed test also captures a **sample of its violating rows**, so you can see which rows broke the check without re-running the SELECT by hand. In the run view, each failed test expands into a table of its sample rows, with CSV download.
+
+![Failed data tests with one test expanded into its violating-rows sample table](./data_test_violating_rows.png 'A failed test expanded into its violating-rows sample')
+
+Samples are bounded and best-effort:
+
+- At most **20 rows and 50KB** of serialized data per test. A sample over the size cap is dropped entirely, never truncated.
+- A sample can never change a test's outcome: pass/fail is decided from the violating-row count alone, and a missing sample just means that test shows counts only.
+- Which rows land in the sample is not deterministic (it is a sample of the violating rows, not the full set).
+- `unique` samples the duplicated values as `{value, count}` pairs rather than raw rows, matching how its count is defined (number of duplicated values). On partitioned targets the managed `_wm_partition` column is excluded from samples.
+
+The error *message* of a failed run stays counts-only (`✗ unique(id) — 3 violating row(s)`), so run descriptions and alerts built from the message carry no row data. The samples live in the structured result of the failed job, under `error.data_tests` (a list of `{test, violating, sample?}`). An [error handler](../10_error_handling/index.mdx) that formats only the error message keeps alerting with counts; one that wants the offending rows can read them from `error.data_tests` in the job result it receives.
+
+On Enterprise Edition, where a violating run is rolled back before it commits (see [below](#failing-tests-publish-or-roll-back-ce-vs-ee)), the violating rows no longer exist to sample: an EE failed run shows the per-test checklist with counts only.
 
 ### Failing tests: publish or roll back (CE vs EE)
 
@@ -295,8 +312,9 @@ What happens to the data written by a failing run depends on the edition:
 | DuckLake snapshot | New snapshot created (time-travel can inspect the bad write) | No snapshot created |
 | First run of a brand-new asset | Table created, filled with the failing data | No table created at all |
 | Job result, error message, cascade | Run fails with the per-test pass/fail breakdown; downstream cascade stops | Identical |
+| [Violating-row samples](#violating-row-samples) | Failed tests include a sample of their violating rows | Counts only: the rolled-back rows no longer exist to sample |
 
-Passing runs behave identically in both editions, and the run result shows the same per-test breakdown either way. The only difference is whether the data written by a failing run is visible afterwards.
+Passing runs behave identically in both editions, and the run result shows the same per-test breakdown either way. The difference is whether the data written by a failing run is visible afterwards - and, as a consequence, whether its violating rows are still there to sample.
 
 ## Materialization in workspace forks (dev data)
 
