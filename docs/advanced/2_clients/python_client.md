@@ -84,13 +84,19 @@ import wmill
 from wmill import S3Object
 
 # Load a file from S3
-s3_obj = S3Object(s3='/path/to/file.txt')
+s3_obj = S3Object(s3='path/to/file.txt')
 content = wmill.load_s3_file(s3_obj)
 
 # Write a file to S3
 file_content = b'Hello Windmill!'
 wmill.write_s3_file(s3_obj, file_content)
+
+# Strings are accepted as s3:// URIs: s3:///<key> targets the default
+# workspace storage, s3://<storage>/<key> a secondary storage
+content = wmill.load_s3_file('s3:///path/to/file.txt')
 ```
+
+String parameters must be `s3://` URIs. Since client version 1.748.0, any other string (e.g. `'path/to/file.txt'`) raises a `ValueError` instead of silently uploading under an auto-generated key. To get an auto-generated key on purpose, pass `None` as the S3 object. See [Object storage in Windmill](../../core_concepts/38_object_storage_in_windmill/index.mdx#read-a-file-from-s3-or-object-storage-within-a-script) for details.
 
 ## Notes
 

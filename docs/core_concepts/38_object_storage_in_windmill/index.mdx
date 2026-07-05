@@ -120,6 +120,24 @@ S3 files in Windmill are just pointers to the S3 object using its key. As such, 
 }
 ```
 
+The SDK functions that take an `S3Object` also accept an `s3://` URI string. The format is strict: `s3://<storage>/<key>`, where `<storage>` is the name of a [secondary storage](#secondary-storage) and is left empty for the default workspace storage. A file `path/to/file` in the default storage is therefore written `s3:///path/to/file`, with three slashes.
+
+```python
+wmill.load_s3_file('s3:///path/to/file')  # default workspace storage
+wmill.load_s3_file('s3://my_storage/path/to/file')  # secondary storage named 'my_storage'
+```
+
+Since client version 1.748.0, any other string raises an error instead of being accepted. Previously, a bare string like `path/to/file` was silently replaced by an auto-generated key, which hid typos and misplaced uploads:
+
+```
+Invalid s3 object 'path/to/file': expected an s3://<storage>/<key> URI
+(e.g. 's3:///path/to/file' for key 'path/to/file' in the default storage) or S3Object(s3=<key>)
+```
+
+To upload under an auto-generated key on purpose, omit the S3 object argument (pass `None` / `undefined`) rather than passing a string. In TypeScript, the `S3Object` type only admits `` `s3://${string}/${string}` `` template literals, so bare strings are already a compile-time error in typed code.
+
+The same `s3:///<key>` spelling is used by [asset](../52_assets/index.mdx) annotations and DuckDB queries (`read_json_auto('s3:///path/to/file')`), so one spelling works everywhere and resolves to the same asset path. This is particularly relevant when connecting scripts into [pipelines](../63_pipelines/index.mdx).
+
 You can read a file from S3 or object storage within a script using the `loadS3File` and `loadS3FileStream` functions from the [TypeScript client](../../advanced/2_clients/ts_client.mdx) and the `wmill.load_s3_file` and `wmill.load_s3_file_stream` functions from the [Python client](../../advanced/2_clients/python_client.md). When writing or manipulating file content, consider using `Blob` objects to efficiently handle binary data and ensure compatibility across different file types.
 
 - **`loadS3File`**: This function loads the entire file content into memory as a single unit, which is useful for smaller files where you need immediate access to all data.

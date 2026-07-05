@@ -44,16 +44,18 @@ You can use the Add Resource / S3 Object buttons in the editor bar for convenien
 />
 <br />
 
-The python and Typescript/Javascript clients now support the new URI syntax :
+The python and Typescript/Javascript clients support the URI syntax :
 
 ```python
 wmill.get_resource('res://path/to/resource')
-wmill.load_s3_file('s3://storage/path/to/file.csv')
 
-# Not using the URI syntax still works for back-compatibility,
-# and is detected as an asset
-wmill.load_s3_file('storage/path/to/file.csv')
+# 'storage' is the name of a secondary storage;
+# the default workspace storage has an empty name, hence the three slashes
+wmill.load_s3_file('s3://storage/path/to/file.csv')
+wmill.load_s3_file('s3:///path/to/file.csv')
 ```
+
+For S3 files, string parameters must use the `s3://` URI format. Since client version 1.748.0, a bare string like `'path/to/file.csv'` raises an error instead of silently uploading under an auto-generated key, and is not detected as an asset. Pass `S3Object(s3='path/to/file.csv')` or spell it `'s3:///path/to/file.csv'`. See [Object storage in Windmill](../38_object_storage_in_windmill/index.mdx#read-a-file-from-s3-or-object-storage-within-a-script) for details. For resources, plain paths without `res://` still work for back-compatibility.
 
 ## Asset nodes in flows
 
