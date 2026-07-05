@@ -152,10 +152,13 @@ You can choose to use S3, Azure Blob Storage, AWS OIDC or Google Cloud Storage. 
 |-------|-------------|
 | Account name | The name of your Azure storage account |
 | Container name | The name of your Azure blob container |
-| Access key | Your Azure storage account access key |
+| Access key | Your Azure storage account access key. Leave empty when authenticating with AKS Workload Identity |
 | Tenant ID | (Optional) Your Azure tenant ID |
 | Client ID | (Optional) Your Azure client ID |
+| Federated token file | (Optional) Path to the projected service account token when using AKS Workload Identity, e.g. `/var/run/secrets/azure/tokens/azure-identity-token` |
 | Endpoint | (Optional) Only needed for non Azure Blob providers like Azurite |
+
+When running on AKS with [Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview), you can authenticate without a storage access key: set the tenant ID, client ID and federated token file (leave the access key empty). Windmill then exchanges the projected service account token for storage credentials directly, without relying on IMDS.
 
 #### AWS OIDC
 

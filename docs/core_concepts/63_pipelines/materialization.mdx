@@ -23,6 +23,7 @@ The trailing `SELECT` may reference SQL arguments declared with `-- $name (type)
 ```
 // materialize ducklake://<name>/<table> [append] [key=<col>]                          # managed (default)
 // materialize ducklake://<name>/<table> key=<col> history [track=<c1,…>] [deletes=close]  # managed SCD2 history
+// materialize ducklake://<name>/<table> … on_schema_change=ignore                     # any managed form: mute downstream contract warnings
 // materialize manual ducklake://<name>/<table>                                        # track-only escape hatch
 ```
 
@@ -31,6 +32,7 @@ The trailing `SELECT` may reference SQL arguments declared with `-- $name (type)
   - `key=<col>` → **merge**: upsert the slice on `<col>` (rows absent from the SELECT are left in place).
   - `append` → **insert-only**: for immutable event logs. Re-running duplicates rows, so use only for append-only sources. (`append` wins over `key=` if both are given.)
   - `key=<col> history` → **SCD2 history**: keep every version of every row instead of overwriting on change. See [SCD2 history](#scd2-history-slowly-changing-dimensions).
+  - `on_schema_change=ignore` combines with any strategy: it declares the table's schema deliberately unstable and suppresses downstream [schema contract](#schema-contracts) warnings. Default is `warn`.
 - **`manual`** — the escape hatch: your script writes its own DDL and Windmill only records that the slice was materialized (no snapshot capture, no idempotency guarantee). Rare; explicit.
 
 `// materialize` is for DuckDB SQL. From **Python or TypeScript**, use the `wmill.ducklake` helpers (`upsert_partition`, `append_partition`, `read`) which give the same managed, idempotent write from arbitrary code.
@@ -145,6 +147,8 @@ From there, **Backfill** re-runs the materialization for a range of partitions; 
 
 The Backfill button opens a range picker that previews the status of every partition in `[from, to]` - missing, failed or materialized - so the missing/failed set is the backfill worklist. A toggle (on by default) restricts the run to missing and failed partitions; turn it off to re-run the whole range. Launching runs the producing script once per partition with an explicit `partition` argument, sequentially (concurrent materializations of one DuckLake table would contend on the catalog commit); each run is idempotent, and a failed partition does not stop the rest. Progress streams in the dialog and, when it is closed, in the asset drawer header, and the grid refreshes as each partition lands.
 
+Range backfill enumerates time [partition kinds](./partitioning.mdx#partition-kinds) only (`daily`, `hourly`, `weekly`, `monthly`), honours the spec's `start` anchor (partitions before it are not enumerated), and caps a single backfill at 1000 partitions. `dynamic` partitions cannot be enumerated over a range - backfill them one at a time with an explicit `partition` argument.
+
 ![Backfill range picker previewing missing, failed and materialized partitions](./backfill_range_preview.png 'Backfill range picker with partition-status preview')
 
 The same backfill works headlessly from the CLI by passing an explicit partition per run: `wmill pipeline run <folder> --partition 2026-06-30` (see [local development](./index.mdx#local-development)).
@@ -152,6 +156,44 @@ The same backfill works headlessly from the CLI by passing an explicit partition
 ## Schema capture
 
 After a managed materialize run, Windmill captures the table's output schema (column names and types) and stores it as **versioned asset metadata**. Selecting a materialized `ducklake://` asset shows a **Schema** tab listing each captured version. A new version is recorded only when the column set actually changes (a column added, dropped, retyped, or reordered), so the tab is a compact schema-evolution history rather than one row per run.
+
+The captured schema also doubles as a contract for downstream consumers - see [Schema contracts](#schema-contracts).
+
+## Schema contracts
+
+The [captured schema](#schema-capture) is read back as a contract: when a consumer script is saved or deployed, Windmill checks every `ducklake://` reference it makes against the latest captured schema of that asset, and surfaces mismatches as **warnings - never errors**. Renaming a column upstream no longer breaks downstream consumers silently at run time; but because a deliberate upstream reshape should not fail every consumer save either, deploy is never blocked (there is no equivalent of dbt's `on_schema_change=fail`).
+
+The same check shows up in three places:
+
+- **Save-time warnings** - right after a successful deploy, mismatches are listed in a warning toast. This is the authoritative check, run server-side against the deployed content.
+- **Editor squiggles** - the check also runs live on the open buffer, underlining the offending column read, `// column` line or `// data_test` line with a warning squiggle as you type.
+- **Schema-aware autocomplete** - on annotation lines, typing `.` after a `ducklake://…` reference completes column names (with their captured types), so a broken reference never gets typed in the first place.
+
+{/* TODO screenshot: schema_contract_squiggle.png - consumer script in the editor reading a column that was renamed upstream, showing the warning squiggle and its hover message citing the captured schema version and the surviving columns */}
+
+{/* TODO screenshot: schema_contract_autocomplete.png - Monaco completion popup after typing `.` following a ducklake:// reference on a `-- column` annotation line, listing captured column names with their types */}
+
+What is checked (for `ducklake://` assets only, the substrate with [schema capture](#schema-capture)):
+
+- Columns your script reads from or writes to the asset that are missing from its captured schema.
+- `// column` [lineage annotations](#column-level-lineage) whose source column no longer exists.
+- `// data_test relationships` references: a referenced column that is missing, and a type difference between the two join columns when both sides are captured (reported as a difference, not a failure - the runtime probe coerces types, so the test may still pass).
+
+Comparison follows DuckDB semantics: column names compare case-insensitively, `{partition}` tokens are stripped before lookup, and the managed `_wm_partition` column is always accepted. A `<table>_current` reference is checked against its [SCD2](#scd2-history-slowly-changing-dimensions) base table's capture (the view has the same columns by construction). An asset with no capture at all - never materialized, `// materialize manual`, or a non-DuckLake target - produces no warnings. Each warning cites the schema version and capture time it was checked against, so you can tell when a warning is due to a stale capture rather than an actual mismatch.
+
+### Suppressing warnings for an unstable schema
+
+When a table's schema is deliberately unstable - a raw landing table whose columns track an external payload, for example - declare it on the producer with `on_schema_change=ignore`:
+
+```sql
+-- pipeline
+-- materialize ducklake://main/raw_events append on_schema_change=ignore
+
+ATTACH 'ducklake://main' AS dl;
+SELECT * FROM read_json('s3://landing/events/*.json')
+```
+
+Consumers of that asset then get a single informational note instead of per-column warnings. The default is `warn`, and unknown values keep the default. On `// materialize manual` the option is inert since nothing is captured; the deploy logs a warning saying so.
 
 ## Column-level lineage
 
