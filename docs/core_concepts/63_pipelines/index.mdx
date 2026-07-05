@@ -171,6 +171,12 @@ Mind the S3 URI shape: the first segment after `s3://` is the storage name, and 
 
 Read/write is inferred from code context (a `COPY (...) TO` is a write, a `read_parquet` is a read). Only asset URIs are valid here; a `// on` with an unrecognized URI is ignored. Duplicate identical `// on` lines are de-duplicated.
 
+:::info Substrate setup
+
+The store an asset points at has to exist before a pipeline can write to it. A [DuckLake](../11_persistent_storage/ducklake.mdx) is one click to create in `workspace settings` -> `Object storage (S3)` (the default lake is `main`), so `ducklake://` targets work as soon as a lake is configured. The [data table](../11_persistent_storage/data_tables.mdx) substrate behind `datatable://` is a separate Postgres database that must be configured first in the workspace's data-tables settings; until it is, `datatable://` reads and writes have no backing store. `s3://`, `$res:` and `volume://` assets need only their usual [object storage](../38_object_storage_in_windmill/index.mdx) / resource / volume configuration.
+
+:::
+
 ```ts
 // pipeline
 // on s3:///datasets/raw/events.parquet
@@ -527,7 +533,7 @@ The full command reference (all options for `show`, `run`, `dev` and `docs`) is 
 | `// on <kind>` | trigger | none (marker-only) | - | Fire from a native trigger that targets the script; `<kind>`: `schedule`, `webhook`, `email`, `kafka`, `mqtt`, `nats`, `postgres`, `sqs`, `gcp`, `data_upload`. The cron and all other options live on the trigger row |
 | `// freshness <duration>` | SLA | `<n>[s\|m\|h\|d]` | - | Fresh/stale badge on the graph; on EE a [watchdog](#freshness-watchdog-ee) re-runs stale scripts (first wins) |
 | `// partitioned <kind> [opts]` | output | kinds `daily\|hourly\|weekly\|monthly\|dynamic`; opts `tz=`, `format=`, `start=`, `key=` (dynamic) | `tz=UTC`, per-kind `format`, no `start` | Materialize one dataset per partition (first wins) |
-| `// materialize [manual] <ducklake-uri> [opts]` | output | `manual` (track-only); opts `append`, `key=<col>`, `history` (SCD2, with `track=`, `deletes=close`), `on_schema_change=ignore` | managed, replace | Managed write into a DuckLake table — idempotent, snapshotted, tracked (first wins). DuckDB-only |
+| `// materialize [manual] <ducklake-uri> [opts]` | output | `manual` (track-only); opts `append`, `key=<col>`, `history` (SCD2, with `track=`, `deletes=close`), `on_schema_change=warn\|ignore\|fail\|sync` | managed, replace | Managed write into a DuckLake table — idempotent, snapshotted, tracked (first wins). DuckDB-only |
 | `// macros` | script | none (bare marker) | - | Mark a DuckDB script as a workspace [macro library](./macros.mdx); its macros become callable from every DuckDB script |
 | `// use <lib_path>` | script | macro library script path | - | Force-inject a macro library (definitions + setup), for calls hidden in dynamic SQL (accumulate) |
 | `// column <out> <- <asset-uri>.<col>[, …]` | lineage | comma-separated source columns | inferred from SQL | Column-to-column lineage; inferred from SQL for DuckDB, override/declare for other languages. Metadata only (accumulate) |
@@ -541,6 +547,19 @@ The full command reference (all options for `show`, `run`, `dev` and `docs`) is 
 
 The `{partition}` token is used inside asset paths (in `// on` and in the paths your code writes) and is resolved at run time. Unknown annotations and unknown option values are ignored (the default is kept) rather than failing the deploy.
 
+## Community vs Enterprise
+
+Every pipeline concept works on the Community Edition: the annotations, the asset [cascade](#triggering-a-pipeline), [materialization](./materialization.mdx) with all strategies, [data tests](./materialization.mdx#data-tests), [column lineage](./materialization.mdx#column-level-lineage), [macros](./macros.mdx), [partitions](./partitioning.mdx), freshness badges and [local development](#local-development). A few *operational* capabilities are [Enterprise Edition](/pricing) only, and each one degrades to a safe Community behavior rather than disappearing:
+
+| Capability | Community Edition | Enterprise Edition |
+| --- | --- | --- |
+| [Backfill](./materialization.mdx#partition-status-and-backfill) | Single-partition runs (an explicit `partition` argument from the graph, editor or CLI, one at a time) | One-click **range backfill** over `[from, to]` from the pipeline graph, up to 1000 partitions |
+| [Failing data tests](./materialization.mdx#failing-tests-publish-or-roll-back-ce-vs-ee) | Commit-then-test: the failing slice is committed and published, then the run fails (dbt's behavior) | **Write-audit-publish**: the checks run inside the write transaction and a violation rolls the write back before commit, so readers keep the previous version |
+| [Freshness](#freshness) | Passive fresh/stale [badge](#freshstale-badge) on the graph | Active [**watchdog**](#freshness-watchdog-ee) that re-runs stale scripts automatically |
+| [DuckLake maintenance](../11_persistent_storage/ducklake.mdx#scheduled-maintenance) | None managed: the lake grows unboundedly unless you compact and expire snapshots yourself | **Scheduled maintenance** per lake: snapshot expiry, compaction and orphaned-file cleanup on a managed schedule |
+
+The Community behavior is never a stub: a one-at-a-time backfill, a passive freshness verdict and commit-then-test are exactly how dbt and a hand-rolled orchestrator behave. Enterprise turns each into an automated, safe-by-default operation.
+
 ## How this compares to dbt and Dagster
 
 Pipelines borrow the asset-and-lineage model that [dbt](https://www.getdbt.com/) and [Dagster](https://dagster.io/) popularized, but fold several tools into one platform:
@@ -548,7 +567,7 @@ Pipelines borrow the asset-and-lineage model that [dbt](https://www.getdbt.com/)
 - **dbt** transforms data with SQL and tracks lineage, but it is transform-only: it needs a separate orchestrator to run it on a schedule and a separate warehouse to run against. Windmill runs the transforms (DuckDB), owns the store and versioning ([DuckLake](../11_persistent_storage/ducklake.mdx)), and schedules and triggers them natively.
 - **Dagster** orchestrates assets and tracks metadata, but it relies on dbt (or your own code) for the transforms and a warehouse for compute. Windmill is the orchestrator, the compute (your own workers), and the transform engine at once.
 
-The equivalents map closely: [materializations](./materialization.mdx), [data tests](./materialization.mdx#data-tests), [macros](./macros.mdx), [column lineage](./materialization.mdx#column-level-lineage), [schema contracts](./materialization.mdx#schema-contracts), [selective runs](#selective-execution-run-up-to-here), [backfill](./materialization.mdx#partition-status-and-backfill) and [freshness](#freshness) all have counterparts, while the compute, scheduling and [triggers](../../getting_started/8_triggers/index.mdx) come from the same platform and run on your own infrastructure, in any language. Schema contracts differ in shape from dbt's: instead of a declaration you maintain by hand, the schema captured at materialization time is the contract, and consumer saves are checked against it with warnings only (there is no equivalent of dbt's `on_schema_change=fail`). In one place pipelines go further than dbt: on [Enterprise Edition](/pricing), a failing data test [rolls back the write](./materialization.mdx#failing-tests-publish-or-roll-back-ce-vs-ee) (write-audit-publish) instead of leaving the failed model live, which is dbt's behavior and the Community Edition default.
+The equivalents map closely: [materializations](./materialization.mdx), [data tests](./materialization.mdx#data-tests), [macros](./macros.mdx), [column lineage](./materialization.mdx#column-level-lineage), [schema contracts](./materialization.mdx#schema-contracts), [selective runs](#selective-execution-run-up-to-here), [backfill](./materialization.mdx#partition-status-and-backfill) and [freshness](#freshness) all have counterparts, while the compute, scheduling and [triggers](../../getting_started/8_triggers/index.mdx) come from the same platform and run on your own infrastructure, in any language. Schema contracts differ in shape from dbt's: instead of a declaration you maintain by hand, the schema captured at materialization time is the contract, and consumer saves are checked against it with warnings only. On the producer side, [`on_schema_change`](./materialization.mdx#on_schema_change) mirrors dbt's option (`warn`, `ignore`, `fail`, `sync`) to control how a model handles a change to its own schema. In one place pipelines go further than dbt: on [Enterprise Edition](/pricing), a failing data test [rolls back the write](./materialization.mdx#failing-tests-publish-or-roll-back-ce-vs-ee) (write-audit-publish) instead of leaving the failed model live, which is dbt's behavior and the Community Edition default.
 
 Pipelines are in alpha and do not yet cover everything those tools do: dbt's docs-site generation, seeds and semantic layer have no direct equivalent. The goal is not feature-for-feature parity but doing the whole asset-based workflow (transform, orchestrate, test, materialize, version) in a single platform, on your own compute.
 

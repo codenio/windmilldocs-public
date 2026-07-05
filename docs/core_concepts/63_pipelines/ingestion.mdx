@@ -50,7 +50,7 @@ The landing file carries whatever the source sent, so `read_json_auto` picks a n
 | append | Frozen at first run; drifted batch fails the run. |
 | `key=... history` (SCD2) | Frozen by design; manual rebuild required. |
 
-A failing run is the schema contract firing. Recovery options, in order of typicality: project explicitly in the loader (`SELECT id, name, ... FROM read_json_auto(...)`) so new source columns are ignored until you opt in; evolve the table (`ALTER TABLE lake.t ADD COLUMN ...`) then widen the SELECT; or rebuild (replace for one run, or drop the table and let the next run bootstrap the new shape).
+A failing run is the schema contract firing. Recovery options, in order of typicality: project explicitly in the loader (`SELECT id, name, ... FROM read_json_auto(...)`) so new source columns are ignored until you opt in; set [`on_schema_change=sync`](./materialization.mdx#on_schema_change) on the loader to let Windmill `ALTER` the table to the new shape automatically; evolve the table by hand (`ALTER TABLE lake.t ADD COLUMN ...`) then widen the SELECT; or rebuild (replace for one run, or drop the table and let the next run bootstrap the new shape).
 
 ## Worked examples
 

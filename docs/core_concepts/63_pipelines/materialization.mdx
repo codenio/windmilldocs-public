@@ -25,7 +25,7 @@ The trailing `SELECT` may reference SQL arguments declared with `-- $name (type)
 ```
 // materialize ducklake://<name>/<table> [append] [key=<col>]                          # managed (default)
 // materialize ducklake://<name>/<table> key=<col> history [track=<c1,…>] [deletes=close]  # managed SCD2 history
-// materialize ducklake://<name>/<table> … on_schema_change=ignore                     # any managed form: mute downstream contract warnings
+// materialize ducklake://<name>/<table> … on_schema_change=warn|ignore|fail|sync      # any managed form: how a schema change is handled
 // materialize manual ducklake://<name>/<table>                                        # track-only escape hatch
 ```
 
@@ -34,7 +34,7 @@ The trailing `SELECT` may reference SQL arguments declared with `-- $name (type)
   - `key=<col>` → **merge**: upsert the slice on `<col>` (rows absent from the SELECT are left in place).
   - `append` → **insert-only**: for immutable event logs. Re-running duplicates rows, so use only for append-only sources. (`append` wins over `key=` if both are given.)
   - `key=<col> history` → **SCD2 history**: keep every version of every row instead of overwriting on change. See [SCD2 history](#scd2-history-slowly-changing-dimensions).
-  - `on_schema_change=ignore` combines with any strategy: it declares the table's schema deliberately unstable and suppresses downstream [schema contract](#schema-contracts) warnings. Default is `warn`.
+  - `on_schema_change=<warn|ignore|fail|sync>` combines with any strategy and controls what a run does when the SELECT's columns diverge from the target's stored schema, from warning downstream consumers (`warn`, the default) to aborting the run (`fail`) or auto-syncing the table (`sync`). See [on_schema_change](#on_schema_change).
 - **`manual`** — the escape hatch: your script writes its own DDL and Windmill only records that the slice was materialized (no snapshot capture, no idempotency guarantee). Rare; explicit.
 
 `// materialize` is for DuckDB SQL. From **Python or TypeScript**, use the `wmill.ducklake` helpers (`upsert_partition`, `append_partition`, `read`) which give the same managed, idempotent write from arbitrary code.
@@ -64,6 +64,12 @@ SELECT customer_id, name, tier FROM dl.customers
 ```
 
 The `history` strategy is the exception: it is whole-table only, and combining it with `// partitioned` is rejected at deploy.
+
+:::info `key=` merge is a cross-run upsert, not a within-run de-duplicator
+
+`key=<col>` reconciles this run's SELECT against the rows **already in the target**: existing keys are updated, new keys inserted, and keys absent from the SELECT left untouched. That reconciliation is across runs, not within one - it does not collapse duplicate keys *inside* a single SELECT. If the SELECT returns the same key twice in one run, both rows are inserted as-is (the merge does not pick a winner), so the SELECT must already be unique on `<col>`. De-duplicate in the query when the source can emit a key more than once, for example with `QUALIFY row_number() OVER (PARTITION BY <col> ORDER BY updated_at DESC) = 1` or a `GROUP BY`.
+
+:::
 
 ## SCD2 history (slowly changing dimensions)
 
@@ -105,6 +111,14 @@ Each run also maintains a companion view `<table>_current` containing only the `
 ATTACH 'ducklake://analytics' AS dl;
 SELECT * FROM dl.dim_customer_current;
 ```
+
+Read `<table>_current` (not the base table) whenever you want exactly one row per key - the live version - without an `is_current` filter or an as-of join. Declare it as an input with `// on ducklake://…/<table>_current`, as above, so the read is a first-class edge of the pipeline graph.
+
+:::info Lineage to the base dimension
+
+The graph traces a `<table>_current` read to the companion view, but does not yet automatically draw the edge back through it to the base `history` dimension. Until that link is inferred, add an explicit `// on ducklake://…/<table>` (the base dimension) alongside the `_current` read if you want the lineage edge to the base table shown. This is annotation-only and forward-compatible: the extra `// on` stays correct once the view-to-base link is inferred, so you can add it now and remove it later, or leave it in place.
+
+:::
 
 The payoff over [time-travel](#versioning-and-time-travel) (which is keyed by commit, not business-effective time) is the effective-dated as-of join - for each fact row, the dimension version that was current at that moment:
 
@@ -184,7 +198,7 @@ The captured schema also doubles as a contract for downstream consumers - see [S
 
 ## Schema contracts
 
-The [captured schema](#schema-capture) is read back as a contract: when a consumer script is saved or deployed, Windmill checks every `ducklake://` reference it makes against the latest captured schema of that asset, and surfaces mismatches as **warnings - never errors**. Renaming a column upstream no longer breaks downstream consumers silently at run time; but because a deliberate upstream reshape should not fail every consumer save either, deploy is never blocked (there is no equivalent of dbt's `on_schema_change=fail`).
+The [captured schema](#schema-capture) is read back as a contract: when a consumer script is saved or deployed, Windmill checks every `ducklake://` reference it makes against the latest captured schema of that asset, and surfaces mismatches as **warnings - never errors**. Renaming a column upstream no longer breaks downstream consumers silently at run time; but because a deliberate upstream reshape should not fail every consumer save either, the consumer-side contract never blocks a deploy - it warns only. How a *producer* reconciles a change to its own schema (from warning downstream to a strict abort or an automatic `ALTER`) is a separate, producer-side control - see [on_schema_change](#on_schema_change).
 
 The same check shows up in three places:
 
@@ -204,9 +218,20 @@ What is checked (for `ducklake://` assets only, the substrate with [schema captu
 
 Comparison follows DuckDB semantics: column names compare case-insensitively, `{partition}` tokens are stripped before lookup, and the managed `_wm_partition` column is always accepted. A `<table>_current` reference is checked against its [SCD2](#scd2-history-slowly-changing-dimensions) base table's capture (the view has the same columns by construction). An asset with no capture at all - never materialized, `// materialize manual`, or a non-DuckLake target - produces no warnings. Each warning cites the schema version and capture time it was checked against, so you can tell when a warning is due to a stale capture rather than an actual mismatch.
 
-### Suppressing warnings for an unstable schema
+### on_schema_change
 
-When a table's schema is deliberately unstable - a raw landing table whose columns track an external payload, for example - declare it on the producer with `on_schema_change=ignore`:
+`on_schema_change` is a producer-side option on the `// materialize` line that controls what a managed run does when the trailing SELECT's column set diverges from the target table's stored schema. It mirrors [dbt's option](https://docs.getdbt.com/docs/build/incremental-models#what-if-the-columns-of-my-incremental-model-change) of the same name and combines with any strategy:
+
+| Value | Behavior |
+| --- | --- |
+| `warn` (default) | The write proceeds and the new schema is captured; downstream consumers get a [schema-contract](#schema-contracts) warning on their next save. |
+| `ignore` | Same as `warn` but no downstream warning - for a table whose schema is deliberately unstable (a raw landing table tracking an external payload). |
+| `fail` | The run aborts when the SELECT's column set diverges from the stored schema. It compares the set of column *names*, so it catches added, dropped or renamed columns, but not a same-name column reordering (which keeps the same set). |
+| `sync` | Windmill `ALTER`s the target table to match the SELECT (adding and dropping columns) and writes with `INSERT BY NAME`, so column order no longer has to match. |
+
+Unknown values keep the default (`warn`). On `// materialize manual` the option is inert since nothing is captured; the deploy logs a warning saying so.
+
+Declare `ignore` on a raw landing table whose columns track an external payload:
 
 ```sql
 -- pipeline
@@ -216,7 +241,7 @@ ATTACH 'ducklake://main' AS dl;
 SELECT * FROM read_json('s3://landing/events/*.json')
 ```
 
-Consumers of that asset then get a single informational note instead of per-column warnings. The default is `warn`, and unknown values keep the default. On `// materialize manual` the option is inert since nothing is captured; the deploy logs a warning saying so.
+Consumers of that asset then get a single informational note instead of per-column warnings. Use `fail` instead when a schema change should stop the pipeline for review, and `sync` when the target should follow the source's columns automatically - an evolving ingestion where a new source column should just appear in the table without a manual `ALTER` (compare the [schema-drift recovery options](./ingestion.mdx#schema-drift-on-load) for the merge/append strategies).
 
 ## Column-level lineage
 
@@ -282,6 +307,33 @@ ATTACH 'ducklake://main' AS dl;
 SELECT order_id, status, amount FROM dl.orders WHERE created_at::date = '{partition}'
 ```
 
+### Custom data tests
+
+When the four built-in checks are not enough, point `// data_test` at a script path instead of a keyword:
+
+```
+// data_test <script_path>
+```
+
+The referenced script is a plain DuckDB script whose body is a **single `SELECT` that returns the violating rows** - one row per violation, in whatever shape you choose. The test passes when the SELECT returns no rows and fails otherwise, exactly like a built-in check: a failure fails the run and stops the [cascade](./index.mdx#triggering-a-pipeline), and the returned rows become the test's [violating-row sample](#violating-row-samples).
+
+Authoring contract:
+
+- **Read the freshly-materialized target through the internal `_wm_target` schema.** Windmill attaches the slice this run just wrote as `_wm_target`, so reference the target as `_wm_target.<table>` (the table name is the last segment of the `ducklake://` URI). Reading the target this way sees this run's slice, not stale committed data - on Enterprise Edition it is the pre-commit write being audited (see [write-audit-publish](#failing-tests-publish-or-roll-back-ce-vs-ee)). You do not `ATTACH` the target yourself.
+- **Exactly one trailing `SELECT`, returning the offending rows.** Setup statements (`ATTACH` of *other* lakes, `SET`, `CREATE TEMP …`) may precede it, so you can join the target against another table for a cross-table check; the last statement must be the violating-rows SELECT.
+- **Zero rows = pass, any rows = fail.** The count of returned rows is the violation count.
+- Scope matches the built-ins: for a `// partitioned` target `_wm_target.<table>` is the partition just written, and for an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target it is the current rows.
+
+Example - a custom test `f/tests/orders_amount_sane` that flags any order with a non-positive amount, referenced from the `orders_daily` producer with `// data_test f/tests/orders_amount_sane`:
+
+```sql
+-- Violating rows: orders whose amount is not strictly positive.
+-- An empty result means the test passes.
+SELECT order_id, amount
+FROM _wm_target.orders_daily
+WHERE amount <= 0;
+```
+
 ### Violating-row samples
 
 When a test fails, the result does not just report a count: each failed test also captures a **sample of its violating rows**, so you can see which rows broke the check without re-running the SELECT by hand. In the run view, each failed test expands into a table of its sample rows, with CSV download.
@@ -318,7 +370,7 @@ Passing runs behave identically in both editions, and the run result shows the s
 
 ## Materialization in workspace forks (dev data)
 
-In a [workspace fork](../../advanced/20_workspace_forks/index.mdx), materialization does not touch the parent workspace's tables. By default each lake resolves to a fork-scoped namespace (separate metadata schema and bucket prefix), and tables the fork has not materialized yet are read from the parent through read-only defer views, so you can iterate on one node without rebuilding upstream. The pipeline graph marks each DuckLake asset with a `deferred` (reading parent data) or `fork` (fork-materialized) chip. No annotation changes are needed: the same `ducklake://` URIs transparently target the fork's environment, and a per-lake option at fork creation lets you opt out and share the parent's lake instead.
+Getting an isolated dev-data environment for a pipeline is just [forking the workspace](../../advanced/20_workspace_forks/index.mdx#fork-creation) - no separate setup. The fork's id is always `wm-fork-<name>` (the prefix is what lets Windmill route its data to an isolated namespace), and in a fork, materialization does not touch the parent workspace's tables. By default each lake resolves to a fork-scoped namespace (separate metadata schema and bucket prefix), and tables the fork has not materialized yet are read from the parent through read-only defer views, so you can iterate on one node without rebuilding upstream. The pipeline graph marks each DuckLake asset with a `deferred` (reading parent data) or `fork` (fork-materialized) chip. No annotation changes are needed: the same `ducklake://` URIs transparently target the fork's environment, and a per-lake option at fork creation lets you opt out and share the parent's lake instead.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
