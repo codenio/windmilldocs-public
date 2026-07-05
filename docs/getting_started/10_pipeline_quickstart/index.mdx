@@ -71,7 +71,7 @@ Open the folder and select the pipeline view. You will see the lineage:
 
 On the `ingest` node, choose "Run + downstream". `ingest` materializes `events`, and the asset cascade automatically fires `rollup`, which materializes `events_by_kind`. Each node shows live status, its DuckLake snapshot and row count as the run progresses, and the result panel previews the materialized table.
 
-That is the whole model: mark scripts with `-- pipeline`, declare inputs with `-- on`, and Windmill infers and runs the graph from asset lineage. Adding `-- materialize` (the optional DuckLake layer used here) is what also gives you idempotent re-runs, time-travel, [data tests](../../core_concepts/63_pipelines/index.mdx#data-tests) and [backfill](../../core_concepts/63_pipelines/index.mdx#partition-status-and-backfill) with no extra work.
+That is the whole model: mark scripts with `-- pipeline`, declare inputs with `-- on`, and Windmill infers and runs the graph from asset lineage. Adding `-- materialize` (the optional DuckLake layer used here) is what also gives you idempotent re-runs, time-travel, [data tests](../../core_concepts/63_pipelines/materialization.mdx#data-tests) and [backfill](../../core_concepts/63_pipelines/materialization.mdx#partition-status-and-backfill) with no extra work.
 
 ## Next steps
 

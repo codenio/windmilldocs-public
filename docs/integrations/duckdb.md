@@ -27,4 +27,8 @@ DuckDB scripts in Windmill can read from and write to [Azure Blob Storage](./mic
 
 This works with the same S3-compatible path syntax, and requires an Azure Blob storage resource to be configured in the workspace.
 
+## Pipelines and macro libraries
+
+DuckDB is also the engine of Windmill [pipelines](../core_concepts/63_pipelines/index.mdx): DuckDB steps can [materialize](../core_concepts/63_pipelines/materialization.mdx) managed [DuckLake](../core_concepts/11_persistent_storage/ducklake.mdx) tables, and shared SQL logic can be published as workspace [macro libraries](../core_concepts/63_pipelines/macros.mdx) callable from any DuckDB script.
+
 To get started, check out the [SQL Getting Started section](/docs/getting_started/scripts_quickstart/sql#duckdb-1).

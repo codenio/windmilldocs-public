@@ -1,3 +1,7 @@
+---
+description: How do I share SQL logic across DuckDB scripts in Windmill? Publish workspace macro libraries with // macros and call the macros from any DuckDB script.
+---
+
 # Macro libraries (DuckDB)
 
 Shared SQL logic can be factored into workspace **macro libraries** — engine-native DuckDB `CREATE MACRO` definitions rather than text templating, the pipeline equivalent of dbt macros. A DuckDB script annotated `// macros` is a macro library: its body is `CREATE OR REPLACE MACRO` statements (scalar or `AS TABLE`), plus optional plain setup statements (`ATTACH`, `INSTALL`/`LOAD`, `SET`, `CREATE TEMP TABLE`). Deploying is publishing: the macros are callable from every DuckDB script in the workspace the instant the deploy commits, and macro names are workspace-unique.
@@ -26,9 +30,11 @@ SELECT safe_div(revenue, users) AS arpu,
 FROM sample_rows('lake.events', 10000);
 ```
 
-Macros are late-bound, like dbt packages: redeploy the library and the very next run of every consumer uses the new definition, without redeploying the consumers. To opt a script out, define your own macro with the same name — a local `CREATE MACRO` always wins and its name is excluded from injection entirely.
+Macros are late-bound, like dbt packages: redeploy the library and the very next run of every consumer uses the new definition, without redeploying the consumers. To opt a script out, define your own macro with the same name — a local `CREATE MACRO` always wins and its name is excluded from injection entirely. Local and injected definitions still compose in both directions: a local macro can call a registry macro, and an injected macro can call a local one.
 
 Detection is lexical, so a call hidden inside a string — for example dynamic SQL built with `query('…')` — is not seen. For that case, `// use <lib_path>` force-injects a whole library (definitions and setup). Libraries can declare `// use` themselves and it is honored transitively, so a library whose macros build SQL strings calling another library declares the dependency once and every consumer inherits it.
+
+Deploying a script whose `// use` target is not deployed yet is a warning rather than an error, so git-synced workspaces can deploy in any order; the missing library only fails at run time. Renaming a library keeps the registry consistent automatically, but `// use <lib_path>` strings in consumers are plain text and fail at run time until updated.
 
 ## Discovering macros
 
@@ -47,3 +53,5 @@ Macro libraries are workspace-trusted code: a deployed library is injected into 
 :::
 
 Calling a macro that does not exist (a typo, or a library not deployed yet) fails at run time with DuckDB's `Catalog Error`. Agent (HTTP) workers cannot read the macro registry: implicit macro calls fail there with the same error and `// use` errors explicitly.
+
+Archiving or deleting a library removes its macros from the registry (and the recorded consumer edges), and [forking a workspace](../../advanced/20_workspace_forks/index.mdx) clones the registry, so consumers in the fork run immediately.
