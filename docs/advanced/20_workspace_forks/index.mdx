@@ -30,6 +30,7 @@ Key features:
 - **Git integration**: Automatically creates corresponding git branches using the git sync workflow
 - **Team collaboration**: Multiple developers can work on separate forks simultaneously
 - **Data table forking**: Data tables are included in the fork, giving each fork its own isolated copy of the data
+- **DuckLake data environments**: Pipelines that materialize [DuckLake](../../core_concepts/11_persistent_storage/ducklake.mdx) tables write to a fork-scoped namespace and read not-yet-materialized tables from the parent (see [Fork data environments for DuckLake](#fork-data-environments-for-ducklake))
 - **CLI merge**: Use `wmill workspace merge` to merge changes from a fork back to the parent workspace
 
 ![Workspace Forks and Git Sync](/images/workspace_forks.png)
@@ -160,6 +161,46 @@ Workspace forks do not copy over triggers when being created. This avoids unnece
 ### Git sync based merging
 
 When git sync is properly setup, the workspace is synchronized with one of the branches in your repo, and the forks are also synchronized with their own branches. It is then possible your preferred git workflow to merge into or out of these branches to sync, so you can update the fork, or deploy changes into the parent workspace.
+
+## Fork data environments for DuckLake
+
+When the parent workspace has [DuckLake](../../core_concepts/11_persistent_storage/ducklake.mdx) lakes configured, a fork gets its own isolated data environment for each lake by default. Running a [pipeline](../../core_concepts/63_pipelines/index.mdx) that [materializes](../../core_concepts/63_pipelines/materialization.mdx) DuckLake tables in a fork writes to a fork-scoped namespace (a separate metadata schema in the same catalog database, and a dedicated `__wm_forks/<fork id>/...` prefix in the bucket) instead of the parent workspace's tables. This applies transparently: scripts keep the same `ducklake://<lake>/<table>` URIs and annotations, and the redirect covers managed materialization, raw SQL, previews and backfills alike.
+
+This also applies to [dev workspaces](../26_dev_workspaces/index.mdx), which are persistent forks.
+
+### Reading parent data (defer)
+
+For every table the parent workspace has materialized but the fork has not, the fork sees a read-only view over the parent's current data, in the style of dbt's defer. You can iterate on a single pipeline step in a fork without first rebuilding everything upstream: consumers read the parent's data until the fork materializes the table itself, at which point they switch to the fork's own copy. For an [SCD2 history](../../core_concepts/63_pipelines/materialization.mdx#scd2-history-slowly-changing-dimensions) table, the `<table>_current` companion view is deferred as well.
+
+Parent lakes are attached read-only in a fork, so a fork job cannot write the parent's data through DuckLake even accidentally.
+
+### Isolated vs shared with parent
+
+When the parent workspace has lakes configured, the fork-creation dialog shows a `Ducklake data environment` section with a per-lake choice:
+
+- **Isolated** (default): the fork gets the isolated data environment described above.
+- **Shared with parent**: the fork reads and writes the parent's lake directly, with no isolation. Useful for forks that must operate on production data, such as a prod-equivalent backfill; a warning is shown since pipeline runs in the fork will modify the parent's tables.
+
+The choice is stamped per lake on the fork and is visible in the fork's workspace settings under `Object storage (S3)` -> Ducklake, where each lake shows an isolated or shared-with-parent chip. Forks created through the API without an explicit choice default to isolated.
+
+Lakes using a MySQL catalog cannot be isolated (the fork-scoped metadata schema requires a PostgreSQL catalog): pipeline runs against such a lake fail with an explicit error in an isolated fork, while sharing the lake with the parent works.
+
+{/* TODO: screenshot of the fork-creation dialog showing the "Ducklake data environment" section with per-lake Isolated / Shared with parent choice and the warning callout on shared. */}
+
+### Fork status in the pipeline graph
+
+In a fork, each DuckLake asset in the [pipeline graph](../../core_concepts/63_pipelines/index.mdx#the-pipeline-graph) carries a chip showing where its data currently comes from:
+
+- an amber `deferred` chip: the fork has not materialized this table yet, reads are deferred to the parent's data;
+- an emerald `fork` chip: the fork has materialized its own copy in its isolated namespace.
+
+Selecting the asset shows a matching banner in the details pane.
+
+{/* TODO: screenshot of a fork's pipeline graph with amber "deferred" and emerald "fork" chips on asset nodes, and the details-pane banner. */}
+
+### Cleanup
+
+Deleting a fork also offers to drop its forked DuckLake namespaces: the fork-scoped metadata schema and the `__wm_forks/<fork id>/...` files in the bucket. The same cleanup is available as an API endpoint, `POST /w/<workspace>/workspaces/drop_forked_ducklake_namespaces`, which requires the same permission as deleting the workspace. It is safe to retry if a previous attempt failed partway. Lakes shared with the parent have nothing to clean up.
 
 ## Dev workspaces
 

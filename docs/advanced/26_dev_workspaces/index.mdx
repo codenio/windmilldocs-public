@@ -120,6 +120,7 @@ The "Create new fork" entry defaults to **Fork from \<dev\>**; an admin-only **F
 - Deleting or archiving an attached dev workspace requires being an admin of the prod workspace; it clears the prod lock. Deleting a prod workspace that still has a dev workspace is blocked - detach first.
 - A prod admin who still has write access to a locked prod sees the normal editor (rather than the "Edit in \<dev\>" redirect) and is stopped by the backend deploy block instead.
 - Auto-sync from dev to prod, and special handling of triggers and schedules, are not part of this workflow. Triggers are not copied into a fork on creation - see [triggers and schedules](../20_workspace_forks/index.mdx#triggers-and-schedules).
+- Like any fork, a dev workspace gets an isolated DuckLake data environment per lake by default, with reads deferred to the prod workspace's data until the dev workspace materializes a table itself - see [fork data environments for DuckLake](../20_workspace_forks/index.mdx#fork-data-environments-for-ducklake).
 
 ## Related documentation
 

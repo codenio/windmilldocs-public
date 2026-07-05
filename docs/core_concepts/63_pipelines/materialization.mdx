@@ -1,3 +1,5 @@
+import DocCard from '@site/src/components/DocCard';
+
 # Materialization
 
 A DuckDB script can declare that it **produces** a managed [DuckLake](../11_persistent_storage/ducklake.mdx) table with `// materialize`. This is the canonical, most powerful way to build a pipeline step (see [the canonical stack](./index.mdx#the-canonical-stack-duckdb--ducklake--materialize)). Instead of writing the table yourself, you write the query for one *slice* and Windmill owns the write: it is idempotent, captured as a DuckLake snapshot, and tracked. A **slice** is one [partition](./partitioning.mdx) when the script is also `// partitioned`, or the **whole table** when it isn't — `materialize` works either way (`// partitioned` is optional and independent; see [Strategy and unit](#strategy-and-unit) below).
@@ -260,3 +262,15 @@ A materialized asset can declare **data tests** that run against the freshly-mat
 ATTACH 'ducklake://main' AS dl;
 SELECT order_id, status, amount FROM dl.orders WHERE created_at::date = '{partition}'
 ```
+
+## Materialization in workspace forks (dev data)
+
+In a [workspace fork](../../advanced/20_workspace_forks/index.mdx), materialization does not touch the parent workspace's tables. By default each lake resolves to a fork-scoped namespace (separate metadata schema and bucket prefix), and tables the fork has not materialized yet are read from the parent through read-only defer views, so you can iterate on one node without rebuilding upstream. The pipeline graph marks each DuckLake asset with a `deferred` (reading parent data) or `fork` (fork-materialized) chip. No annotation changes are needed: the same `ducklake://` URIs transparently target the fork's environment, and a per-lake option at fork creation lets you opt out and share the parent's lake instead.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Fork data environments for DuckLake"
+		description="Isolated dev data in workspace forks: write redirect, defer to parent, per-lake isolated vs shared choice, and cleanup."
+		href="/docs/advanced/workspace_forks#fork-data-environments-for-ducklake"
+	/>
+</div>

@@ -172,6 +172,12 @@ Expired snapshots are gone for good: [time-travel](../63_pipelines/materializati
 
 File deletion is conservative: files released by expired snapshots are physically deleted with an extra one-day margin, so a long-running query reading a just-expired snapshot is not interrupted, and orphaned file cleanup never deletes files younger than one day, so files being written by a concurrent job are safe. Storage space is therefore reclaimed about a day after snapshots expire.
 
+## Ducklake in workspace forks
+
+In a [workspace fork](../../advanced/20_workspace_forks/index.mdx), each Ducklake resolves by default to an isolated, fork-scoped data environment: writes land in a separate metadata schema and bucket prefix instead of the parent workspace's tables, and tables the fork has not written yet are read from the parent through read-only defer views. The fork's Ducklake settings show a banner and a per-lake isolated or shared-with-parent chip. See [Fork data environments for DuckLake](../../advanced/20_workspace_forks/index.mdx#fork-data-environments-for-ducklake).
+
+{/* TODO: screenshot of workspace settings -> Ducklake in a fork, with the fork data environment banner and per-lake isolated / shared-with-parent chips. */}
+
 ## Performance: Ducklake vs Snowflake
 
 import TpcDsBenchmarkSection from '@site/src/components/TpcDsBenchmarkSection.mdx';
