@@ -49,7 +49,9 @@ Users can be given different levels of permissions:
 
 ### Superadmin
 
-The superadmin role has the highest level of access and can manage the entire Windmill instance. Only superadmins can access the dedicated 'admins' workspace. Also by default, superadmins have access to all workspaces as admins of those workspaces. When an admin does an action as a user of a workspace he is not a member of and as such as no username in, their email is used in lieu of the username. Windmill can be configured to remove the ability for non-superadmins to create workspace using the: CREATE_WORKSPACE_REQUIRE_SUPERADMIN env variable.
+The superadmin role has the highest level of access and can manage the entire Windmill instance. Only superadmins can access the dedicated 'admins' workspace. Also by default, superadmins have access to all workspaces as admins of those workspaces. Windmill can be configured to remove the ability for non-superadmins to create workspace using the: CREATE_WORKSPACE_REQUIRE_SUPERADMIN env variable.
+
+When a superadmin does an action in a workspace they are not a member of, they have no username in that workspace. Their instance-wide derived username (e.g. `admin` for `admin@company.com`, assigned through [automatic username creation](../../advanced/18_instance_settings/index.mdx#global-users)) is used to identify them in job metadata (`created_by`, `permissioned_as`), [audit logs](../14_audit_logs/index.mdx), draft authorship and the UI, and their email is still preserved internally (e.g. in `permissioned_as_email` on jobs). The UI shows 'Superadmin, not a member of this workspace' along with the acting username. Only on very old legacy instances where automatic username creation is disabled is their email used in lieu of the username.
 
 ### Devops
 
