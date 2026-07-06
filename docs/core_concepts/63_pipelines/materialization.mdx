@@ -241,14 +241,18 @@ Comparison follows DuckDB semantics: column names compare case-insensitively, `{
 
 ### on_schema_change
 
-`on_schema_change` is a producer-side option on the `// materialize` line that controls what a managed run does when the trailing SELECT's column set diverges from the target table's stored schema. It mirrors [dbt's option](https://docs.getdbt.com/docs/build/incremental-models#what-if-the-columns-of-my-incremental-model-change) of the same name and combines with any strategy:
+`on_schema_change` is a producer-side option on the `// materialize` line that controls what a managed run does when the trailing SELECT's column set diverges from the target table's stored schema. It mirrors [dbt's option](https://docs.getdbt.com/docs/build/incremental-models#what-if-the-columns-of-my-incremental-model-change) of the same name:
 
 | Value | Behavior |
 | --- | --- |
 | `warn` (default) | The write proceeds and the new schema is captured; downstream consumers get a [schema-contract](#schema-contracts) warning on their next save. |
 | `ignore` | Same as `warn` but no downstream warning - for a table whose schema is deliberately unstable (a raw landing table tracking an external payload). |
-| `fail` | The run aborts when the SELECT's column set diverges from the stored schema. It compares the set of column *names*, so it catches added, dropped or renamed columns, but not a same-name column reordering (which keeps the same set). |
+| `fail` | The run aborts before writing when the SELECT's column set diverges from the stored schema. |
 | `sync` | Windmill `ALTER`s the target table to match the SELECT (adding and dropping columns) and writes with `INSERT BY NAME`, so column order no longer has to match. |
+
+`warn` and `ignore` only govern the downstream [contract warning](#schema-contracts), so they apply to every strategy. `fail` and `sync` are write-time guardrails and apply **only to the persist-and-mutate strategies**: partitioned replace, `key=` merge and `append`. Those create the table once and then write into that fixed schema **by column position**, so a drifted SELECT silently lands values in the wrong column. Whole-table replace (a non-partitioned default materialize) rebuilds the table from scratch each run, and an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target has no positional write, so on both there is nothing to guard and `fail`/`sync` fall back to `warn`.
+
+Drift is detected on the **set of column names**, so `fail` catches an added, dropped or renamed column but not a pure reordering of same-named columns (`SELECT b, a` into an `(a, b)` table keeps the same set, so `fail` does not fire and the positional write swaps the values). Reorder-safety is exactly what `sync` adds: `INSERT BY NAME` maps by name, so a SELECT whose column order is not pinned to the table's should use `sync`, not `fail`.
 
 Unknown values keep the default (`warn`). On `// materialize manual` the option is inert since nothing is captured; the deploy logs a warning saying so.
 
@@ -314,7 +318,7 @@ A materialized asset can declare **data tests** that run against the freshly-mat
 - **`relationships <col> -> <asset-uri>.<col>`** — referential integrity: every value must exist in the referenced asset's column.
 - **`<script_path>`** — a custom DuckDB test script (the escape hatch), e.g. `// data_test f/tests/orders_amount_sane`.
 
-`// data_test` lines accumulate (a script can declare several) and malformed lines drop fail-safe. For a `// partitioned` target the built-in checks are scoped to the slice just written, and for an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target to the current rows (`is_current`). Data tests require managed `// materialize` (they are rejected on `// materialize manual` or a non-DuckLake target). The producer→asset edge shows a test-count badge, and the run result lists each test with a pass/fail outcome; failed tests also include a [sample of their violating rows](#violating-row-samples).
+`// data_test` lines accumulate (a script can declare several). A malformed line (one whose right-hand side doesn't parse) still drops fail-safe rather than registering a broken check, but the deploy now surfaces a warning naming it, so a typo can't silently disable a data-quality assertion. For a `// partitioned` target the built-in checks are scoped to the slice just written, and for an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target to the current rows (`is_current`). Data tests require managed `// materialize` (they are rejected on `// materialize manual` or a non-DuckLake target). The producer→asset edge shows a test-count badge, and the run result lists each test with a pass/fail outcome; failed tests also include a [sample of their violating rows](#violating-row-samples).
 
 ```sql
 -- pipeline
