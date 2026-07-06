@@ -342,12 +342,16 @@ When the four built-in checks are not enough, point `// data_test` at a script p
 
 The referenced script is a plain DuckDB script whose body is a **single `SELECT` that returns the violating rows** - one row per violation, in whatever shape you choose. The test passes when the SELECT returns no rows and fails otherwise, exactly like a built-in check: a failure fails the run and stops the [cascade](./index.mdx#triggering-a-pipeline), and the returned rows become the test's [violating-row sample](#violating-row-samples).
 
+To scaffold one, the pipeline editor's "+" script creator has a **Data test** output kind (DuckDB only) that generates a correct starter body - a single `SELECT * FROM _wm_target.<table> WHERE <condition>` plus the `-- data_test <this-script-path>` line you paste into the producing script.
+
 Authoring contract:
 
-- **Read the freshly-materialized target through the internal `_wm_target` schema.** Windmill attaches the slice this run just wrote as `_wm_target`, so reference the target as `_wm_target.<table>` (the table name is the last segment of the `ducklake://` URI). Reading the target this way sees this run's slice, not stale committed data - on Enterprise Edition it is the pre-commit write being audited (see [write-audit-publish](#failing-tests-publish-or-roll-back-ce-vs-ee)). You do not `ATTACH` the target yourself.
-- **Exactly one trailing `SELECT`, returning the offending rows.** Setup statements (`ATTACH` of *other* lakes, `SET`, `CREATE TEMP …`) may precede it, so you can join the target against another table for a cross-table check; the last statement must be the violating-rows SELECT.
+- **Read the freshly-materialized target through the internal `_wm_target` schema.** Windmill attaches the slice this run just wrote as `_wm_target`, so reference the target as `_wm_target.<table>` (the table name is the last segment of the `ducklake://` URI). Referencing the bare table name instead is the most common mistake, and is rejected at deploy. Reading the target this way sees this run's slice, not stale committed data - on Enterprise Edition it is the pre-commit write being audited (see [write-audit-publish](#failing-tests-publish-or-roll-back-ce-vs-ee)). You do not `ATTACH` the target yourself.
+- **A single `SELECT` returning the offending rows** - one statement, no setup statements, writes or DDL. The body is embedded as a subquery, so it must be one `SELECT` (a `WITH … SELECT` CTE or DuckDB's FROM-first form both count); a multi-statement body (e.g. `SET …; SELECT …`) is rejected. Cross-table joins are still fine as long as the other source is referenceable inline (a file path, or a catalog already attached in the target's connection).
 - **Zero rows = pass, any rows = fail.** The count of returned rows is the violation count.
 - Scope matches the built-ins: for a `// partitioned` target `_wm_target.<table>` is the partition just written, and for an [SCD2 `history`](#scd2-history-slowly-changing-dimensions) target it is the current rows.
+
+Each of these rules is enforced at deploy: a malformed custom test fails codegen with an error that names the exact violation (empty body, multiple statements, non-`SELECT`, or a body that never references `_wm_target`) and appends a copyable one-line example, so the fix is discoverable without leaving the editor.
 
 Example - a custom test `f/tests/orders_amount_sane` that flags any order with a non-positive amount, referenced from the `orders_daily` producer with `// data_test f/tests/orders_amount_sane`:
 
