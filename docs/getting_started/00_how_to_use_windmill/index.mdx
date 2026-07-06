@@ -51,3 +51,22 @@ Prefer your own setup? No problem. Windmill integrates smoothly with local envir
 ### Ready to deploy?
 
 Move from staging to production seamlessly with Windmill's deployment guides, ensuring your projects are production-ready. [Deploy to production](../../advanced/12_deploy_to_prod/index.mdx).
+
+## Creating resources from the home page
+
+The workspace home page lists everything in your workspace. To create something new, use the **New** button in the top-right corner of the header. Hovering (or clicking) it opens a two-pane popover: the option list on the right, a description of the highlighted option on the left. Clicking **New** directly creates a script, the default option.
+
+<!-- SCREENSHOT PLACEHOLDER: the "New" popover on the home page, opened. Two panes — description on the left, option list on the right — with the option rows (Script, Flow, App (full-code), Workflow-as-Code, Data pipelines, App (low-code)) and the Advanced / Alpha / Legacy badges visible. Reference PR screenshot: shots/worktree-home-plus-new-popover/1782636902-reordered.png. Save as new_popover.png (+ new_popover.png.webp) next to this file. -->
+
+The available options are:
+
+- [Script](../0_scripts_quickstart/index.mdx) - a single standalone script in [any supported language](../0_scripts_quickstart/index.mdx).
+- [Flow](../../flows/1_flow_editor.mdx) - compose scripts into a workflow with branches, loops, approvals and retries.
+- [App (full-code)](../9_full_code_apps_quickstart/index.mdx) - build a UI with React or Svelte.
+- [Workflow-as-Code](../../core_concepts/31_workflows_as_code/index.mdx) - badged _Advanced_. Express a whole workflow as a single script; picking it offers a **Python** or **TypeScript** choice.
+- [Data pipelines](../10_pipeline_quickstart/index.mdx) - badged _Alpha_. Visual editor to chain ingestion, transformation and materialization steps.
+- [App (low-code)](../7_apps_quickstart/index.mdx) - badged _Legacy_. Drag-and-drop UI builder. For new apps, prefer full-code apps.
+
+Some options also expose secondary import actions in their detail panel (for example _Import flow_, _Import Workflow-as-Code_, _Import full-code app_, _Import low-code app_), which open a drawer where you paste a YAML or JSON export to pre-fill the editor.
+
+The header also has a **Hub** button that opens the [Windmill Hub](https://hub.windmill.dev/) in a new tab, and a **CLI / MCP** button to connect external tooling.

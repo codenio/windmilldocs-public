@@ -83,7 +83,7 @@ Integration MongoDB through the [mongodb resource type](https://hub.windmill.dev
 ## Create script
 
 Next, let's create a Script that will use the newly created Resource. Head on to
-the [Home][wm-app-home] page and click on the "+Script" button. We'll be using
+the [Home][wm-app-home] page, click **New** and select **Script**. We'll be using
 TypeScript as the language.
 
 :::info

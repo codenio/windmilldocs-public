@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 # Pipelines
 
 :::caution Alpha
-Pipelines are in alpha. The entry points are deliberately kept out of the way while we develop the feature - open the pipelines index at `/pipeline` (it lists existing pipelines and lets you pick or create a folder), or create one from the home page by opening the dropdown next to **+ Flow** and selecting **Pipeline (alpha)**. The annotation syntax and behavior described on this page are still evolving and may change in future releases. We would love your feedback - share it on [Discord](https://discord.com/invite/V7PM2YHsPB) or [GitHub](https://github.com/windmill-labs/windmill).
+Pipelines are in alpha. The entry points are deliberately kept out of the way while we develop the feature - open the pipelines index at `/pipeline` (it lists existing pipelines and lets you pick or create a folder), or create one from the home page by clicking **New** and selecting **Data pipelines** (badged _Alpha_) in the popover. The annotation syntax and behavior described on this page are still evolving and may change in future releases. We would love your feedback - share it on [Discord](https://discord.com/invite/V7PM2YHsPB) or [GitHub](https://github.com/windmill-labs/windmill).
 :::
 
 A pipeline is a set of scripts in the same [folder](../8_groups_and_folders/index.mdx) that are wired together by the data they read and write. Instead of assembling steps by hand in a [flow](../../flows/1_flow_editor.mdx), you declare a few comment annotations at the top of each script and Windmill infers the execution graph from [asset](../52_assets/index.mdx) lineage: when a script writes an asset, every script that reads that asset is triggered automatically.
