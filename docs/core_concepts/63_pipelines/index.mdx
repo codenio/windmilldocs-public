@@ -269,6 +269,8 @@ Besides asset writes, a step can be triggered by a native [trigger](../../gettin
 
 If a `// on <kind>` marker has no matching trigger yet, the pipeline graph shows a placeholder node you can click to create one (for a schedule, that is where you set the cron).
 
+A `data_upload` entry point has no trigger to create: clicking the node opens the target script's run form with an auto-generated S3 file picker. Because these scripts declare a required input (an uploaded file or a JSON payload), you must stage that input before the pipeline can run - pick the file (or fill the form) and the node turns green with a checkmark to mark it ready. The **Run pipeline** button is gated on every `data_upload` entry being green: if any still need data, clicking it shows a toast and focuses the first unstaged node instead of launching a run that would immediately fail on the empty argument. Once all entries are staged, the run proceeds with the data you provided.
+
 ```ts
 // pipeline
 // on schedule
