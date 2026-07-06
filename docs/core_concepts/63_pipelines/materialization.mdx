@@ -168,7 +168,7 @@ Built-in [data tests](#data-tests) on an SCD2 target are scoped to current rows 
 
 A managed run returns a small summary — the asset it produced, the row count of the slice, and the DuckLake `snapshot_id` — and the run's **Result** panel renders a live, read-only preview of the materialized table beneath it. For a `// partitioned` target the preview adds a **This partition / Whole table** toggle, and the summary's row count is the slice (partition) the run wrote. The same values are recorded as the asset's [materialization state](#partition-status-and-backfill).
 
-To run a partitioned script manually (e.g. from the editor's **Test** panel), fill the **partition** field — Windmill surfaces it automatically for `// partitioned` DuckDB scripts, as a date picker for date kinds. In a pipeline the [cascade](./index.mdx#triggering-a-pipeline) injects it for you.
+To run a partitioned script manually (e.g. from the editor's **Test** panel), fill the **partition** field — Windmill surfaces it automatically for `// partitioned` DuckDB scripts, as a date picker for date kinds. Selecting the producer in the pipeline graph opens a richer [partition picker](./partitioning.mdx#the-partition-picker) with materialization and upstream-data hints. In a pipeline the [cascade](./index.mdx#triggering-a-pipeline) injects it for you.
 
 ## Versioning and time-travel
 

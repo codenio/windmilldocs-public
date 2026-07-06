@@ -74,6 +74,30 @@ The resolved value is injected into the script as a `partition` argument and per
 
 In a `// partitioned` DuckDB script, the `partition` argument is declared automatically, so the SQL can reference `$partition` directly without a manual `-- $partition (text)` declaration (an explicit declaration still wins). The auto-declared argument is optional in run forms since the platform resolves it at run start.
 
+## The partition picker
+
+Selecting a partitioned producer in the [pipeline graph](./index.mdx#the-pipeline-graph) opens a **Materialize a partition** run form. Instead of a bare string field where you would have to type the exact bucket format by hand, it renders the picker that matches the cadence:
+
+| Kind | Picker |
+| --- | --- |
+| `daily` | date |
+| `weekly` | ISO week |
+| `monthly` | month |
+| `hourly` | datetime |
+| `dynamic`, or a custom `format=` | plain text (enter the bucket exactly as the producer renders it) |
+
+The picker seeds the current bucket by default, resolved in the producer's `tz` (default `UTC`, not the browser timezone) so the default matches the buckets scheduled runs actually wrote. A `start=` anchor is honoured: before the anchor the default is the first partition rather than today, and a malformed `// partitioned` header (bad `tz` or `start`) leaves the field empty and shows the error rather than seeding a value the run would take verbatim.
+
+When the producer materializes a DuckLake table, the picker also signals what is and isn't there yet, so you don't launch a redundant or empty run:
+
+- Whether the selected bucket is **already materialized** (running replaces it) or **not materialized yet** (running creates it).
+- A warning when a partitioned upstream input has **no data for the selected bucket** yet, so the run may materialize an empty partition.
+- A list of **recently missing** buckets (recent cadence buckets not yet materialized) as one-click chips that set the partition for you.
+
+{/* TODO screenshot: partition_picker.png - the "Materialize a partition" run form on a selected daily producer, showing the date picker, a "not materialized yet" hint, and a row of recently-missing partition chips */}
+
+To run a whole range of partitions at once rather than one, use [backfill](./materialization.mdx#partition-status-and-backfill). The same single-partition run is available headlessly from the CLI with `wmill pipeline run <folder> --partition <bucket>`.
+
 ## The `{partition}` token
 
 Use the literal token `{partition}` inside asset paths, both in `// on` declarations and in the URI constants your code derives its write paths from. It stays literal in the lineage graph (the graph is partition-agnostic) and is substituted with the resolved value when the cascade fires. An `// on` whose path contains `{partition}` is a partition-bearing input (relevant to [joins](./index.mdx#joining-inputs-any-vs-all)).

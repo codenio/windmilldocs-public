@@ -39,11 +39,11 @@ Renders the folder's pipeline DAG in the terminal: sources, asset lineage and su
 wmill pipeline run <folder> [options]
 ```
 
-Runs a bounded cascade: starting from a schedule or manual root, every downstream step runs in topological order, stopping at the `--to` end node(s) if given. This is the CLI counterpart of the graph's Run + downstream and [selective execution](../../core_concepts/63_pipelines/index.mdx#selective-execution-run-up-to-here).
+Runs a cascade: starting from `--from`, every downstream step runs in topological order, stopping at the `--to` end node(s) if given. `--from` may be any runnable node - a schedule/manual root or a mid-DAG model (asset subscriber or pure reader). A mid-DAG start runs that node plus its transitive downstream and never re-runs upstream, matching dbt's `--select model+`. This is the CLI counterpart of the graph's Run + downstream and [selective execution](../../core_concepts/63_pipelines/index.mdx#selective-execution-run-up-to-here).
 
 | Option | Description |
 | --- | --- |
-| `--from <script>` | Start script (short name or path). Defaults to the folder's sole schedule / manual root. |
+| `--from <script>` | Start script (short name or path). May be any runnable node, including a mid-DAG model - that node and its transitive downstream run, upstream is not re-run (dbt `--select model+`). Defaults to the folder's sole schedule / manual root. |
 | `--to <node>` | End node(s) to stop at: script names / paths or asset URIs (e.g. `datatable://main/staged`). Repeatable or comma-separated. Omit to run the full downstream. |
 | `--dry-run` | Print the topological run plan without executing it. |
 | `--json` | Output the plan as JSON (for piping to `jq`). |
@@ -65,6 +65,9 @@ wmill pipeline run ecommerce --dry-run
 
 # Bounded slice: run everything needed to produce daily_kpis and stop there
 wmill pipeline run ecommerce --to daily_kpis
+
+# Rebuild a mid-DAG model and everything downstream of it (dbt `--select model+`)
+wmill pipeline run ecommerce --from fct_orders_daily
 
 # Backfill one day from local working-tree files, without deploying
 wmill pipeline run ecommerce --local --partition 2026-06-30

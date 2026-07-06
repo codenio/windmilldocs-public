@@ -16,6 +16,8 @@ DuckLake is not required, though. Pipelines wire scripts in any language (Python
 
 :::info Prerequisite
 Because this guide uses DuckLake, you need a [workspace storage and a DuckLake](../../core_concepts/11_persistent_storage/ducklake.mdx) configured. The default DuckLake is named `main`; this guide uses it. (A plain S3-based pipeline needs only the [workspace storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#workspace-object-storage).)
+
+On a fresh workspace the pipelines page shows a **setup checklist** whenever either prerequisite is missing, with a link straight to the [workspace object storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#workspace-object-storage) and [DuckLake](../../core_concepts/11_persistent_storage/ducklake.mdx) settings that fix it. Nothing materializes until both are set.
 :::
 
 ## 1. Create a pipeline

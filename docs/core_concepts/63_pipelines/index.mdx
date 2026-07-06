@@ -45,7 +45,7 @@ The quickstart below uses DuckDB (`--`), the canonical pipeline language; the re
 
 ## Quickstart
 
-Build a two-step [DuckLake](../11_persistent_storage/ducklake.mdx) pipeline in a folder. The first DuckDB script materializes a table; the second declares it as an input and materializes an aggregate whenever it changes. This needs a [workspace storage and a DuckLake](../11_persistent_storage/ducklake.mdx) configured (the default DuckLake is named `main`).
+Build a two-step [DuckLake](../11_persistent_storage/ducklake.mdx) pipeline in a folder. The first DuckDB script materializes a table; the second declares it as an input and materializes an aggregate whenever it changes. This needs a [workspace storage and a DuckLake](../11_persistent_storage/ducklake.mdx) configured (the default DuckLake is named `main`); until both are set, the pipelines page shows a setup checklist linking to the settings that configure them.
 
 1. Create a folder (for example `f/demo`) and add a DuckDB script `f/demo/ingest`:
 
@@ -208,23 +208,31 @@ The asset cascade is depth-capped so a cycle or a runaway fan-out cannot loop fo
 
 Open the folder and select the pipeline view to see the graph ([the example above](#an-end-to-end-example) shows it for `f/ecommerce`). Script nodes are connected to the assets they read and write, so you can see the full lineage at a glance: schedule nodes at the top, run-count and `daily` badges on scripts, test and column badges on write edges, a bell-off badge on a [muted](#muting-a-read-edge) read edge (read but not cascaded on), and dashed ƒ edges from macro libraries to their consumers. From any node you can run a single step or a step and everything downstream of it, and the [Activity panel](#an-end-to-end-example) streams live run status as a cascade progresses.
 
-Selecting a node opens its details pane: source and annotations for a script, and for a materialized asset its [partition grid](./materialization.mdx#partition-status-and-backfill), [captured schema](./materialization.mdx#schema-capture) and [column lineage](./materialization.mdx#column-level-lineage). When a selected script declares inputs (for example a `partition` argument, see below), a compact arguments form appears under the Test button so the run can be parameterized before launching it from the graph.
+Selecting a node opens its details pane: source and annotations for a script, and for a materialized asset its [partition grid](./materialization.mdx#partition-status-and-backfill), [captured schema](./materialization.mdx#schema-capture) and [column lineage](./materialization.mdx#column-level-lineage). When a selected script declares inputs, a compact arguments form appears under the Test button so the run can be parameterized before launching it from the graph. A `// partitioned` producer gets a dedicated [partition picker](./partitioning.mdx#the-partition-picker) here instead of a bare text field.
 
 Pipelines are first-class items on the home page and in search: each pipeline shows as a single entry (member scripts are folded into it), including pipelines that only exist as a draft. They can also be built and edited from the [AI chat](../22_ai_generation/index.mdx): when a pipeline editor (or an in-session pipeline preview) is open, the chat gains tools to read the graph and build, edit, remove or test pipeline steps; changes apply as ordinary unsaved drafts, like in the flow and script editors.
 
 ### Selective execution (run up to here)
 
-Beyond running a single step or a step and everything downstream of it, you can run a **bounded slice** of the cascade: start at an entry point and stop at one or more chosen end nodes. On a valid start node — a schedule-rooted or manual entry point — open **Run downstream up to…** to enter pick mode, click the node(s) where the run should stop (eligible nodes highlight, out-of-reach ones dim), and launch. Windmill runs exactly the path between the start and the ends — every step needed to produce the chosen ends and nothing past them — in topological order, stopping on the first failure. It maps to the natural "run up to here" gesture without dbt's compile-time `--select` grammar.
+Beyond running a single step or a step and everything downstream of it, you can start a run from **any node in the graph** and, optionally, bound it to a chosen end. Any node that can run on its own - a schedule-rooted or manual root, but also a mid-DAG model (an asset subscriber or a pure reader) - shows a **Run + downstream…** entry in its cascade menu. Choosing it runs that node plus its transitive downstream, and never re-runs anything upstream. This is dbt's `model+` gesture: rebuild a model and everything that depends on it, without recomputing its inputs.
+
+```bash
+wmill pipeline run f/orders --from fct_orders_daily   # = dbt run --select fct_orders_daily+
+```
+
+To bound the run further, click the node(s) where it should stop (eligible nodes highlight, out-of-reach ones dim) before launching. Windmill then runs exactly the path between the start and the ends - every step needed to produce the chosen ends and nothing past them - in topological order, stopping on the first failure.
+
+Nodes that can't run on empty arguments - event triggers (kafka/mqtt/nats/postgres/sqs/gcp/email) and input-only entry points (webhook/data_upload) - can't be picked as a start; they fan out per event or need caller-supplied input. Bind one with `--upload` from the CLI to run it as a start anyway.
 
 ![Selective execution: bounding a cascade to a chosen end node](./selective_execution.png 'Bounding a cascade to an end node')
 
-The same bounded run is available from the CLI:
+The same run is available from the CLI:
 
 ```bash
-wmill pipeline run <folder> --to <node>[,<node>…] [--from <start>] [--dry-run] [--json]
+wmill pipeline run <folder> [--from <start>] [--to <node>[,<node>…]] [--dry-run] [--json]
 ```
 
-`--to` accepts script names, paths, or asset URIs (e.g. `datatable://main/staged`); `--from` defaults to the folder's sole valid start; `--dry-run` prints the planned set without running it.
+`--from` is any runnable node, mid-DAG models included, and defaults to the folder's sole schedule/manual root; `--to` accepts script names, paths, or asset URIs (e.g. `datatable://main/staged`); `--dry-run` prints the planned set without running it.
 
 ## Triggering a pipeline
 
