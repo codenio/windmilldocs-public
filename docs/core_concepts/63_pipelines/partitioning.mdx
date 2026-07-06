@@ -80,7 +80,7 @@ Use the literal token `{partition}` inside asset paths, both in `// on` declarat
 
 In DuckDB SQL, the token is substituted in the text of [managed materialize](./materialization.mdx) scripts, always as a complete quoted literal:
 
-- `'{partition}'` (the whole literal is the token) becomes `'2026-05-16'` - use it in comparisons: `WHERE created_at::DATE = '{partition}'`.
+- `'{partition}'` (the whole literal is the token) becomes `'2026-05-16'` - use it in comparisons: `WHERE created_at::DATE = '{partition}'`. This works for `daily`, but the hourly/weekly/monthly identity strings are not valid dates: to compare a timestamp column on any time grain, filter with the injected [`wm_partition` macro](./materialization.mdx#filtering-the-source-to-the-active-partition) instead - `WHERE wm_partition(created_at) = {partition}`.
 - To build an S3 path around it, concatenate: `read_json('s3:///lake/raw/orders/' || '{partition}' || '/orders.json')`. A token in the middle of a longer literal (`'s3:///lake/{partition}/x'`) is not substituted cleanly - keep the token a standalone literal.
 - The `partition` argument is also auto-declared for `// partitioned` DuckDB scripts, so the SQL can bind `$partition` like any other argument where a bound parameter is accepted.
 

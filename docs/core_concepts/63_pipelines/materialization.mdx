@@ -20,6 +20,27 @@ The script is *setup statements (ATTACH, SET, CREATE TEMP …) followed by one t
 
 The trailing `SELECT` may reference SQL arguments declared with `-- $name (type)` (for example `-- $cutoff (date)` then `WHERE created_at < $cutoff`); they bind at run time like any other DuckDB script argument, including `s3object` arguments translated to `s3://` URIs.
 
+## Filtering the source to the active partition
+
+A `// partitioned` materialize runs once per [partition](./partitioning.mdx) and its `SELECT` should return only that slice. The [`{partition}` token](./partitioning.mdx#the-partition-token) substitutes to the partition's *identity string* as a quoted SQL literal - the same value stored in `_wm_partition`: `'2026-07-05'` (daily), `'2026-07-05T23'` (hourly), `'2026-W27'` (weekly) or `'2026-07'` (monthly).
+
+Only the daily identity is a valid DuckDB `DATE`/`TIMESTAMP`, so a naive `WHERE ts = TIMESTAMP {partition}` parses for daily but raises a `Conversion Error` on the other grains. To filter a timestamp column regardless of grain, use the `wm_partition(<ts_col>)` macro, which Windmill injects automatically as the first setup statement of every time-partitioned materialize:
+
+```sql
+-- pipeline
+-- materialize ducklake://main/orders_hourly
+-- partitioned hourly
+
+ATTACH 'ducklake://main' AS dl;
+SELECT order_id, amount, created_at
+FROM dl.orders
+WHERE wm_partition(created_at) = {partition}
+```
+
+`wm_partition(ts)` renders `ts` with the same format the resolver used to stamp `{partition}`, so the equality both parses and selects the whole bucket (every row in the slice, not just the boundary instant) on any time grain. It honours a custom `format=` [override](./partitioning.mdx#options-by-kind) and is timezone-agnostic (it formats `ts` as given): when a non-UTC `tz=` is set, express `ts` in that zone yourself.
+
+`dynamic` partitions get **no** macro - their identity is a caller-supplied key, not a timestamp - so filter on your key column directly with `WHERE tenant_id = {partition}`.
+
 ## Grammar
 
 ```
