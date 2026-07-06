@@ -104,9 +104,8 @@ One step of the example in full - the fact table - to show how the annotations c
 
 ```sql
 -- pipeline
--- on ducklake://main/raw_orders
--- on ducklake://main/stg_events
--- on ducklake://main/dim_customers
+-- the three ducklake reads in the FROM/JOIN clauses below auto-derive their
+-- cascade edges, so no `-- on` line is needed for them
 -- partitioned daily
 -- materialize ducklake://main/fct_orders key=order_id
 -- data_test not_null order_id
@@ -155,7 +154,7 @@ Pipeline membership is broader than materialization: a script that only validate
 A pipeline's edges come from assets, not from manual wiring:
 
 - Outputs are detected automatically from your code. Writing an S3 file, a `COPY (...) TO file` in DuckDB, or a resource write is recognized as a produced asset. See [assets](../52_assets/index.mdx) for how detection works and how to override an ambiguous read/write.
-- Inputs are declared with `// on <asset>`. Each declared asset the script reads becomes an incoming edge.
+- Inputs are detected the same way. Inside a `// pipeline`, a read of a [DuckLake](../11_persistent_storage/ducklake.mdx) table or an S3 object [auto-derives its incoming cascade edge](#asset-triggers-the-cascade) straight from the code - no `// on <asset>` needed. `// on <asset>` stays required for edges detection can't see (a read built from dynamic SQL), for the other asset kinds (resource, data table, volume), and to carry per-edge options such as `debounce`.
 
 Assets are referenced by URI. Every asset kind Windmill tracks can be used in a `// on` input and is detected as an output from code:
 
@@ -179,7 +178,6 @@ The store an asset points at has to exist before a pipeline can write to it. A [
 
 ```ts
 // pipeline
-// on s3:///datasets/raw/events.parquet
 import * as wmill from 'windmill-client';
 
 export async function main() {
@@ -188,7 +186,7 @@ export async function main() {
 }
 ```
 
-When the producer above writes `s3:///datasets/raw/events.parquet`, this consumer runs automatically. If it in turn writes `s3:///datasets/clean/events.parquet`, any script that declares `// on s3:///datasets/clean/events.parquet` runs next, and so on down the chain.
+The `loadS3File` read auto-derives the incoming edge, so no `// on` is needed. When the producer above writes `s3:///datasets/raw/events.parquet`, this consumer runs automatically. If it in turn writes `s3:///datasets/clean/events.parquet`, any script that reads `s3:///datasets/clean/events.parquet` runs next, and so on down the chain.
 
 ### How outputs are detected
 
@@ -208,7 +206,7 @@ The asset cascade is depth-capped so a cycle or a runaway fan-out cannot loop fo
 
 ## The pipeline graph
 
-Open the folder and select the pipeline view to see the graph ([the example above](#an-end-to-end-example) shows it for `f/ecommerce`). Script nodes are connected to the assets they read and write, so you can see the full lineage at a glance: schedule nodes at the top, run-count and `daily` badges on scripts, test and column badges on write edges, and dashed ƒ edges from macro libraries to their consumers. From any node you can run a single step or a step and everything downstream of it, and the [Activity panel](#an-end-to-end-example) streams live run status as a cascade progresses.
+Open the folder and select the pipeline view to see the graph ([the example above](#an-end-to-end-example) shows it for `f/ecommerce`). Script nodes are connected to the assets they read and write, so you can see the full lineage at a glance: schedule nodes at the top, run-count and `daily` badges on scripts, test and column badges on write edges, a bell-off badge on a [muted](#muting-a-read-edge) read edge (read but not cascaded on), and dashed ƒ edges from macro libraries to their consumers. From any node you can run a single step or a step and everything downstream of it, and the [Activity panel](#an-end-to-end-example) streams live run status as a cascade progresses.
 
 Selecting a node opens its details pane: source and annotations for a script, and for a materialized asset its [partition grid](./materialization.mdx#partition-status-and-backfill), [captured schema](./materialization.mdx#schema-capture) and [column lineage](./materialization.mdx#column-level-lineage). When a selected script declares inputs (for example a `partition` argument, see below), a compact arguments form appears under the Test button so the run can be parameterized before launching it from the graph.
 
@@ -234,16 +232,42 @@ A step runs when any of its triggers fire. There are two trigger forms: asset wr
 
 ### Asset triggers (the cascade)
 
+Asset writes are the default way data flows through a pipeline: when an upstream script writes an asset, every script that reads it runs next. Inside a `// pipeline`, a read of a [DuckLake](../11_persistent_storage/ducklake.mdx) table or an S3 object auto-derives that edge from the code - the DuckDB `FROM` clause, a `read_parquet`, or an SDK `load` call wires the cascade edge with no annotation. Auto-derived edges render as ordinary trigger edges. A cascade-dispatched run also records the DuckLake snapshot id of each direct upstream asset at dispatch time, shown as an [Upstream snapshots](./materialization.mdx#upstream-snapshots) panel on its run page, so you can query the inputs exactly as the run saw them.
+
+Auto-derivation covers read-only DuckLake and S3 reads only. A read the script also writes (an incremental model that `SELECT`s from the table it materializes) is not turned into a self-triggering edge, an ambiguous read is skipped, and the other asset kinds (resource, data table, volume) stay explicit.
+
 ```
 // on <asset-uri> [debounce=<duration>]
 ```
 
-`// on <asset-uri>` runs the script whenever an upstream script writes that asset. `<asset-uri>` is any of the asset kinds in the table above. The optional trailing `debounce=` is the only inline option (see [debounce](#debounce)); it is meaningful for asset inputs only. This is the default way data flows through a pipeline. A cascade-dispatched run also records the DuckLake snapshot id of each direct upstream asset at dispatch time, shown as an [Upstream snapshots](./materialization.mdx#upstream-snapshots) panel on its run page, so you can query the inputs exactly as the run saw them.
+Use `// on <asset-uri>` for edges detection can't derive on its own:
+
+- a read hidden from static analysis (a table name built from dynamic SQL),
+- an input of a kind that isn't auto-derived (resource, data table, volume),
+- or to carry the per-edge `debounce=` option (the only inline option, see [debounce](#debounce); meaningful for asset inputs only). An explicit `// on` wins over the derived edge for the same asset, so it is how you attach options to an otherwise-derived read.
+
+`<asset-uri>` is any of the asset kinds in the table above.
 
 ```ts
 // pipeline
-// on s3:///datasets/raw/events.parquet
+// on ducklake://main/orders debounce=60s
 // on $res:f/team/config
+```
+
+#### Muting a read edge
+
+An auto-derived edge is occasionally unwanted: a script reads an asset but should not re-run when it changes - a lookup table or slowly-changing dimension it reads on every run. Two annotations opt out:
+
+```
+// mute <asset>   suppress the auto-derived edge for one asset (asset is still read, just not cascaded on)
+// mute all       opt the whole script out of auto-derivation (only explicit `// on` edges remain)
+```
+
+A muted read shows on the pipeline graph as an edge with a bell-off badge: the script reads the asset, but changes to it won't re-run the script. Only `ducklake://` and `s3://` refs are muteable (the only auto-derived kinds), and `// mute all` leaves explicit `// on` edges untouched.
+
+```ts
+// pipeline
+// mute ducklake://main/country_codes
 ```
 
 ### Native-trigger markers (schedule, webhook, kafka, …)
