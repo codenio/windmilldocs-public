@@ -23,5 +23,5 @@ On [self-hosted instances](../advanced/1_self_host/index.mdx), integrating an OA
 
 ## Native triggers
 
-The `gworkspace` resource type is also used by Google [native triggers](../core_concepts/52_native_triggers/index.mdx) to watch for changes in Google Drive and Google Calendar. When configured through the native triggers workspace integration, the resource is created with different scopes (`drive.readonly`, `calendar.readonly`, `calendar.events`) tailored to receiving push notifications.
+The `gworkspace` resource type is also used by Google [native triggers](../core_concepts/66_native_triggers/index.mdx) to watch for changes in Google Drive and Google Calendar. When configured through the native triggers workspace integration, the resource is created with different scopes (`drive.readonly`, `calendar.readonly`, `calendar.events`) tailored to receiving push notifications.
 

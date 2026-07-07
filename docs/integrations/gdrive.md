@@ -27,5 +27,5 @@ On [self-hosted instances](../advanced/1_self_host/index.mdx), integrating an OA
 
 ## Native triggers
 
-You can use [native triggers](../core_concepts/52_native_triggers/index.mdx) to automatically run scripts or flows when files or folders change in Google Drive. Native triggers receive real-time push notifications so your runnables execute as soon as events occur.
+You can use [native triggers](../core_concepts/66_native_triggers/index.mdx) to automatically run scripts or flows when files or folders change in Google Drive. Native triggers receive real-time push notifications so your runnables execute as soon as events occur.
 

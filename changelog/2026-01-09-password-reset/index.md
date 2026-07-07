@@ -7,5 +7,5 @@ features:
   - '"Forgot password?" link on the login page'
   - Secure token-based reset flow with 1-hour expiry
   - Email enumeration protection
-docs: /docs/core_concepts/authentification#password-reset
+docs: /docs/core_concepts/authentication#password-reset
 ---

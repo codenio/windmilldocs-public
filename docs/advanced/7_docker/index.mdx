@@ -6,7 +6,7 @@ import DocCard from '@site/src/components/DocCard';
 
 # Run Docker containers
 
-Windmill can run any container image directly from a [Bash](../../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx) script with the `# sandbox <image>` annotation. It is daemonless (no Docker socket, no Docker-in-Docker sidecar) and runs the image inside the job's own [nsjail](../security_isolation/index.mdx) sandbox, so it is safe to run untrusted multi-tenant code and is available on [Windmill Cloud](/pricing).
+Windmill can run any container image directly from a [Bash](../../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx) script with the `# sandbox <image>` annotation. It is daemonless (no Docker socket, no Docker-in-Docker sidecar) and runs the image inside the job's own [nsjail](../27_security_isolation/index.mdx) sandbox, so it is safe to run untrusted multi-tenant code and is available on [Windmill Cloud](/pricing).
 
 ## Using it
 
@@ -27,7 +27,7 @@ python3 -c "import sys; print('hello', sys.argv[1])" "$name"
 - An **empty** body runs the image's `ENTRYPOINT` + `CMD`.
 - Windmill arguments (declared `x="$1"`, …) bind positionally.
 - The image's `Env` and `WorkingDir` are applied, and the windmill reserved variables (`WM_TOKEN`, `BASE_INTERNAL_URL`, …) are injected so [`wmill`](../3_cli/index.mdx) and API calls work from inside the container.
-- [`# volume`](../../core_concepts/56_volumes/index.mdx) mounts and the same-worker `/tmp/shared` folder apply inside the container.
+- [`# volume`](../../core_concepts/67_volumes/index.mdx) mounts and the same-worker `/tmp/shared` folder apply inside the container.
 
 `# sandbox <image>` and a bare `# sandbox` are distinct: a bare `# sandbox` runs the bash script itself under nsjail, while `# sandbox <image>` runs that image's command under nsjail.
 

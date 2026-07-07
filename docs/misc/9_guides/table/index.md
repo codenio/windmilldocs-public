@@ -4,6 +4,12 @@ description: How do I use the Table component in a Windmill app?
 
 # Table
 
+:::info Legacy
+
+This guide uses the legacy low-code app editor. For new apps, we recommend [full-code apps](../../../full_code_apps/index.mdx) with React or Svelte.
+
+:::
+
 This is a introduction on how to use the Table component in Windmill.
 
 ![Table API](../../../assets/apps/4_app_component_library/table.png.webp)

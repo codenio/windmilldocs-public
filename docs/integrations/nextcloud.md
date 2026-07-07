@@ -23,5 +23,5 @@ To integrate Nextcloud to Windmill, you need to save the following elements as a
 
 ## Native triggers
 
-You can use [native triggers](../core_concepts/52_native_triggers/index.mdx) to automatically run scripts or flows when files or folders change on your Nextcloud instance. Native triggers receive real-time push notifications so your runnables execute as soon as events occur.
+You can use [native triggers](../core_concepts/66_native_triggers/index.mdx) to automatically run scripts or flows when files or folders change on your Nextcloud instance. Native triggers receive real-time push notifications so your runnables execute as soon as events occur.
 

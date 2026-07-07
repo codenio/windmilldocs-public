@@ -4,6 +4,12 @@ description: How do I build an e-commerce CRM app in Windmill? Tutorial to creat
 
 # Tutorial: e-commerce CRM app
 
+:::info Legacy
+
+This tutorial uses the legacy low-code app editor. For new apps, we recommend [full-code apps](../full_code_apps/index.mdx) with React or Svelte.
+
+:::
+
 We will now use the Windmill app builder to build a simple E-commerce backoffice app. It is a simple CRM app that allows you to manage your products, customers and orders of a e-commerce store.
 
 <video
@@ -382,7 +388,7 @@ state.cart = [];
 
 It also needs to refresh the table. We can do this by selecting the id of the table in the `Recompute others` configuration of the action.
 
-The `Checkout` button needs to create the order. We can use the following frontend script to do this.
+The `Checkout` button needs to create the order. Unlike the previous actions, this one talks to Supabase, so it is an inline backend script rather than a frontend script.
 
 ```ts
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.10.0';

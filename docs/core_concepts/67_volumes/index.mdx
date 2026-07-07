@@ -29,7 +29,7 @@ Volumes are declared with comment annotations at the top of your script. The syn
 
 Where:
 - `<name>` is the volume identifier. Must be 2–255 characters, start and end with an alphanumeric character, and contain only `a-z`, `A-Z`, `0-9`, `.`, `_`, or `-`.
-- `<mount_path>` is the path where the volume will be available during execution. With [nsjail sandboxing](../../advanced/security_isolation/index.mdx), this can be an absolute path (restricted to `/tmp/`, `/mnt/`, `/opt/`, `/home/`, `/data/` prefixes) or a relative path. Without sandboxing, only relative paths are supported (e.g. `.claude`, `data/models`) — they are resolved relative to the job's working directory via a symlink.
+- `<mount_path>` is the path where the volume will be available during execution. With [nsjail sandboxing](../../advanced/27_security_isolation/index.mdx), this can be an absolute path (restricted to `/tmp/`, `/mnt/`, `/opt/`, `/home/`, `/data/` prefixes) or a relative path. Without sandboxing, only relative paths are supported (e.g. `.claude`, `data/models`) — they are resolved relative to the job's working directory via a symlink.
 
 A script can mount up to 10 volumes. Duplicate volume names or mount paths within the same script are not allowed.
 
@@ -55,7 +55,7 @@ def main():
 
 ### With sandbox (absolute paths)
 
-When using the [`sandbox` annotation](../../advanced/security_isolation/index.mdx#sandbox-annotation), you can use absolute mount paths:
+When using the [`sandbox` annotation](../../advanced/27_security_isolation/index.mdx#sandbox-annotation), you can use absolute mount paths:
 
 ```ts
 // sandbox
@@ -104,7 +104,7 @@ When called with `env="prod"` in workspace `acme`, mounts volumes `acme-cache` a
 ## How it works
 
 1. **Before execution** — Windmill acquires an exclusive lease on the volume, then downloads the volume's files from object storage into a local directory using a per-worker LRU cache (up to 10 GB). Files are compared by size and MD5 hash to skip unchanged files.
-2. **During execution** — The volume directory is bind-mounted (read-write) into the job's [nsjail](../../advanced/security_isolation/index.mdx) sandbox, or symlinked into the job directory when running without sandboxing.
+2. **During execution** — The volume directory is bind-mounted (read-write) into the job's [nsjail](../../advanced/27_security_isolation/index.mdx) sandbox, or symlinked into the job directory when running without sandboxing.
 3. **After execution** — If the volume is writable, changed and new files are synced back to object storage. Deleted files are removed from the remote. Volume metadata (size, file count) is updated. The lease is released.
 
 Symlinks inside a volume are preserved: they are serialized to a metadata file in object storage and restored on download.
@@ -154,12 +154,12 @@ From the Volumes drawer you can:
 
 ## Volumes and sandboxing
 
-Volumes work with both sandboxed ([nsjail](../../advanced/security_isolation/index.mdx)) and non-sandboxed execution, but the mount path behavior differs:
+Volumes work with both sandboxed ([nsjail](../../advanced/27_security_isolation/index.mdx)) and non-sandboxed execution, but the mount path behavior differs:
 
 - **With nsjail (sandbox)** — The volume directory is bind-mounted read-write at the declared mount path inside the sandbox. Both absolute (restricted to `/tmp/`, `/mnt/`, `/opt/`, `/home/`, `/data/`) and relative paths work. Relative paths are resolved relative to the nsjail working directory (`/tmp/bun` for Bun/TypeScript, `/tmp/deno` for Deno, `/tmp` for Python and others).
 - **Without nsjail** — Only relative mount paths are supported. Windmill creates a symlink from the job directory to the volume's local directory.
 
-You can combine volumes with the [`sandbox` annotation](../../advanced/security_isolation/index.mdx#sandbox-annotation) to enable per-script sandboxing, which is required if you need absolute mount paths:
+You can combine volumes with the [`sandbox` annotation](../../advanced/27_security_isolation/index.mdx#sandbox-annotation) to enable per-script sandboxing, which is required if you need absolute mount paths:
 
 ```ts
 // sandbox

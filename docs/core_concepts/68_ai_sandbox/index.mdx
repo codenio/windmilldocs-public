@@ -6,7 +6,7 @@ import DocCard from '@site/src/components/DocCard';
 
 # AI sandbox
 
-The AI sandbox combines two Windmill features - [sandboxing](../../advanced/security_isolation/index.mdx#sandbox-annotation) and [volumes](../56_volumes/index.mdx) - to run AI coding agents with process isolation and persistent file storage. Any agent that operates on a local filesystem can be wrapped in a Windmill [script](../../getting_started/0_scripts_quickstart/index.mdx) this way: [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://github.com/openai/codex), [OpenCode](https://github.com/sst/opencode), or a custom agent.
+The AI sandbox combines two Windmill features - [sandboxing](../../advanced/27_security_isolation/index.mdx#sandbox-annotation) and [volumes](../67_volumes/index.mdx) - to run AI coding agents with process isolation and persistent file storage. Any agent that operates on a local filesystem can be wrapped in a Windmill [script](../../getting_started/0_scripts_quickstart/index.mdx) this way: [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex](https://github.com/openai/codex), [OpenCode](https://github.com/sst/opencode), or a custom agent.
 
 ## Core pattern
 
@@ -17,8 +17,8 @@ An AI sandbox script has two annotations at the top:
 // volume: agent-state .agent
 ```
 
-- `sandbox` - runs the [job](../20_jobs/index.mdx) inside [nsjail](../../advanced/security_isolation/index.mdx#nsjail-sandboxing), isolating the agent's filesystem and processes from the [worker](../9_worker_groups/index.mdx).
-- `volume: <name> <path>` - mounts a persistent [volume](../56_volumes/index.mdx) so the agent can read and write files that survive across job runs (session state, memory, generated artifacts, etc.). Files are synced to [object storage](../38_object_storage_in_windmill/index.mdx).
+- `sandbox` - runs the [job](../20_jobs/index.mdx) inside [nsjail](../../advanced/27_security_isolation/index.mdx#nsjail-sandboxing), isolating the agent's filesystem and processes from the [worker](../9_worker_groups/index.mdx).
+- `volume: <name> <path>` - mounts a persistent [volume](../67_volumes/index.mdx) so the agent can read and write files that survive across job runs (session state, memory, generated artifacts, etc.). Files are synced to [object storage](../38_object_storage_in_windmill/index.mdx).
 
 This pattern works for any [language](../../getting_started/0_scripts_quickstart/index.mdx) supported by Windmill. The agent itself can be invoked via an SDK, a CLI subprocess, or an HTTP API - the sandbox and volume annotations are independent of how the agent runs. You can use AI sandboxes in standalone scripts or as steps within [flows](../../flows/1_flow_editor.mdx).
 

@@ -11,7 +11,7 @@ Windmill can run a [Bash](../../getting_started/0_scripts_quickstart/4_bash_quic
 This is a Cloud & Self-hosted [Enterprise Edition](/pricing) feature, off by default.
 
 :::info Default to agent workers
-SSH execution is for the narrow case where you can only reach a jump node over SSH and the scripts are self-contained. If you can run any process in the target environment, use an [agent worker](../../core_concepts/28_agent_workers/index.mdx) instead: it is a lightweight worker connecting back over outbound HTTP only, and it keeps dependency management, [sandboxing](../security_isolation/index.mdx), the S3 cache and native secrets. See [when to use what](#when-to-use-what).
+SSH execution is for the narrow case where you can only reach a jump node over SSH and the scripts are self-contained. If you can run any process in the target environment, use an [agent worker](../../core_concepts/28_agent_workers/index.mdx) instead: it is a lightweight worker connecting back over outbound HTTP only, and it keeps dependency management, [sandboxing](../27_security_isolation/index.mdx), the S3 cache and native secrets. See [when to use what](#when-to-use-what).
 :::
 
 ## Enabling the feature
@@ -92,7 +92,7 @@ Host-key pinning is enforced (`StrictHostKeyChecking=yes`) whenever the resource
 The remote host receives the script body and its positional args only. The Windmill runtime is not forwarded: `BASE_INTERNAL_URL`, the `wmill` client and reserved `WM_*` variables are unavailable remotely, so in-script Windmill API callbacks won't work. In addition:
 
 - No remote dependency management: the remote host must already have every tool the script uses.
-- No [nsjail sandbox](../security_isolation/index.mdx): the script runs as the SSH user with that user's full privileges. Scope the key and user tightly.
+- No [nsjail sandbox](../27_security_isolation/index.mdx): the script runs as the SSH user with that user's full privileges. Scope the key and user tightly.
 - No S3/binary cache.
 - Per-job SSH connection overhead.
 - v1 is bash-only.

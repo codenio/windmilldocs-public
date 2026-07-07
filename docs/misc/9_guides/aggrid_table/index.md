@@ -4,6 +4,12 @@ description: How do I use the AgGrid table component in a Windmill app?
 
 # AgGrid table guide
 
+:::info Legacy
+
+This guide uses the legacy low-code app editor. For new apps, we recommend [full-code apps](../../../full_code_apps/index.mdx) with React or Svelte.
+
+:::
+
 This is a basic introduction on how to use
 [AgGrid table](https://www.ag-grid.com/) together with Windmill. It assumes
 little to no knowledge about AgGrid.

@@ -246,7 +246,7 @@ To test it after setting an oauth client, go to the Resources menu and create a 
 
 ### SCIM/SAML
 
-Windmill supports [SCIM and SAML](../../misc/14_saml_and_scim/index.md) for user provisioning and [authentication](../../core_concepts/15_authentification/index.mdx).
+Windmill supports [SCIM and SAML](../../misc/14_saml_and_scim/index.md) for user provisioning and [authentication](../../core_concepts/15_authentication/index.mdx).
 
 ![SCIM/SAML](./scim_saml.png "SCIM/SAML")
 
@@ -334,7 +334,7 @@ Superadmins can configure per-workspace overrides for package registry settings.
 
 ### Docker registries
 
-Credentials used by `crane` when pulling private container images for [sandbox](../../core_concepts/58_ai_sandbox/index.mdx) snapshot builds. Provide a JSON array of `{registry, username, password}` objects, for example:
+Credentials used by `crane` when pulling private container images for [sandbox](../../core_concepts/68_ai_sandbox/index.mdx) snapshot builds. Provide a JSON array of `{registry, username, password}` objects, for example:
 
 ```json
 [
@@ -383,7 +383,7 @@ This setting is only available on [Enterprise Edition](/pricing).
 
 ### SMTP
 
-Setting SMTP unlocks [sending emails upon adding new users](../../core_concepts/15_authentification/index.mdx) to the workspace or the instance and [sending critical alerts](#critical-alert-channels).
+Setting SMTP unlocks [sending emails upon adding new users](../../core_concepts/15_authentication/index.mdx) to the workspace or the instance and [sending critical alerts](#critical-alert-channels).
 
 You need to provide the following details:
 
