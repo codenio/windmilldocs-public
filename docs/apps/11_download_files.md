@@ -51,10 +51,13 @@ function downloadDataAsFile(dataUrl, fileName) {
 downloadDataAsFile(result, 'name.file');
 ```
 
-or if the result is just regular JSON:
+or if the result is just regular JSON, convert it to a data URL first:
 ```js
-// Function to download the data as a file
-function downloadDataAsFile(dataUrl, fileName) {
+// Function to download JSON data as a file
+function downloadDataAsFile(data, fileName) {
+  // Encode the JSON result as a Base64 data URL
+  const dataUrl = 'data:application/json;base64,' + btoa(JSON.stringify(data, null, 2));
+
   // Create an anchor element
   const anchor = document.createElement('a');
 
@@ -74,8 +77,8 @@ function downloadDataAsFile(dataUrl, fileName) {
   document.body.removeChild(anchor);
 }
 
-// Call the function with your data URL and a file name
-downloadDataAsFile(result, 'selected_row.md');
+// Call the function with the runnable's JSON result and a file name
+downloadDataAsFile(result, 'selected_row.json');
 ```
 
 Here is an example of downloading a file from a [button](./4_app_configuration_settings/button.mdx) in a [table](./4_app_configuration_settings/table.mdx).

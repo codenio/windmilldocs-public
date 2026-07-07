@@ -42,9 +42,9 @@ Scripts consist of 2 parts:
 - [Code](#code): for C# scripts, it must have at least a **public** static Main method inside a class (the name of the class is irrelevant).
 - [Settings](#settings): settings & metadata about the Script such as its path, summary, description, [JSON Schema](../../../core_concepts/13_json_schema_and_parsing/index.mdx) of its inputs (inferred from its signature).
 
-When stored in a code repository, these 2 parts are stored separately at `<path>.rs` and `<path>.script.yaml`
+When stored in a code repository, these 2 parts are stored separately at `<path>.cs` and `<path>.script.yaml`
 
-Windmill automatically manages [dependencies](../../../advanced/6_imports/index.mdx) for you. When you import libraries in your C# script, Windmill parses these imports upon saving the script and automatically generates a list of dependencies. It then spawns a dependency job to associate these PyPI packages with a lockfile, ensuring that the same version of the script is always executed with the same versions of its dependencies.
+Windmill automatically manages [dependencies](../../../advanced/6_imports/index.mdx) for you. When you import libraries in your C# script, Windmill parses these imports upon saving the script and automatically generates a list of dependencies. It then spawns a dependency job to associate these NuGet packages with a lockfile, ensuring that the same version of the script is always executed with the same versions of its dependencies.
 
 From the Home page, click **New** and select **Script**. This will take you to the first step of script creation: [Metadata](../../../script_editor/settings.mdx#metadata).
 
@@ -172,7 +172,7 @@ Packages can be installed through NuGet. Just add the dependencies you need at t
 #r "nuget: AutoMapper, 6.1.0"
 ```
 
-::: warn
+:::caution
 Note that only the lines at the very top will be taken into account.
 :::
 

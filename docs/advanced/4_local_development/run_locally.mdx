@@ -53,8 +53,8 @@ setClient(
 
 ```ts
 setClient(
-	Bun.env.get('WM_TOKEN') ?? 'no_token',
-	Bun.env.get('BASE_INTERNAL_URL') ?? 'http://localhost:8000'
+	process.env.WM_TOKEN ?? 'no_token',
+	process.env.BASE_INTERNAL_URL ?? 'http://localhost:8000'
 );
 ```
 
@@ -116,7 +116,7 @@ Deno.env.set('WM_STATE_PATH', path);
 let fullUrl = import.meta.url;
 let pathS = fullUrl.substring(8, fullUrl.length - 3).split('/');
 const path = pathS.slice(pathS.length - 3, pathS.length).join('/');
-Bun.env.set('WM_STATE_PATH', path);
+process.env.WM_STATE_PATH = path;
 ```
 
 </TabItem>
@@ -179,7 +179,7 @@ For example, for TypeScript:
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "deno",
       "runtimeArgs": ["run", "--inspect-brk", "-A", "${file}"],
-      "env" {
+      "env": {
         "BASE_INTERNAL_URL": "https://app.windmill.dev",
         "WM_TOKEN": "ThisIsAToken",
         "WM_WORKSPACE": "workspace_id"
@@ -204,7 +204,7 @@ For example, for TypeScript:
       "cwd": "${workspaceFolder}",
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "${file}"],
-      "env" {
+      "env": {
         "BASE_INTERNAL_URL": "https://app.windmill.dev",
         "WM_TOKEN": "ThisIsAToken",
         "WM_WORKSPACE": "workspace_id"

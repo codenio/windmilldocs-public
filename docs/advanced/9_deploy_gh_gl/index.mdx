@@ -79,7 +79,7 @@ Additionally, you will be asked to choose between:
 - **Create one branch per deployed object** (default)
 - **Group deployed objects by folder**: Create a branch per folder containing objects being deployed
 
-Now you've succesfully set-up the `prod-branch` as the promotion target for the `staging` workspace. Any changes done to the staging workspace will now also be committed on a branch off of `prod-branch` named `wm-deploy/f/folder/item`. In the next step we will create a Github Action that automaticccaly creates a PR to merge these.
+Now you've succesfully set-up the `prod-branch` as the promotion target for the `staging` workspace. Any changes done to the staging workspace will now also be committed on a branch off of `prod-branch` named `wm_deploy/[WORKSPACE_NAME]/f/folder/item`. In the next step we will create a Github Action that automaticccaly creates a PR to merge these.
 
 ### GitHub Actions setup
 
@@ -94,14 +94,14 @@ on:
     branches:
       - wm_deploy/**
 env:
-TARGET_BRANCH: prod
+  TARGET_BRANCH: prod
 
 jobs:
-submit_pull_requests:
-runs-on: ubuntu-latest
-permissions:
-contents: read
-pull-requests: write
+  submit_pull_requests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -110,12 +110,12 @@ pull-requests: write
           gh pr view ${{ github.ref_name }} \
           && gh pr reopen ${{ github.ref_name }} \
           || gh pr create -B ${{ env.TARGET_BRANCH }} -H ${{ github.ref_name }} \
-          --title "${{github.event.head_commit.message }}" \
+          --title "${{ github.event.head_commit.message }}" \
           --body "PR created by Github action '${{ github.workflow }}'"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
 
-````
 </TabItem>
 </Tabs>
 
@@ -147,7 +147,7 @@ This is the recommended approach for most cases:
 includes:
   - "f/team1_folder/**"  # Team 1's folder
   - "f/team2_folder/**"  # Team 2's folder
-````
+```
 
 This setup ensures that:
 

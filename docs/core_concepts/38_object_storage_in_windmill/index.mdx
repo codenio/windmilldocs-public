@@ -96,7 +96,7 @@ You can even display several S3 files through an array of S3 objects:
 
 ```ts
 export async function main() {
-  return [{s3: "path/to/file_1"}, {s3: "path/to/file_2", {s3: "path/to/file_3"}}];
+  return [{s3: "path/to/file_1"}, {s3: "path/to/file_2"}, {s3: "path/to/file_3"}];
 }
 ```
 
@@ -204,10 +204,9 @@ import wmill
 from wmill import S3Object
 
 def main():
+    example_file = S3Object(s3='path/to/file')
 
-	example_file = S3Object(s3='path/to/file')
-
-	# Load the entire file_content as a bytes array
+    # Load the entire file_content as a bytes array
     file_content = wmill.load_s3_file(example_file)
     print(file_content.decode('utf-8'))
 
@@ -262,8 +261,8 @@ import wmill
 from wmill import S3Object
 
 def main(input_file: S3Object):
-
-# Rest of the code
+    # Rest of the code
+    pass
 ```
 
 </TabItem>
@@ -345,7 +344,7 @@ def main(s3_file_path: str):
     s3_file_output = S3Object(s3=s3_file_path)
 
     file_content = b"Hello Windmill!"
-	# file_content can be either bytes or a BufferedReader
+    # file_content can be either bytes or a BufferedReader
     file_content = wmill.write_s3_file(s3_file_output, file_content)
     return s3_file_output
 ```

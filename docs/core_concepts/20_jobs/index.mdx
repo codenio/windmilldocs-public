@@ -304,9 +304,9 @@ The response from the SSE endpoint is a stream of JSON objects, each with a `typ
     "workflow_as_code_status": {...}, // optional, JSON: status of workflow as code (raw JSON)
     "job": {...},                   // optional, JSON: job metadata
   }
+  ```
 
-Once completed, the job field will contain the full completed job data, including its result but not only
-
+Once completed, the `job` field will contain the full completed job data, including its result as well as the following fields:
 
 - **workspace_id** (string): The unique identifier of the workspace where the job was run.
 - **id** (UUID): The unique identifier of the job.

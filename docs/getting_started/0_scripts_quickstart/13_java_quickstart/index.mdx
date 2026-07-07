@@ -98,7 +98,6 @@ boilerplate. Let's take a look:
 //requirements:
 //com.google.code.gson:gson:2.8.9
 //com.github.ricksbrown:cowsay:1.1.0
-//com.github.ricksbrown:cowsay:1.1.0
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -172,11 +171,10 @@ Return type can either be an `Object` or `void`. Any primitive java type can be 
 	/>
 </div>
 
-Packages can be installed through [Coursier](https://get-coursier.io/). Just add the dependencies you need at the top of the file, using the following format:
+Packages can be installed through [Coursier](https://get-coursier.io/). Just add the dependencies you need at the top of the file, one per line in the format `groupId:artifactId:version`:
 
 ```java
-//requirements: 
-//groupId:artifact:Id:version
+//requirements:
 //com.google.code.gson:gson:2.8.9
 //com.github.ricksbrown:cowsay:1.1.0
 ```

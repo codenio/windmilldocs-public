@@ -154,7 +154,7 @@ The `table-row` key allows returning the value as a row-wise table.
 If the result matches the table format, it will be displayed as a table even if the data is not nested under the key `table-row`.
 
 ```ts
-return { [ [ "foo", "bar" ], [ 42, 38 ], [ 8, 12 ] ] }
+return [ [ "foo", "bar" ], [ 42, 38 ], [ 8, 12 ] ]
 ```
 
 or
@@ -205,7 +205,7 @@ You can even display several S3 files through an array of S3 objects:
 
 ```ts
 export async function main() {
-  return [{s3: "path/to/file_1"}, {s3: "path/to/file_2", {s3: "path/to/file_3"}}];
+  return [{s3: "path/to/file_1"}, {s3: "path/to/file_2"}, {s3: "path/to/file_3"}];
 }
 ```
 

@@ -712,14 +712,14 @@ type Postgresql = {
 
 // The main function that will execute a query on a Postgresql database
 export async function main(query = 'SELECT * FROM demo', pg_resource: Postgresql) {
-  // Initialize the PostgreSQL client with SSL configuration disabled for strict certificate validation
+  // Initialize the PostgreSQL client, deriving the SSL configuration from the resource's sslmode
   const client = new Client({
     host: pg_resource.host,
     port: pg_resource.port,
     user: pg_resource.user,
     password: pg_resource.password,
     database: pg_resource.dbname,
-    ssl: pg_resource.ssl,
+    ssl: pg_resource.sslmode === 'disable' ? false : { rejectUnauthorized: false },
   });
 
   try {
@@ -982,7 +982,7 @@ class mysql(TypedDict):
     database: str
     password: str
 
-def main(mysql_credentials: mysql, query; str) -> str:
+def main(mysql_credentials: mysql, query: str) -> str:
     # Connect to the MySQL database using the provided credentials
     connection = mysql_connector.connect(
         host=mysql_credentials["host"],

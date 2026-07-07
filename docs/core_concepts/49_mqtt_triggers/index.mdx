@@ -152,6 +152,7 @@ export async function preprocessor(
 ) {
   if (event.kind === 'mqtt') {
     const payloadAsString = atob(event.payload);
+    const uint8Payload = Uint8Array.from(payloadAsString, (c) => c.charCodeAt(0));
 
     return {
       contentType: event.v5?.content_type,

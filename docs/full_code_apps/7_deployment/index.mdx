@@ -41,7 +41,7 @@ Admins can set a custom URL path for an app:
 custom_path: "my-dashboard"
 ```
 
-The app will then be accessible at `https://<instance>/apps/custom/my-dashboard`.
+The app will then be accessible at `https://<instance>/a/my-dashboard` (on multi-workspace deployments such as the cloud, the workspace is part of the path: `https://<instance>/a/<workspace>/my-dashboard`).
 
 ## Execution policy
 
@@ -49,8 +49,9 @@ The execution policy is auto-generated at deployment time. It controls how backe
 
 | Mode | Description |
 |------|-------------|
-| `publisher` | Runnables execute as the app owner (the user who deployed the app). Users don't need direct permissions on the underlying scripts. This is the default. |
-| `anonymous` | Runnables execute with the permissions of the viewer. Used for public apps or when you want per-user access control. |
+| `publisher` | Requires login and read access on the app. Runnables execute as the app publisher (the user who deployed the app), so users don't need direct permissions on the underlying scripts. This is the default. |
+| `anonymous` | No login required. Runnables still execute as the app publisher; unauthenticated callers appear as `anonymous`. This is the mode used by public apps. |
+| `viewer` | Requires login. Runnables execute with the permissions of the viewer themselves, for per-user access control. |
 
 The `triggerables` and `triggerables_v2` fields map each runnable to its execution configuration and are populated automatically during push/deploy.
 

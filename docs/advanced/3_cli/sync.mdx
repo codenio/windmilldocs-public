@@ -36,9 +36,9 @@ includes:
   - f/**
 excludes: []
 codebases: []
-skipVariables: true
-skipResources: true
-skipResourceTypes: true
+skipVariables: false
+skipResources: false
+skipResourceTypes: false
 skipSecrets: true
 includeSchedules: false
 includeTriggers: false
@@ -46,7 +46,7 @@ includeTriggers: false
 
 See more details in [wmill.yaml](#wmillyaml).
 
-Note that here, the variables, resources, secrets, schedules, and triggers are all skipped by default. You can change that by setting the corresponding options.
+Note that here, secrets are skipped by default (for security) and schedules and triggers are not included by default, while variables, resources and resource types are synced. You can change that by setting the corresponding options.
 
 When pulling, the source is the remote workspace and the target is the local folder, and when pushing, the source is the local folder and the target is the remote workspace.
 
