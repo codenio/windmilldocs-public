@@ -2,6 +2,8 @@
 description: How do I connect Google Sheets to Windmill? Read and write spreadsheet data from scripts and flows.
 ---
 
+import ResourceUsage from './_resource_usage.mdx';
+
 # Google Sheets integration
 
 [Google Sheets](https://www.google.com/sheets/about/) is an online spreadsheet application.
@@ -21,27 +23,5 @@ The Google Sheets integration is done through OAuth. You just need to sign in fr
 
 On [self-hosted instances](../advanced/1_self_host/index.mdx), integrating an OAuth API will require [Setup OAuth and SSO](../misc/2_setup_oauth/index.mdx).
 
-Your resource can be used [passed as parameters](../core_concepts/3_resources_and_types/index.mdx#passing-resources-as-parameters-to-scripts-preferred) or [directly fetched](../core_concepts/3_resources_and_types/index.mdx#fetching-them-from-within-a-script-by-using-the-wmill-client-in-the-respective-language) within [scripts](../script_editor/index.mdx), [flows](../flows/1_flow_editor.mdx), [low-code apps](../apps/0_app_editor/index.mdx) and [full-code apps](../full_code_apps/index.mdx).
+<ResourceUsage name="Google Sheets" hub="gsheets" />
 
-<iframe
-	style={{ aspectRatio: '16/9' }}
-	src="https://www.youtube.com/embed/ggJQtzvqaqA"
-	title="YouTube video player"
-	frameBorder="0"
-	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-	allowFullScreen
-	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
-></iframe>
-
-<br/>
-
-> Example of a Supabase resource being used in two different manners from a script in Windmill.
-<br/>
-
-:::tip
-
-Find some pre-set interactions with Google Sheets on the [Hub](https://hub.windmill.dev/?app=gsheets).
-
-Feel free to create your own Google Sheets scripts on [Windmill](../getting_started/00_how_to_use_windmill/index.mdx).
-
-:::

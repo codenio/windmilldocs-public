@@ -4,6 +4,8 @@ description: How do I connect Snowflake to Windmill? Query and manage Snowflake 
 
 import DocCard from '@site/src/components/DocCard';
 
+import ResourceUsage from './_resource_usage.mdx';
+
 # Snowflake integration
 
 [Snowflake](https://www.snowflake.com/en/) is a cloud-based data warehousing platform.
@@ -43,25 +45,5 @@ To integrate [Snowflake](https://www.snowflake.com/en/) with Windmill, you can e
 | schema             | string | Snowflake schema name                 |         | true     | Snowflake Console > Databases > [Your Database] > Schemas       |
 | role               | string | Snowflake role for access control     |         | true     | Snowflake Console > Users and Security > Roles                  |
 
-<br />
-<br />
+<ResourceUsage name="Snowflake" hub="snowflake" />
 
-Your resource can be used [passed as parameters](../core_concepts/3_resources_and_types/index.mdx#passing-resources-as-parameters-to-scripts-preferred) or [directly fetched](../core_concepts/3_resources_and_types/index.mdx#fetching-them-from-within-a-script-by-using-the-wmill-client-in-the-respective-language) within [scripts](../script_editor/index.mdx), [flows](../flows/1_flow_editor.mdx), [low-code apps](../apps/0_app_editor/index.mdx) and [full-code apps](../full_code_apps/index.mdx).
-
-<iframe
-	style={{ aspectRatio: '16/9' }}
-	src="https://www.youtube.com/embed/ggJQtzvqaqA"
-	title="YouTube video player"
-	frameBorder="0"
-	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-	allowFullScreen
-	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
-></iframe>
-
-<br />
-
-:::tip
-
-Find some pre-set interactions with Snowflake on the [Hub](https://hub.windmill.dev/?app=snowflake).
-
-:::

@@ -409,11 +409,11 @@ For scripts that are already deployed and have no version specified in lockfile,
 During test runs or deployments, if there are imported scripts, Windmill will search through all of them to find an annotated version, which will be used as the final version. If no annotated version is found, the instance version will be used instead. 
 
 
-For [Enterprise Edition](/pricing) (EE) customers, [S3 cache](../../../misc/13_s3_cache/index.mdx) tarballs will be organized and separated by Python version.
+For [Enterprise Edition](/pricing) (EE) customers, [S3 cache](../../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage-distributed-cache-for-python-rust-go) tarballs will be organized and separated by Python version.
 
 ## Caching
 
-Every dependency on Python is cached on disk by default. Furtherfore if you use the [Distributed cache storage](../../../misc/13_s3_cache/index.mdx), it will be available to every other worker, allowing fast startup for every worker.
+Every dependency on Python is cached on disk by default. Furtherfore if you use the [Distributed cache storage](../../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage-distributed-cache-for-python-rust-go), it will be available to every other worker, allowing fast startup for every worker.
 
 ## What's next?
 

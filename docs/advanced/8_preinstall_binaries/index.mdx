@@ -107,9 +107,9 @@ Init scripts are available only on [self-hosting and enterprise edition](/pricin
 
 <br />
 
-Any scripts are set from the [Worker Management UI](../../misc/11_worker_group_management_ui/index.mdx), at the worker group level. Any script content specified in `INIT_SCRIPT` will be executed at the beginning when each worker of the worker group starts.
+Any scripts are set from the [Worker Management UI](../../core_concepts/9_worker_groups/index.mdx), at the worker group level. Any script content specified in `INIT_SCRIPT` will be executed at the beginning when each worker of the worker group starts.
 
-When adjustments are made in the [Worker Management UI](../../misc/11_worker_group_management_ui/index.mdx), the workers will shut down and are expected to be restarted by their supervisor (Docker or k8s).
+When adjustments are made in the [Worker Management UI](../../core_concepts/9_worker_groups/index.mdx), the workers will shut down and are expected to be restarted by their supervisor (Docker or k8s).
 
 The execution of Init scripts is inspectable in the superadmin workspace, with `Kind = All` filter. The path of those executions are `init_script_{worker_name}`.
 
@@ -200,6 +200,6 @@ More at:
 	<DocCard
 		title="Worker groups management UI"
 		description="On Enterpris Edition, worker groups can be managed through Windmill UI."
-		href="/docs/misc/worker_group_management_ui"
+		href="/docs/core_concepts/worker_groups"
 	/>
 </div>

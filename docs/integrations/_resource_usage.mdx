@@ -1,0 +1,29 @@
+{/* Shared boilerplate for integration pages: how to use the resource once created.
+    Usage: import ResourceUsage from './_resource_usage.mdx';
+           <ResourceUsage name="Airtable" hub="airtable" />
+    `hub` (optional) is the app slug on https://hub.windmill.dev. */}
+
+Your resource can be [passed as a parameter](../core_concepts/3_resources_and_types/index.mdx#passing-resources-as-parameters-to-scripts-preferred) or [fetched directly](../core_concepts/3_resources_and_types/index.mdx#fetching-them-from-within-a-script-by-using-the-wmill-client-in-the-respective-language) within [scripts](../script_editor/index.mdx), [flows](../flows/1_flow_editor.mdx), [low-code apps](../apps/0_app_editor/index.mdx) and [full-code apps](../full_code_apps/index.mdx).
+
+<iframe
+	style={{ aspectRatio: '16/9' }}
+	src="https://www.youtube.com/embed/ggJQtzvqaqA"
+	title="YouTube video player"
+	frameBorder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	allowFullScreen
+	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
+></iframe>
+
+:::tip
+
+{props.hub && (
+	<p>
+		Find some pre-set interactions with {props.name} on the{' '}
+		<a href={`https://hub.windmill.dev/?app=${props.hub}`}>Hub</a>.
+	</p>
+)}
+
+Feel free to create your own {props.name} scripts on [Windmill](../getting_started/00_how_to_use_windmill/index.mdx).
+
+:::

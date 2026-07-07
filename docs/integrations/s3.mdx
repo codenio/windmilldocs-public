@@ -4,6 +4,8 @@ description: How do I use S3-compatible storage with Windmill? Connect any S3-co
 
 import DocCard from '@site/src/components/DocCard';
 
+import ResourceUsage from './_resource_usage.mdx';
+
 # S3 APIs integrations
 
 S3 is a cloud-based object storage service designed to store and retrieve any amount of data.
@@ -22,44 +24,50 @@ Here are the required details:
 
 ![S3 resource type](../assets/integrations/add-s3.png.webp)
 
-| Property  | Type    | Description               | Default | Required |
-| --------- | ------- | ------------------------- | ------- | -------- |
-| bucket    | string  | S3 bucket name            |         | true     |
-| region    | string  | S3 region for the bucket  |         | true     |
-| useSSL    | boolean | Use SSL for connections   | true    | true    |
-| endPoint  | string  | S3 endpoint               |         | true     |
-| accessKey | string  | AWS access key            |         | false    |
-| pathStyle | boolean | Use path-style addressing | false   | true    |
-| secretKey | string  | AWS secret key            |         | false    |
+| Property  | Type    | Description                                     | Default | Required |
+| --------- | ------- | ----------------------------------------------- | ------- | -------- |
+| bucket    | string  | S3 bucket name                                  |         | true     |
+| region    | string  | S3 region for the bucket (e.g. `eu-west-3`)     |         | true     |
+| endPoint  | string  | S3 endpoint (e.g. `s3.eu-west-3.amazonaws.com`) |         | true     |
+| useSSL    | boolean | Use SSL for connections                         | true    | false    |
+| pathStyle | boolean | Use path-style addressing                       | false   | false    |
+| accessKey | string  | Access key ID                                   |         | false    |
+| secretKey | string  | Secret access key                               |         | false    |
 
-<br/>
+`accessKey` and `secretKey` are optional in the resource type but required by most providers (Amazon S3, Cloudflare R2, Tigris); leave them empty only for setups relying on public buckets or ambient credentials.
 
-For guidelines on where to find such details on a given platform, please go to the [AWS S3](./aws-s3.mdx) or [Cloudflare R2](./cloudflare-r2.mdx) pages.
+For guidelines on where to find these details on a given platform, see the provider pages:
 
-Your resource can be used [passed as parameters](../core_concepts/3_resources_and_types/index.mdx#passing-resources-as-parameters-to-scripts-preferred) or [directly fetched](../core_concepts/3_resources_and_types/index.mdx#fetching-them-from-within-a-script-by-using-the-wmill-client-in-the-respective-language) within [scripts](../script_editor/index.mdx), [flows](../flows/1_flow_editor.mdx), [low-code apps](../apps/0_app_editor/index.mdx) and [full-code apps](../full_code_apps/index.mdx).
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Amazon S3"
+		description="Where to find the S3 resource details for Amazon S3."
+		href="/docs/integrations/aws-s3"
+	/>
+	<DocCard
+		title="Cloudflare R2"
+		description="Where to find the S3 resource details for Cloudflare R2."
+		href="/docs/integrations/cloudflare-r2"
+	/>
+	<DocCard
+		title="Tigris"
+		description="Where to find the S3 resource details for Tigris."
+		href="/docs/integrations/tigris"
+	/>
+	<DocCard
+		title="Google Cloud Storage"
+		description="GCS uses its own resource type based on a service account key."
+		href="/docs/integrations/google-cloud-storage"
+	/>
+	<DocCard
+		title="Microsoft Azure Blob"
+		description="Azure Blob uses its own resource type based on an account name and access key."
+		href="/docs/integrations/microsoft-azure-blob"
+	/>
+</div>
 
-<iframe
-	style={{ aspectRatio: '16/9' }}
-	src="https://www.youtube.com/embed/ggJQtzvqaqA"
-	title="YouTube video player"
-	frameBorder="0"
-	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-	allowFullScreen
-	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
-></iframe>
+<ResourceUsage name="S3" hub="s3" />
 
-<br/>
-
-> Example of a Supabase resource being used in two different manners from a script in Windmill.
-<br/>
-
-:::tip
-
-Find some pre-set interactions with S3 on the [Hub](https://hub.windmill.dev/?app=s3).
-
-Feel free to create your own S3 scripts on [Windmill](../getting_started/00_how_to_use_windmill/index.mdx).
-
-:::
 
 ## Workspace object storage
 

@@ -2,6 +2,8 @@
 description: How do I use SMTP with Windmill? Send emails via SMTP from scripts and flows.
 ---
 
+import ResourceUsage from './_resource_usage.mdx';
+
 # SMTP integration
 
 [SMTP](https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol) (Simple Mail Transfer Protocol) is an internet standard for electronic mail transmission.
@@ -19,29 +21,5 @@ To add a SMTP [resource](../core_concepts/3_resources_and_types/index.mdx) to Wi
 | user     | string | SMTP username          | false    | Provided by your SMTP service or email hosting provider |
 | password | string | SMTP password          | false    | Provided by your SMTP service or email hosting provider |
 
-<br/><br/>
+<ResourceUsage name="SMTP" hub="smtp" />
 
-Your resource can be used [passed as parameters](../core_concepts/3_resources_and_types/index.mdx#passing-resources-as-parameters-to-scripts-preferred) or [directly fetched](../core_concepts/3_resources_and_types/index.mdx#fetching-them-from-within-a-script-by-using-the-wmill-client-in-the-respective-language) within [scripts](../script_editor/index.mdx), [flows](../flows/1_flow_editor.mdx), [low-code apps](../apps/0_app_editor/index.mdx) and [full-code apps](../full_code_apps/index.mdx).
-
-<iframe
-	style={{ aspectRatio: '16/9' }}
-	src="https://www.youtube.com/embed/ggJQtzvqaqA"
-	title="YouTube video player"
-	frameBorder="0"
-	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-	allowFullScreen
-	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
-></iframe>
-
-<br/>
-
-> Example of a Supabase resource being used in two different manners from a script in Windmill.
-<br/>
-
-:::tip
-
-Find some pre-set interactions with SMTP on the [Hub](https://hub.windmill.dev/?app=smtp).
-
-Feel free to create your own SMTP scripts on [Windmill](../getting_started/00_how_to_use_windmill/index.mdx).
-
-:::

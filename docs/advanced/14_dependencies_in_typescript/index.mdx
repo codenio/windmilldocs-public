@@ -13,7 +13,7 @@ Both of these runtimes allow you to include dependencies directly in the script,
 There are however methods to have more control on your dependencies:
 
 - Using [workspace dependencies](../../core_concepts/55_workspace_dependencies/index.mdx) for centralized dependency management at the workspace level.
-- Leveraging [standard mode](#lockfile-per-script-inferred-from-imports-standard) on [web IDE](#web-ide) or [locally](#cli).
+- Leveraging [standard mode](#lockfile-per-script-inferred-from-imports-standard), from the [web IDE or locally](../6_imports/index.mdx#lockfile-per-script-inferred-from-imports-standard).
 - [Bundling](#bundle-per-script-built-by-cli) per script with CLI, more powerful and local only.
 
 Moreover, there are other tricks, compatible with the methodologies mentioned above:
@@ -74,39 +74,13 @@ import * as wmill from 'npm:windmill-client@1.335.0';
 	/>
 </div>
 
-### Web IDE
-
-When a script is deployed through the Web IDE, Windmill generates a lockfile to ensure that the same [version of a script](../../core_concepts/34_versioning/index.mdx#script-versioning) is always executed with the same versions of its [dependencies](../6_imports/index.mdx). To generate a lockfile, it analyzes the imports, the imports can use a version pin (e.g. `windmill-client@1.147.3`) or if no version is used, it uses the latest version. Windmill's [workers](../../core_concepts/9_worker_groups/index.mdx) cache dependencies to ensure fast performance without the need to pre-package dependencies - most jobs take under 100ms end-to-end.
-
-At runtime, a deployed script always uses the same version of its dependencies.
-
-At each [deployment](../../core_concepts/0_draft_and_deploy/index.mdx), the lockfile is automatically recomputed from the imports in the script and the imports used by the [relative imports](#sharing-common-logic-with-relative-imports-when-not-using-bundles). The computation of that lockfile is done by a dependency jobs that you can find in the [Runs](../../core_concepts/5_monitor_past_and_future_runs/index.mdx) page.
-
-### CLI
-
-On [local development](../4_local_development/index.mdx), each script gets:
-
-- a content file (`script_path.py`, `script_path.ts`, `script_path.go`, etc.) that contains the code of the script,
-- a metadata file (`script_path.yaml`) that contains the metadata of the script,
-- a lockfile (`script_path.lock`) that contains the dependencies of the script.
-
-You can get those 3 files for each script by pulling your workspace with command [`wmill sync pull`](../3_cli/sync.mdx).
-
-Editing a script is as simple as editing its content. The code can be edited freely in your IDE, and there are possibilities to even run it locally if you have the correct development environment setup for the script language.
-
-Using [wmill CLI](../3_cli/index.mdx) command [`wmill generate-metadata`](../3_cli/generate-metadata.md), lockfiles can be generated and updated as files. The CLI asks the Windmill servers to run dependency job, using either [workspace dependencies](../../core_concepts/55_workspace_dependencies/index.mdx) (if configured) or automatically resolving from the script's imports, and from the output of those jobs, create the lockfiles.
-When a lockfile is present alongside a script at time of deployment by the CLI, no dependency job is run and the present lockfile is used instead.
+Whether deployed from the Web IDE (where the lockfile is recomputed at each deployment by a dependency job) or from the CLI (where each script gets a content file, a metadata file and a lockfile managed with [`wmill generate-metadata`](../3_cli/generate-metadata.md)), the lockfile generation mechanism is the same for all languages and is described in [Dependency management & imports](../6_imports/index.mdx#lockfile-per-script-inferred-from-imports-standard).
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
-		title="Command-line interface (CLI)"
-		description="The Windmill CLI, `wmill` allows you to interact with Windmill instances right from your terminal."
-		href="/docs/advanced/cli"
-	/>
-	<DocCard
-		title="Local development"
-		description="Develop locally, push to git and deploy automatically to Windmill."
-		href="/docs/advanced/local_development"
+		title="Dependency management & imports"
+		description="How Windmill generates and uses lockfiles, from the Web IDE and from the CLI."
+		href="/docs/advanced/imports"
 	/>
 </div>
 

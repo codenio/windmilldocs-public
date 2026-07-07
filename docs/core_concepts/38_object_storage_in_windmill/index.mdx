@@ -428,9 +428,38 @@ Under [Enterprise Edition](/pricing), instance object storage offers advanced fe
 
 ![Instance object storage infographic](./instance_object_storage_infographic.png 'Instance object storage infographic')
 
-This can be configured from the [instance settings](../../advanced/18_instance_settings/index.mdx#instance-object-storage), with configuration options for S3, Azure Blob, Google Cloud Storage, or AWS OIDC.
+This can be configured from the [instance settings](../../advanced/18_instance_settings/index.mdx#instance-object-storage), with configuration options for S3, Azure Blob, Google Cloud Storage, or AWS OIDC. For each you will find a button to test settings from a server or from a worker.
 
 ![S3/Azure for Python/Go cache & large logs](../../core_concepts/20_jobs/s3_azure_cache.png 'S3/Azure for Python/Go cache & large logs')
+
+#### S3
+
+| Name         | Type       | Description                                                                   |
+| ------------ | ---------- | ----------------------------------------------------------------------------- |
+| Bucket       | string     | Name of your S3 bucket.                                                       |
+| Region       | string     | If left empty, will be derived automatically from $AWS_REGION.   			    |
+| Access key ID       | string     | If left empty, will be derived automatically from $AWS_ACCESS_KEY_ID, pod or ec2 profile.   	    |
+| Secret key       | string     | If left empty, will be derived automatically from $AWS_SECRET_KEY, pod or ec2 profile.   	    |
+| Endpoint       | string     | Only needed for non AWS S3 providers like R2 or MinIo.   	    |
+| Allow http       | boolean     | Disable if using https only policy.   	    |
+
+#### Azure Blob
+
+| Name           | Type       | Description                                                                   |
+| -------------- | ---------- | ----------------------------------------------------------------------------- |
+| Account name   | string     | The name of your Azure Storage account. It uniquely identifies your Azure Storage account within Azure and is required to authenticate with Azure Blob Storage. |
+| Container name | string     | The name of the specific blob container within your storage account. Blob containers are used to organize blobs, similar to a directory structure. |
+| Access key     | string     | The primary or secondary access key for the storage account. This key is used to authenticate and provide access to Azure Blob Storage. |
+| Tenant ID      | string     | (optional) The unique identifier (GUID) for your Azure Active Directory (AAD) tenant. Required if using Azure Active Directory for authentication. |
+| Client ID      | string     | (optional) The unique identifier (GUID) for your application registered in Azure AD. Required if using service principal authentication via Azure AD. |
+| Endpoint       | string     | (optional) The specific endpoint for Azure Blob Storage, typically used when interacting with non-Azure Blob providers like Azurite or other emulators. For Azure Blob Storage, this is auto-generated and not usually needed. |
+
+#### Google Cloud Storage
+
+| Field | Description |
+|-------|-------------|
+| Bucket | The name of your Google Cloud Storage bucket |
+| Service Account Key | The service account key for your Google Cloud Storage bucket in JSON format |
 
 ### Large job logs management
 
@@ -440,7 +469,7 @@ For jobs with extensive logging needs, Windmill [Enterprise Edition](/pricing) u
 
 This allows the handling of large-scale logs with minimal database impact, supporting more efficient and scalable workflows.
 
-For large logs storage (and display) and cache for distributed Python jobs, you can [connect your instance to a bucket](../20_jobs/index.mdx#large-job-logs-management). This feature is at the Instance-level, and has no overlap with the Workspace object storage.
+For large logs storage (and display) and cache for distributed Python jobs, you can [connect your instance to a bucket](../../advanced/18_instance_settings/index.mdx#instance-object-storage). This feature is at the Instance-level, and has no overlap with the Workspace object storage.
 
 When instance object storage is configured from the UI, the **Monitor logs on S3** toggle (`monitor_logs_on_s3`) defaults to **on** — meaning Windmill mirrors service logs and job log chunks to the configured bucket for long-term storage and search. You can explicitly disable it if you prefer to keep logs on disk/DB only.
 
@@ -471,20 +500,14 @@ This feature is available on [Enterprise Edition](/pricing) and is configurable 
 
 For [Bun](../../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx#caching), Rust, and [Go](../../getting_started/0_scripts_quickstart/3_go_quickstart/index.mdx#caching), the binary bundle is cached on disk by default. However, if Instance Object storage is configured, these bundles can also be stored on the configured object storage (like S3), providing a distributed cache across all workers.
 
-<div className="grid grid-cols-2 gap-6 mb-4">
-	<DocCard
-		title="Instance object storage distributed cache for Python, Rust, Go"
-		description="Leverage a global S3 cache to speed up Python dependency handling by storing and reusing pre-installed package."
-		href="/docs/misc/s3_cache"
-	/>
-</div>
-
 #### Global Python dependency cache
 
 The first time a dependency is seen by a worker, if it is not cached locally, the worker search in the bucket if that specific `name==version` is there:
 
 1. If it is not, install the dependency from pypi, then do a snapshot of installed dependency, tar it and push it to S3 (we call this a "piptar").
 2. If it is, simply pull the "piptar" and extract it in place of installing from pypi. It is much faster than installing from pypi because that S3 is much closer to your workers than pypi and because there is no installation step to be done, a simple tar extract is sufficient which takes no compute.
+
+S3 cache tarballs are organized and separated by Python version, so dependencies are cached and retrieved according to the specific Python version used.
 
 ### Service logs storage
 

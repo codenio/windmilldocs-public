@@ -140,12 +140,7 @@ wmill sync push
 
 Once the workspace folder is pulled, edits can be made using any IDE (including the [VS Code extension](../../cli_local_dev/1_vscode-extension/index.mdx)).
 
-When created and edited through the UI (Windmill App), the lockfile is automatically generated. On local development, each script gets:
-- a content file (`script_path.py`, `script_path.ts`, `script_path.go`, etc.) that contains the code of the script,
-- a metadata file (`script_path.yaml`) that contains the metadata of the script,
-- a lockfile (`script_path.lock`) that contains the dependencies of the script.
-
-You can get those 3 files for each script by pulling your workspace with command [`wmill sync pull`](../3_cli/sync.mdx).
+On local development, each script gets a content file (the code), a metadata file (`script_path.yaml`) and a lockfile (`script_path.lock`), all pulled with [`wmill sync pull`](../3_cli/sync.mdx). How these three files interact with dependency resolution is described in [Dependency management & imports](../6_imports/index.mdx#dependencies-on-local-development).
 
 Editing a script is as simple as editing its content. The code can be edited freely in your IDE, and there are possibilities to even run it locally if you have the correct development environment setup for the script language.
 

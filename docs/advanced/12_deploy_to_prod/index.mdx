@@ -57,6 +57,32 @@ More details at:
 	/>
 </div>
 
+## Version control
+
+Whatever the deployment option, you can manage changes to scripts, flows, apps and resources using commits & push on remote repositories:
+
+- With [Git sync](../11_git_sync/index.mdx), the workspace automatically commits and pushes scripts, flows and apps to a Git repository on each [deploy](../../core_concepts/0_draft_and_deploy/index.mdx). Git sync is [Cloud plans and Self-Hosted Enterprise Edition](/pricing) only.
+- With the [CLI](../3_cli/index.mdx), you can [sync](../3_cli/sync.mdx) a workspace to a Git repository using `wmill sync pull` & `wmill sync push`.
+- In the Windmill UI, scripts, flows and apps have unique [versions](../../core_concepts/34_versioning/index.mdx) when deployed. You can find the said version any time, fork it or go back to this version.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Git sync"
+		description="Connect a Windmill workspace to a Git repository to automatically commit and push scripts, flows and apps to the repository on each deploy."
+		href="/docs/advanced/git_sync"
+	/>
+	<DocCard
+		title="Command-line interface - Sync"
+		description="Synchronize folders & git repositories to a Windmill instance"
+		href="/docs/advanced/cli/sync"
+	/>
+	<DocCard
+		title="Versioning"
+		description="Scripts, when deployed, can have a parent script identified by its hash."
+		href="/docs/core_concepts/versioning"
+	/>
+</div>
+
 ## CI test scripts
 
 You can attach test scripts to any [script](../../script_editor/index.mdx) or [flow](../../flows/1_flow_editor.mdx) so they run automatically on each deployment, catching regressions before they reach production.

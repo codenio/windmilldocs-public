@@ -268,73 +268,23 @@ This is also exclusive to [Cloud plans and Self-Hosted Enterprise edition](/pric
 
 ### Deno
 
-As we picked `TypeScript (Deno)` for this example, Windmill provided some TypeScript boilerplate. Let's take a look:
+You can also pick `TypeScript (Deno)` as the language instead of `TypeScript (Bun)`. The walkthrough is the same as with Bun ([above](#code)): a `main` function as entrypoint, an [auto-generated UI](../../../core_concepts/6_auto_generated_uis/index.mdx) from its signature, and [dependencies](../../../advanced/14_dependencies_in_typescript/index.mdx) resolved directly from imports. The differences with Bun are:
+
+- The resolution of imports is done by [Deno](https://deno.com/runtime), so npm imports use the `npm:` prefix (e.g. `import * as wmill from "npm:windmill-client@1.525.0"`), and `https://` and `jsr:` imports are also supported.
+- The Bun-specific [modes](#modes) (`//nobundling`, `//native`, `//nodejs`, `//npm`) do not apply.
 
 ```typescript
-// Ctrl/CMD+. to cache dependencies on imports hover.
-
 // Deno uses "npm:" prefix to import from npm (https://deno.land/manual@v1.36.3/node/npm_specifiers)
 // import * as wmill from "npm:windmill-client@1.525.0"
-
-// fill the type, or use the +Resource type to get a type-safe reference to a resource
-// type Postgresql = object
 
 export async function main(
   a: number,
   b: "my" | "enum",
-  //c: Postgresql,
   d = "inferred type string from default arg",
   e = { nested: "object" },
-  //e: wmill.Base64
 ) {
   // let x = await wmill.getVariable('u/user/foo')
   return { foo: a };
-}
-```
-
-In Windmill, scripts need to have a `main` function that will be the script's
-entrypoint. There are a few important things to note about the `main`.
-
-- The main arguments are used for generating
-  1.  the [input spec](../../../core_concepts/13_json_schema_and_parsing/index.mdx) of the Script
-  2.  the [frontend](../../../core_concepts/6_auto_generated_uis/index.mdx) that you see when running the Script as a standalone app.
-- Type annotations are used to generate the UI form, and help pre-validate
-  inputs. While not mandatory, they are highly recommended. You can customize
-  the UI in later steps (but not change the input type!).
-
-<div className="grid grid-cols-2 gap-6 mb-4">
-	<DocCard
-		title="JSON schema and parsing"
-		description="JSON Schemas are used for defining the input specification for scripts and flows, and specifying resource types."
-		href="/docs/core_concepts/json_schema_and_parsing"
-	/>
-</div>
-
-Also take a look at the import statement lines that are commented out.
-In TypeScript, [dependencies](../../../advanced/14_dependencies_in_typescript/index.mdx) and their versions are contained in the script and hence there is no need for any additional steps.
-The resolution is done by [Deno](https://deno.com/runtime).
-You can use npm imports directly in Windmill. The last import line imports the Windmill
-client, that is needed for example, to access
-[variables](../../../core_concepts/2_variables_and_secrets/index.mdx) or
-[resources](../../../core_concepts/3_resources_and_types/index.mdx). We won't go
-into that here.
-
-<div className="grid grid-cols-2 gap-6 mb-4">
-	<DocCard
-		title="Dependencies in TypeScript"
-		description="How to manage dependencies in TypeScript scripts."
-		href="/docs/advanced/dependencies_in_typescript"
-	/>
-</div>
-
-Back to our "Hello World". We can clear up unused import statements, change the
-main to take in the user's name. Let's also return the `name`, maybe we can use
-this later if we use this Script within a [flow](../../../flows/1_flow_editor.mdx) or [app](../../../full_code_apps/index.mdx) and need to pass its result on.
-
-```typescript
-export async function main(name: string) {
-	console.log("Hello world! Oh, it's you %s? Greetings!", name);
-	return { name };
 }
 ```
 
@@ -432,7 +382,7 @@ You can also choose to [run the script from the CLI](../../../advanced/3_cli/ind
 
 ## Caching
 
-Every bundle on Bun is cached on disk by default. Furtherfore if you use the [Distributed cache storage](../../../misc/13_s3_cache/index.mdx), it will be available to every other worker, allowing fast startup for every worker.
+Every bundle on Bun is cached on disk by default. Furtherfore if you use the [Distributed cache storage](../../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage-distributed-cache-for-python-rust-go), it will be available to every other worker, allowing fast startup for every worker.
 
 ## What's next?
 

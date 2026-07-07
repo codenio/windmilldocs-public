@@ -164,6 +164,7 @@ For a human-readable walkthrough of every `wmill.yaml` option — with defaults,
 ```bash
 wmill config            # human-readable reference
 wmill config --json     # JSON reference, one entry per option
+wmill config migrate    # legacy → workspaces
 ```
 
 A JSON Schema is also committed at [`cli/wmill.schema.json`](https://github.com/windmill-labs/windmill/blob/main/cli/wmill.schema.json) for editor autocomplete and validation of your `wmill.yaml`.
@@ -329,16 +330,7 @@ implicit (it defaults to the key). [Workspace-specific item files](./environment
 keep the same suffix — the file `database.main.resource.yaml` stays valid because the
 workspace is still named `main`.
 
-### Inspecting the config
-
-`wmill config` prints a structured reference of every option with its default, type, and
-description. Pair with `--json` for machine-readable output.
-
-```bash
-wmill config            # human-readable reference
-wmill config --json     # JSON reference, one entry per option
-wmill config migrate    # legacy → workspaces
-```
+See [Generating and inspecting the config](#generating-and-inspecting-the-config) for the `wmill config` reference commands.
 
 ### Codebase configuration
 
