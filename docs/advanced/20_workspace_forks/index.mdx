@@ -224,6 +224,10 @@ For example, if the parent workspace is `staging` and a fork `wm-fork-feature1` 
 
 If you want to route fork jobs to their own worker pool — for instance to isolate fork workloads from the parent — you can enable the **"Fork workspace tag: append -fork suffix"** toggle in the instance settings under the **Default Tags** section. When enabled, fork jobs are tagged with the parent workspace id plus a `-fork` suffix (e.g. `python3-staging-fork`), so all forks of a given parent share a common dedicated tag. You can then provision a worker group listening to `*-staging-fork` tags to handle all fork jobs for that parent.
 
+### OIDC tokens in forks
+
+Job [OIDC](../../core_concepts/29_oidc/index.mdx) tokens generated in a fork carry the fork's own workspace id in the `workspace` claim, plus a `fork_parent_workspace` claim containing the parent workspace id. External OIDC consumers such as Vault can bind policies to `fork_parent_workspace` so a single policy covers a workspace and all its forks. See [Token payload reference](../../core_concepts/29_oidc/index.mdx#token-payload-reference).
+
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
