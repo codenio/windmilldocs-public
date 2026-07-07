@@ -23,7 +23,7 @@ A Discord bot where your team asks billing questions and gets answers from Strip
 
 ![Discord bot responding with Stripe invoice data](./discord_stripe_bot.png 'Discord bot checking open Stripe invoices')
 
-The bot runs as a single Windmill script connected to Discord via a [WebSocket trigger](/docs/core_concepts/websocket_triggers). The agent has two tools:
+The bot runs as a single Windmill script connected to Discord via a [WebSocket trigger](/docs/triggers/websocket_triggers). The agent has two tools:
 
 ```typescript
 import { query, tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
@@ -96,7 +96,7 @@ Full setup (Discord Gateway connection, heartbeat config, handler script with to
 	<DocCard
 		title="WebSocket triggers"
 		description="Connect to WebSocket servers and trigger scripts on incoming messages."
-		href="/docs/core_concepts/websocket_triggers"
+		href="/docs/triggers/websocket_triggers"
 	/>
 </div>
 

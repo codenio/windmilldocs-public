@@ -10,6 +10,6 @@ features:
     'Google Drive: watch a specific file or all changes.',
     'Google Calendar: track event creation, updates, and deletions.'
   ]
-docs: /docs/core_concepts/native_triggers
+docs: /docs/triggers/native_triggers
 image: ./native_triggers.png
 ---

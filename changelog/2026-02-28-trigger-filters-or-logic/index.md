@@ -9,5 +9,5 @@ features:
     'OR matches messages that satisfy any of the configured filters.',
     'Existing triggers default to AND; the selector only appears when at least one filter is configured.',
   ]
-docs: /docs/core_concepts/websocket_triggers
+docs: /docs/triggers/websocket_triggers
 ---

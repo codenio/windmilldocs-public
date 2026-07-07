@@ -13,6 +13,6 @@ features:
     "Integrate with AWS resources using existing or new AWS credentials.",
     "Automatically generate TypeScript script templates for message processing."
   ]
-docs: /docs/core_concepts/sqs_triggers
+docs: /docs/triggers/sqs_triggers
 video: https://www.youtube.com/watch?v=-p4jznB5mMQ
 ---

@@ -15,7 +15,7 @@ Kafka triggers is a [self-hosted Enterprise](/pricing) feature.
 
 ## Kafka resource configuration
 
-Before creating a Kafka trigger, you need to set up a Kafka [resource](../3_resources_and_types/index.mdx). Head to the Resources page, click "Add resource" and select `kafka`.
+Before creating a Kafka trigger, you need to set up a Kafka [resource](../../core_concepts/3_resources_and_types/index.mdx). Head to the Resources page, click "Add resource" and select `kafka`.
 
 The resource requires:
 - **Brokers**: List of broker hostnames in the format `hostname:port`
@@ -208,7 +208,7 @@ When auto-commit is disabled:
 - If the trigger restarts before you commit, unacknowledged messages will be re-delivered.
 - You must call the SDK helper from your script to commit offsets.
 
-The [preprocessor](../43_preprocessors/index.mdx) event payload includes `trigger_path`, `partition` and `offset` fields that you pass to the commit function. The SDK call stores the offset in the database and returns immediately. Every 5 seconds, the trigger's consumer picks up stored offsets and commits the highest one for each topic/partition pair to Kafka.
+The [preprocessor](../../core_concepts/43_preprocessors/index.mdx) event payload includes `trigger_path`, `partition` and `offset` fields that you pass to the commit function. The SDK call stores the offset in the database and returns immediately. Every 5 seconds, the trigger's consumer picks up stored offsets and commits the highest one for each topic/partition pair to Kafka.
 
 <Tabs>
 <TabItem value="TypeScript (Bun)">
@@ -302,7 +302,7 @@ export async function main(payload: string) {
 }
 ```
 
-And if you use a [preprocessor](../43_preprocessors/index.mdx), the script could look like this:
+And if you use a [preprocessor](../../core_concepts/43_preprocessors/index.mdx), the script could look like this:
 
 ```TypeScript
 export async function preprocessor(
@@ -355,9 +355,9 @@ The matching uses a superset check — the message value at the given key must c
 Filters can be configured in the Kafka trigger editor UI using the filter section. You can add multiple key/value pairs, and a human-readable preview is shown for each filter (e.g. `payload.type == "order_created"`).
 
 :::info
-Filters use the same mechanism as [WebSocket trigger](../40_websocket_triggers/index.mdx) filters and are evaluated server-side before dispatching the job.
+Filters use the same mechanism as [WebSocket trigger](../3_websocket_triggers/index.mdx) filters and are evaluated server-side before dispatching the job.
 :::
 
 ## Error handling
 
-Kafka triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
+Kafka triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../../core_concepts/10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.

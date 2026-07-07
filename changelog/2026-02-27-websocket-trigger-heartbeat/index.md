@@ -9,5 +9,5 @@ features:
     'Optional state field that captures a value from each inbound message and substitutes it into the heartbeat via {{state}}.',
     'Works for protocols that require app-level keep-alives (Discord Gateway, STOMP, custom APIs).',
   ]
-docs: /docs/core_concepts/websocket_triggers#application-level-heartbeat
+docs: /docs/triggers/websocket_triggers#application-level-heartbeat
 ---

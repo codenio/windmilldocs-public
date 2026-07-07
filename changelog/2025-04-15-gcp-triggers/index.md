@@ -14,6 +14,6 @@ features:
     "Automatically manage Pub/Sub subscriptions with flexible creation and update options.",
     "Support for message ordering and custom message attributes."
   ]
-docs: /docs/core_concepts/gcp_triggers
+docs: /docs/triggers/gcp_triggers
 image: ./gcp-triggers.png
 ---

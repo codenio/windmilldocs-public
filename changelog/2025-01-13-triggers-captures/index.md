@@ -12,6 +12,6 @@ features:
     'Support for different argument types (numbers, strings)',
     'Easy deployment and testing with saved arguments'
   ]
-docs: https://www.windmill.dev/docs/getting_started/triggers
+docs: https://www.windmill.dev/docs/triggers
 video: https://www.youtube.com/watch?v=nI3P3q4Okx8
 ---

@@ -13,5 +13,5 @@ features:
     'Updated trigger configurations automatically apply to resumed jobs',
     'Useful for debugging runnable or trigger logic without disabling the trigger'
   ]
-docs: /docs/getting_started/triggers#suspended-mode
+docs: /docs/triggers#suspended-mode
 ---

@@ -11,5 +11,5 @@ features:
   ]
 
 image: ./trigger_panel.png
-docs: /docs/advanced/email_triggers
+docs: /docs/triggers/email_triggers
 ---

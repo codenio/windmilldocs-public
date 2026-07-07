@@ -30,7 +30,7 @@ export async function main(payload: string) {
 }
 ```
 
-And if you use a [preprocessor](../43_preprocessors/index.mdx), the script could look like this:
+And if you use a [preprocessor](../../core_concepts/43_preprocessors/index.mdx), the script could look like this:
 
 ```TypeScript
 export async function preprocessor(
@@ -82,5 +82,5 @@ The consumer name is also used as the `DeliverSubject`, so make sure it's unique
 
 ## Error handling
 
-NATS triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
+NATS triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../../core_concepts/10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
 

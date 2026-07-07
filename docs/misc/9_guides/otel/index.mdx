@@ -124,7 +124,7 @@ The inbound `traceparent` is also exposed to the job as its [`TRACEPARENT` envir
 
 A few details:
 
-- It applies to the run endpoints that accept a request body: running a script or flow by path, hash or version, including the synchronous `run_wait_result` variants. [HTTP routes](../../../core_concepts/39_http_routing/index.mdx) and other native triggers are not picked up as inbound trace sources.
+- It applies to the run endpoints that accept a request body: running a script or flow by path, hash or version, including the synchronous `run_wait_result` variants. [HTTP routes](../../../triggers/2_http_routing/index.mdx) and other native triggers are not picked up as inbound trace sources.
 - An invalid or malformed `traceparent` header is ignored: the job keeps its own trace derived from the job UUID, so the `job_id` / `root_job` lookup and dashboards built on it keep working.
 
 ### Monitoring metrics with Jaeger

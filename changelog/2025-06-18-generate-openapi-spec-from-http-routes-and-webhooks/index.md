@@ -8,5 +8,5 @@ features:
   - Automatically generate OpenAPI specs from defined HTTP routes and webhook triggers.
   - Export in JSON or YAML formats.
 image: ./http-routes-and-webhooks-to-openapi-spec.png
-docs: /docs/core_concepts/http_routing#generate-an-openapi-specification-from-http-routes
+docs: /docs/triggers/http_routing#generate-an-openapi-specification-from-http-routes
 ---

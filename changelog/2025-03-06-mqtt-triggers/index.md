@@ -13,6 +13,6 @@ features:
     "Support for both MQTT v3 and MQTT v5 protocols with configurable options.",
     "Automatically generate TypeScript script templates for message processing."
   ]
-docs: /docs/core_concepts/mqtt_triggers
+docs: /docs/triggers/mqtt_triggers
 video: https://www.youtube.com/watch?v=T_ava06lqlc
 ---

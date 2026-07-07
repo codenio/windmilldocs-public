@@ -30,7 +30,7 @@ export async function main(msg: string) {
 }
 ```
 
-And if you use a [preprocessor](../43_preprocessors/index.mdx), the script could look like this:
+And if you use a [preprocessor](../../core_concepts/43_preprocessors/index.mdx), the script could look like this:
 
 ```TypeScript
 export async function preprocessor(
@@ -67,7 +67,7 @@ The trigger also supports additional configuration options:
 ### Send runnable result to WebSocket server
 
 If you enable the "Send runnable result" toggle, the runnable result will be sent to the WebSocket server as a message, as long as the job is a success and the result is not null.
-Like for [sync webhooks](../4_webhooks/index.mdx#synchronous), if the flow has the [early return](../../flows/19_early_return.mdx) setting set, the chosen node result will be sent and the rest of the flow will continue asynchronously.
+Like for [sync webhooks](../../core_concepts/4_webhooks/index.mdx#synchronous), if the flow has the [early return](../../flows/19_early_return.mdx) setting set, the chosen node result will be sent and the rest of the flow will continue asynchronously.
 
 By default, only successful results are sent back. Enable the "Send result even on error" toggle to also forward error results to the WebSocket server, so the remote peer can react to failures (e.g. reply with an error frame). When disabled, failed jobs produce no outgoing message.
 
@@ -136,7 +136,7 @@ Windmill extracts the `s` field from every incoming Discord event and substitute
 
 ## Error handling
 
-WebSocket triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
+WebSocket triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../../core_concepts/10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
 
 
 

@@ -186,7 +186,7 @@ Webhooks accumulate into batches of up to 500 events or 5 seconds of inactivity,
 
 ### Database change data capture
 
-When using [Postgres triggers](../46_postgres_triggers/index.mdx) to react to row changes:
+When using [Postgres triggers](../../triggers/4_postgres_triggers/index.mdx) to react to row changes:
 
 ```
 Debounce delay: 10 seconds
@@ -198,7 +198,7 @@ Individual row changes accumulate into batches. A bulk import of 50,000 rows mig
 
 ### IoT sensor ingestion
 
-High-frequency sensor data arriving via [MQTT triggers](../49_mqtt_triggers/index.mdx):
+High-frequency sensor data arriving via [MQTT triggers](../../triggers/8_mqtt_triggers/index.mdx):
 
 ```
 Debounce delay: 30 seconds

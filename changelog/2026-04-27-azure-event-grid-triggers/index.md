@@ -15,5 +15,5 @@ features:
     "Optional event-type filters per trigger.",
     "Capture mode uses an isolated -wm-capture subscription so tests never clobber the deployed trigger."
   ]
-docs: /docs/core_concepts/azure_triggers
+docs: /docs/triggers/azure_triggers
 ---

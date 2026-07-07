@@ -13,6 +13,6 @@ features:
     "Manage Postgres publications and replication slots directly from the interface.",
     "Automatically generate TypeScript script templates for tracked tables and schemas."
   ]
-docs: /docs/core_concepts/postgres_triggers
+docs: /docs/triggers/postgres_triggers
 video: https://www.youtube.com/watch?v=V50Jl4D_RTY
 ---

@@ -4,7 +4,7 @@ version: v1.419.0
 title: WebSocket triggers
 tags: ['Websocket', 'Enterprise']
 description: Support for WebSocket triggers to run jobs when messages are received.
-docs: /docs/core_concepts/websocket_triggers
+docs: /docs/triggers/websocket_triggers
 features:
   [
     'Connect to WebSocket servers and trigger scripts/flows when messages are received',

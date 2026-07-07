@@ -22,9 +22,9 @@ Among the supported authentication mechanisms, there's also **Windmill Auth**, w
 You can configure the route to run:
 - **Synchronously**: Wait for the script to complete and return the result.
 - **Asynchronously**: Return a job ID immediately; the script runs in the background.
-- **Sync SSE**: Return a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) stream. Useful when the runnable returns a [stream](../20_jobs/index.mdx#result-streaming). Works identically to the `/run_and_stream` endpoint of [SSE stream webhooks](../4_webhooks/index.mdx#sse-stream-webhooks).
+- **Sync SSE**: Return a [Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) stream. Useful when the runnable returns a [stream](../../core_concepts/20_jobs/index.mdx#result-streaming). Works identically to the `/run_and_stream` endpoint of [SSE stream webhooks](../../core_concepts/4_webhooks/index.mdx#sse-stream-webhooks).
 
-For more on streaming in Windmill, see [Streaming](../58_streaming/index.mdx).
+For more on streaming in Windmill, see [Streaming](../../core_concepts/58_streaming/index.mdx).
 
 ---
 
@@ -74,7 +74,7 @@ You can provide the specification in one of three ways:
   - Only internal references (e.g., `#/components/...`) are supported.
 
 
-You can use `:param` in the route path and access these as `params` in a [preprocessor](../43_preprocessors/index.mdx).
+You can use `:param` in the route path and access these as `params` in a [preprocessor](../../core_concepts/43_preprocessors/index.mdx).
 
 > ℹ️ **Only workspace admins** can create routes.  
 > Once created, all properties of a route **except the HTTP path** can be modified by any user with **write access** to the route.  
@@ -232,7 +232,7 @@ Windmill supports several ways to secure HTTP triggers:
 | Method           | Description                                                                                  |
 |------------------|----------------------------------------------------------------------------------------------|
 | **None**         | Open to anyone (use only in trusted environments)                                            |
-| **Windmill Auth**| Uses a Windmill-signed JWT token to ensure the requesting agent has read access to both the runnable and the trigger. The token must be provided either in the Authorization header as Bearer `<token>`, or via a cookie named `token`. You can generate this token from your user settings. When selecting this option, you can generate a token pre-scoped with `http_triggers:read` access to the route directly from the trigger configuration. See [user tokens](../59_user_tokens/index.mdx) for more details on scoped tokens. |
+| **Windmill Auth**| Uses a Windmill-signed JWT token to ensure the requesting agent has read access to both the runnable and the trigger. The token must be provided either in the Authorization header as Bearer `<token>`, or via a cookie named `token`. You can generate this token from your user settings. When selecting this option, you can generate a token pre-scoped with `http_triggers:read` access to the route directly from the trigger configuration. See [user tokens](../../core_concepts/59_user_tokens/index.mdx) for more details on scoped tokens. |
 | **API Key**      | Checks a header (e.g., `x-api-key`) for a valid key stored as a resource                     |
 | **Basic Auth**   | Uses HTTP Basic Authentication via a configured resource                                     |
 | **Signature Auth** | Verifies a signature using HMAC or third-party formats (Stripe, GitHub, etc.)               |
@@ -245,7 +245,7 @@ When **Windmill Auth** is selected, the JWT token used to call the route must ca
 
 From the route configuration page, Windmill can generate a token pre-scoped to exactly this route: in the **Windmill Auth** section click **Generate token**, and a new token limited to `http_triggers:read:<route_path>` is created. That token can safely be shared with the caller because it can only read (i.e., trigger) this specific HTTP route and cannot impersonate the issuing user for any other operation.
 
-See [User tokens](../59_user_tokens/index.mdx#token-scopes) for the full scope format and the list of available domains.
+See [User tokens](../../core_concepts/59_user_tokens/index.mdx#token-scopes) for the full scope format and the list of available domains.
 
 ---
 
@@ -297,7 +297,7 @@ HTTP route responses include permissive CORS headers by default so that routes c
 
 `OPTIONS` preflight requests are handled automatically by the HTTP trigger handler.
 
-To override any of these defaults for a route, set the corresponding header on the response returned by your runnable using the [`wm_headers`](../4_webhooks/index.mdx#custom-response-headers) mechanism (or its longer alias `windmill_headers`). Only headers that are **not** already present in the response are filled in with the defaults above, so you can restrict origins or allowed headers on a per-route basis:
+To override any of these defaults for a route, set the corresponding header on the response returned by your runnable using the [`wm_headers`](../../core_concepts/4_webhooks/index.mdx#custom-response-headers) mechanism (or its longer alias `windmill_headers`). Only headers that are **not** already present in the response are filled in with the defaults above, so you can restrict origins or allowed headers on a per-route basis:
 
 ```ts
 export async function main() {
@@ -354,7 +354,7 @@ This gives access to:
 
 - Raw payload
 - Headers, query, and route parameters
-- Secrets stored as [variables](../2_variables_and_secrets/index.mdx)
+- Secrets stored as [variables](../../core_concepts/2_variables_and_secrets/index.mdx)
 
 Example script for HMAC signature validation:
 ```ts
@@ -432,4 +432,4 @@ async function verifySignature(signature: string, body: string, timestamp?: stri
 
 ## Error handling
 
-HTTP routes support local error handlers that override workspace error handlers for specific routes. See the [error handling documentation](../10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
+HTTP routes support local error handlers that override workspace error handlers for specific routes. See the [error handling documentation](../../core_concepts/10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.

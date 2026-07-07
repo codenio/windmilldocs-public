@@ -2,8 +2,6 @@
 description: How do I connect Google Drive to Windmill? Upload, download and manage files in Google Drive.
 ---
 
-import ResourceUsage from './_resource_usage.mdx';
-
 # Google Drive integration
 
 [Google Drive](https://drive.google.com/drive/my-drive) is cloud-based storage platform.
@@ -23,9 +21,31 @@ The Google Drive integration is done through OAuth. You just need to sign in fro
 
 On [self-hosted instances](../advanced/1_self_host/index.mdx), integrating an OAuth API will require [Setup OAuth and SSO](../advanced/27_setup_oauth/index.mdx).
 
-<ResourceUsage name="Google Drive" hub="gdrive" />
+Your resource can be used [passed as parameters](../core_concepts/3_resources_and_types/index.mdx#passing-resources-as-parameters-to-scripts-preferred) or [directly fetched](../core_concepts/3_resources_and_types/index.mdx#fetching-them-from-within-a-script-by-using-the-wmill-client-in-the-respective-language) within [scripts](../script_editor/index.mdx), [flows](../flows/1_flow_editor.mdx), [low-code apps](../apps/0_app_editor/index.mdx) and [full-code apps](../full_code_apps/index.mdx).
+
+<iframe
+	style={{ aspectRatio: '16/9' }}
+	src="https://www.youtube.com/embed/ggJQtzvqaqA"
+	title="YouTube video player"
+	frameBorder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	allowFullScreen
+	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
+></iframe>
+
+<br/>
+
+> Example of a Supabase resource being used in two different manners from a script in Windmill.
+<br/>
 
 ## Native triggers
 
-You can use [native triggers](../core_concepts/66_native_triggers/index.mdx) to automatically run scripts or flows when files or folders change in Google Drive. Native triggers receive real-time push notifications so your runnables execute as soon as events occur.
+You can use [native triggers](../triggers/11_native_triggers/index.mdx) to automatically run scripts or flows when files or folders change in Google Drive. Native triggers receive real-time push notifications so your runnables execute as soon as events occur.
 
+:::tip
+
+Find some pre-set interactions with Google Drive on the [Hub](https://hub.windmill.dev/?app=gdrive).
+
+Feel free to create your own Google Drive scripts on [Windmill](../getting_started/00_how_to_use_windmill/index.mdx).
+
+:::

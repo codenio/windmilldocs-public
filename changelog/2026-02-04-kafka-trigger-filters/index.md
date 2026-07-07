@@ -8,5 +8,5 @@ features:
   - JSON superset matching for flexible filtering
   - Shared filter component with WebSocket triggers
   - Filter preview in the trigger editor UI
-docs: /docs/core_concepts/kafka_triggers#filters
+docs: /docs/triggers/kafka_triggers#filters
 ---

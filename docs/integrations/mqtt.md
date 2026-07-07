@@ -22,7 +22,7 @@ Windmill allows you to create MQTT triggers, enabling subscriptions to a specifi
 >This video shows how to set up an MQTT trigger in Windmill. Additionally, the video illustrates the execution of the script linked to the created trigger when a message is received.
 <br/>
 
-For more details, please refer to the [MQTT documentation](../core_concepts/mqtt_triggers).
+For more details, please refer to the [MQTT documentation](../triggers/mqtt_triggers).
 
 
 

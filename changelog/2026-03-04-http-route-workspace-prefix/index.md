@@ -9,5 +9,5 @@ features:
     'When enabled, all routes are served under /api/r/{workspace_id}/{route}, regardless of the per-route toggle.',
     'The per-route toggle is disabled and labeled as enforced by the instance setting.',
   ]
-docs: /docs/core_concepts/http_routing#workspace-prefix
+docs: /docs/triggers/http_routing#workspace-prefix
 ---

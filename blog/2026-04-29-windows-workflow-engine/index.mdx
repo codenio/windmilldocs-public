@@ -296,7 +296,7 @@ Native [Azure Blob integration](/docs/integrations/microsoft-azure-blob) for fil
 
 ### Kafka with GSSAPI/Kerberos
 
-Enterprise Kafka clusters in AD environments often use Kerberos. Windmill's [Kafka triggers](/docs/core_concepts/kafka_triggers) support `SASL_GSSAPI` and `SASL_SSL_GSSAPI` with keytab support (file path or base64-encoded):
+Enterprise Kafka clusters in AD environments often use Kerberos. Windmill's [Kafka triggers](/docs/triggers/kafka_triggers) support `SASL_GSSAPI` and `SASL_SSL_GSSAPI` with keytab support (file path or base64-encoded):
 
 ```yaml
 kerberos_service_name: kafka
@@ -313,7 +313,7 @@ keytab_path: /etc/security/keytabs/windmill.keytab
 	<DocCard
 		title="Kafka triggers"
 		description="Trigger flows from Kafka messages with GSSAPI/Kerberos support."
-		href="/docs/core_concepts/kafka_triggers"
+		href="/docs/triggers/kafka_triggers"
 	/>
 </div>
 

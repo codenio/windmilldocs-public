@@ -34,7 +34,7 @@ If the port 25 is exposed through a different IP (e.g. Kubernetes):
   - An MX record from `mail.<instance domain>` to the record defined above (`mail_server.<instance domain>` if following the example).
 
 You can choose any email domain, we suggest using `mail.<instance domain>`.
-Once you have defined the DNS settings, set the email domain in the [instance settings](../18_instance_settings/index.mdx#email-domain) under the "Core" tab.
+Once you have defined the DNS settings, set the email domain in the [instance settings](../../advanced/18_instance_settings/index.mdx#email-domain) under the "Core" tab.
 
 ![Instance settings](./instance_settings.png "Instance settings")
 
@@ -185,7 +185,7 @@ This feature is only available on [Enterprise Edition](/pricing).
 
 ## Git sync
 
-Custom email triggers are included in [Git sync](../11_git_sync/index.mdx) alongside other event triggers (HTTP routes, WebSocket, Kafka, etc.). When the **Triggers** resource type is enabled on a git sync repository, email triggers are pushed to the repository as `*.email_trigger.yaml` files and pulled back into the workspace the same way. This lets you version, review, and promote email trigger definitions across workspaces using the regular Windmill [CLI](../3_cli/index.mdx) / git workflow.
+Custom email triggers are included in [Git sync](../../advanced/11_git_sync/index.mdx) alongside other event triggers (HTTP routes, WebSocket, Kafka, etc.). When the **Triggers** resource type is enabled on a git sync repository, email triggers are pushed to the repository as `*.email_trigger.yaml` files and pulled back into the workspace the same way. This lets you version, review, and promote email trigger definitions across workspaces using the regular Windmill [CLI](../../advanced/3_cli/index.mdx) / git workflow.
 
 ## Error handling
 

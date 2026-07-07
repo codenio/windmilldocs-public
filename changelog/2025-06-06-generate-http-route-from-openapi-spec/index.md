@@ -7,5 +7,5 @@ description: Windmill now supports generating HTTP routes directly from an OpenA
 features:
   - Automatically generate HTTP triggers from OpenAPI specs.
 image: ./openapi-spec-to-http-routes.png
-docs: /docs/core_concepts/http_routing#generate-routes-from-an-openapi-specification
+docs: /docs/triggers/http_routing#generate-routes-from-an-openapi-specification
 ---

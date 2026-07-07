@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # Build a Google ADK agent in an AI sandbox
 
-This guide walks you through running a [Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/) agent on Windmill as a single script. The agent runs inside an [AI sandbox](/docs/core_concepts/ai_sandbox), keeps its session state in a [volume](/docs/core_concepts/volumes), and exposes a clean `main()` entry point you can call from a [flow](/docs/flows/flow_editor), a [trigger](/docs/getting_started/triggers), or the UI.
+This guide walks you through running a [Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/) agent on Windmill as a single script. The agent runs inside an [AI sandbox](/docs/core_concepts/ai_sandbox), keeps its session state in a [volume](/docs/core_concepts/volumes), and exposes a clean `main()` entry point you can call from a [flow](/docs/flows/flow_editor), a [trigger](/docs/triggers), or the UI.
 
 ADK is a code-first framework for building, evaluating, and orchestrating agents. It is optimized for [Gemini](https://aistudio.google.com/) but model-agnostic, so the same script works with other providers via [LiteLLM](https://google.github.io/adk-docs/agents/models/#non-google-models). The same patterns shown here work with both the Python ([`google-adk`](https://pypi.org/project/google-adk/)) and the TypeScript ([`@google/adk`](https://www.npmjs.com/package/@google/adk)) ports.
 

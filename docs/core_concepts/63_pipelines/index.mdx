@@ -352,19 +352,19 @@ A muted read shows on the pipeline graph as an edge with a bell-off badge: the s
 // on <kind>
 ```
 
-Besides asset writes, a step can be triggered by a native [trigger](../../getting_started/8_triggers/index.mdx) (including a [schedule](../1_scheduling/index.mdx)) that targets the script. This marker is **keyword-only — there is no path or cron in the annotation**. The binding lives on the trigger row itself (its `script_path` points at this script), and all of the trigger's options — cron and timezone for a schedule, connection / broker / topic / queue / filters / authentication / mapping for the others — live in that trigger's own configuration page. The `// on <kind>` line just surfaces the trigger on the pipeline graph and opts the step into firing from it. Anything after the keyword makes the line malformed (so `// schedule "<cron>"` and `// on kafka f/foo` are not valid forms).
+Besides asset writes, a step can be triggered by a native [trigger](../../triggers/index.mdx) (including a [schedule](../1_scheduling/index.mdx)) that targets the script. This marker is **keyword-only — there is no path or cron in the annotation**. The binding lives on the trigger row itself (its `script_path` points at this script), and all of the trigger's options — cron and timezone for a schedule, connection / broker / topic / queue / filters / authentication / mapping for the others — live in that trigger's own configuration page. The `// on <kind>` line just surfaces the trigger on the pipeline graph and opts the step into firing from it. Anything after the keyword makes the line malformed (so `// schedule "<cron>"` and `// on kafka f/foo` are not valid forms).
 
 | Kind keyword | Trigger | Where the cron / options live |
 | --- | --- | --- |
 | `schedule` | a [schedule](../1_scheduling/index.mdx) | the schedule's cron + timezone |
 | `webhook` | a route / webhook | [Webhooks](../4_webhooks/index.mdx) |
-| `email` | an email trigger | [Triggers](../../getting_started/8_triggers/index.mdx) |
-| `kafka` | a Kafka trigger | [Kafka triggers](../41_kafka_triggers/index.mdx) |
-| `nats` | a NATS trigger | [NATS triggers](../45_nats_triggers/index.mdx) |
-| `mqtt` | an MQTT trigger | [MQTT triggers](../49_mqtt_triggers/index.mdx) |
-| `postgres` | a Postgres trigger | [Postgres triggers](../46_postgres_triggers/index.mdx) |
-| `sqs` | an AWS SQS trigger | [SQS triggers](../48_sqs_triggers/index.mdx) |
-| `gcp` | a GCP Pub/Sub trigger | [GCP triggers](../50_gcp_triggers/index.mdx) |
+| `email` | an email trigger | [Triggers](../../triggers/index.mdx) |
+| `kafka` | a Kafka trigger | [Kafka triggers](../../triggers/5_kafka_triggers/index.mdx) |
+| `nats` | a NATS trigger | [NATS triggers](../../triggers/6_nats_triggers/index.mdx) |
+| `mqtt` | an MQTT trigger | [MQTT triggers](../../triggers/8_mqtt_triggers/index.mdx) |
+| `postgres` | a Postgres trigger | [Postgres triggers](../../triggers/4_postgres_triggers/index.mdx) |
+| `sqs` | an AWS SQS trigger | [SQS triggers](../../triggers/7_sqs_triggers/index.mdx) |
+| `gcp` | a GCP Pub/Sub trigger | [GCP triggers](../../triggers/9_gcp_triggers/index.mdx) |
 | `data_upload` | a UI file-upload entry point | the run form's S3 file picker |
 
 If a `// on <kind>` marker has no matching trigger yet, the pipeline graph shows a placeholder node you can click to create one (for a schedule, that is where you set the cron).
@@ -669,7 +669,7 @@ Pipelines borrow the asset-and-lineage model that [dbt](https://www.getdbt.com/)
 - **dbt** transforms data with SQL and tracks lineage, but it is transform-only: it needs a separate orchestrator to run it on a schedule and a separate warehouse to run against. Windmill runs the transforms (DuckDB), owns the store and versioning ([DuckLake](../11_persistent_storage/ducklake.mdx)), and schedules and triggers them natively.
 - **Dagster** orchestrates assets and tracks metadata, but it relies on dbt (or your own code) for the transforms and a warehouse for compute. Windmill is the orchestrator, the compute (your own workers), and the transform engine at once.
 
-The equivalents map closely: [materializations](./materialization.mdx), [data tests](./materialization.mdx#data-tests), [macros](./macros.mdx), [column lineage](./materialization.mdx#column-level-lineage), [schema contracts](./materialization.mdx#schema-contracts), [selective runs](#selective-execution-run-up-to-here), [backfill](./materialization.mdx#partition-status-and-backfill) and [freshness](#freshness) all have counterparts, while the compute, scheduling and [triggers](../../getting_started/8_triggers/index.mdx) come from the same platform and run on your own infrastructure, in any language. Schema contracts differ in shape from dbt's: instead of a declaration you maintain by hand, the schema captured at materialization time is the contract, and consumer saves are checked against it with warnings only. On the producer side, [`on_schema_change`](./materialization.mdx#on_schema_change) mirrors dbt's option (`warn`, `ignore`, `fail`, `sync`) to control how a model handles a change to its own schema. In one place pipelines go further than dbt: on [Enterprise Edition](/pricing), a failing data test [rolls back the write](./materialization.mdx#failing-tests-publish-or-roll-back-ce-vs-ee) (write-audit-publish) instead of leaving the failed model live, which is dbt's behavior and the Community Edition default.
+The equivalents map closely: [materializations](./materialization.mdx), [data tests](./materialization.mdx#data-tests), [macros](./macros.mdx), [column lineage](./materialization.mdx#column-level-lineage), [schema contracts](./materialization.mdx#schema-contracts), [selective runs](#selective-execution-run-up-to-here), [backfill](./materialization.mdx#partition-status-and-backfill) and [freshness](#freshness) all have counterparts, while the compute, scheduling and [triggers](../../triggers/index.mdx) come from the same platform and run on your own infrastructure, in any language. Schema contracts differ in shape from dbt's: instead of a declaration you maintain by hand, the schema captured at materialization time is the contract, and consumer saves are checked against it with warnings only. On the producer side, [`on_schema_change`](./materialization.mdx#on_schema_change) mirrors dbt's option (`warn`, `ignore`, `fail`, `sync`) to control how a model handles a change to its own schema. In one place pipelines go further than dbt: on [Enterprise Edition](/pricing), a failing data test [rolls back the write](./materialization.mdx#failing-tests-publish-or-roll-back-ce-vs-ee) (write-audit-publish) instead of leaving the failed model live, which is dbt's behavior and the Community Edition default.
 
 Pipelines are in alpha and do not yet cover everything those tools do: dbt's docs-site generation, seeds and semantic layer have no direct equivalent. The goal is not feature-for-feature parity but doing the whole asset-based workflow (transform, orchestrate, test, materialize, version) in a single platform, on your own compute.
 

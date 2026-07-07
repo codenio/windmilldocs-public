@@ -36,13 +36,13 @@ Before creating native triggers, you need to connect the external service in you
 2. Click **Connect** on the service you want to use (Nextcloud or Google)
 3. Provide the [OAuth](../../advanced/27_setup_oauth/index.mdx) credentials (client ID and client secret)
 4. Complete the OAuth authorization flow
-5. Choose a [resource](../3_resources_and_types/index.mdx) path where the connection will be stored in the workspace
+5. Choose a [resource](../../core_concepts/3_resources_and_types/index.mdx) path where the connection will be stored in the workspace
 
 ![Workspace integration](./workspace_integration.png "Workspace settings showing native triggers integrations for Nextcloud and Google")
 
-The integration creates a [resource](../3_resources_and_types/index.mdx) in your workspace at the path you specify. The OAuth token is refreshed automatically, so you don't need to re-authenticate manually. You can use this resource in your scripts to query the service API with the same credentials used by the trigger.
+The integration creates a [resource](../../core_concepts/3_resources_and_types/index.mdx) in your workspace at the path you specify. The OAuth token is refreshed automatically, so you don't need to re-authenticate manually. You can use this resource in your scripts to query the service API with the same credentials used by the trigger.
 
-For Google integrations, the created [resource](../3_resources_and_types/index.mdx) is of type `gworkspace`. The OAuth scopes used are:
+For Google integrations, the created [resource](../../core_concepts/3_resources_and_types/index.mdx) is of type `gworkspace`. The OAuth scopes used are:
 - `https://www.googleapis.com/auth/drive.readonly`
 - `https://www.googleapis.com/auth/calendar.readonly`
 - `https://www.googleapis.com/auth/calendar.events`
@@ -142,7 +142,7 @@ Both use push notifications via Google watch channels. Windmill automatically re
 
 ### Event payload
 
-Google push notifications only contain metadata about the change, not the full event details. To get the actual content of the change, use the [`gworkspace` resource type](../3_resources_and_types/index.mdx) created during workspace integration to query the Google API.
+Google push notifications only contain metadata about the change, not the full event details. To get the actual content of the change, use the [`gworkspace` resource type](../../core_concepts/3_resources_and_types/index.mdx) created during workspace integration to query the Google API.
 
 ```typescript
 type GoogleTriggerPayload = {

@@ -159,7 +159,7 @@ After presenting Windmill's approach to security automation to [FEMA's](https://
 
 ### The Trigger: IDS Alert Webhook
 
-In most SOAR setups, playbooks are kicked off by events coming from SIEM/IDS/IPS, EDR, TIPs, ticketing systems, email parsers, chat-ops, schedulers, or message queues (Kafka/SQS/Pub/Sub). Windmill supports these patterns via [triggers](/docs/getting_started/triggers). In this example, the flow is triggered by a webhook to start the flow and pass an initial alert context. (<VideoLink seconds={720}>watch 12:00</VideoLink>)
+In most SOAR setups, playbooks are kicked off by events coming from SIEM/IDS/IPS, EDR, TIPs, ticketing systems, email parsers, chat-ops, schedulers, or message queues (Kafka/SQS/Pub/Sub). Windmill supports these patterns via [triggers](/docs/triggers). In this example, the flow is triggered by a webhook to start the flow and pass an initial alert context. (<VideoLink seconds={720}>watch 12:00</VideoLink>)
 
 E.g. an intrusion detection system detects suspicious activity and sends a webhook to Windmill with:
 - Username: `jdoe` 

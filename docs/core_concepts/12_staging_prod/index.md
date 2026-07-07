@@ -38,7 +38,7 @@ Items that can be deployed are:
 - [Flows](../../flows/1_flow_editor.mdx)
 - [Resources](../3_resources_and_types/index.mdx)
 - [Variables](../2_variables_and_secrets/index.mdx)
-- [Triggers](../../getting_started/8_triggers/index.mdx)
+- [Triggers](../../triggers/index.mdx)
 
 You can filter out on each of these types so that they won't be deployed.
 

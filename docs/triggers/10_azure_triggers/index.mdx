@@ -106,7 +106,7 @@ export async function main(payload: any) {
 
 ### Using a preprocessor
 
-If you configure a [preprocessor](../43_preprocessors/index.mdx), you can extract fields before they reach the main function. The preprocessor receives an `event` object with the full CloudEvent envelope alongside the `payload`.
+If you configure a [preprocessor](../../core_concepts/43_preprocessors/index.mdx), you can extract fields before they reach the main function. The preprocessor receives an `event` object with the full CloudEvent envelope alongside the `payload`.
 
 #### Azure Event Grid trigger object
 
@@ -176,4 +176,4 @@ The trigger editor includes a **Capture** button that listens for real events wi
 
 ## Error handling
 
-Azure triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
+Azure triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../../core_concepts/10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.

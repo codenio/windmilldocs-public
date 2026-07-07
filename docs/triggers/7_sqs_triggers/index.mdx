@@ -53,7 +53,7 @@ export async function main(msg: string) {
 
 ### Using a preprocessor
 
-If you use a [preprocessor](../43_preprocessors/index.mdx), the preprocessor function receives an SQS message with the following fields:
+If you use a [preprocessor](../../core_concepts/43_preprocessors/index.mdx), the preprocessor function receives an SQS message with the following fields:
 
 #### Field descriptions
 
@@ -110,4 +110,4 @@ export async function main(content: string, metadata: { sentAt: string, messageI
 
 ## Error handling
 
-SQS triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
+SQS triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../../core_concepts/10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.

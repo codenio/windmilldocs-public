@@ -10,5 +10,5 @@ features:
     'Use a preprocessor to transform the request before it is passed to the runnable.'
   ]
 image: ./custom_http_routes.png
-docs: /docs/core_concepts/http_routing
+docs: /docs/triggers/http_routing
 ---
