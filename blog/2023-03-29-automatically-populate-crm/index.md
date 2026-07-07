@@ -1,6 +1,6 @@
 ---
 slug: automatically-populate-crm
-title: Automatically Populate CRM from Simple Emails with OpenAI and Windmill Worfklows
+title: Automatically Populate CRM from Simple Emails with OpenAI and Windmill Workflows
 authors: [henricourdent]
 tags: [tutorial, automation, CRM, email, OpenAI, workflow]
 image: ./windmill-crm.png
@@ -183,7 +183,7 @@ As a reminder, all the scripts I made and that are not on the [hub](https://hub.
 
 ### 2. Qualifying search results
 
-This whole step was made because my beloved OpenAI was not able to qualify search results and make sense of the relevant ones in a single completion (or at least I did not find the right prompt to be used only once in this worflow). So I had to first ask it to qualify results before later making sense of them. This section is made for qualyfing results.
+This whole step was made because my beloved OpenAI was not able to qualify search results and make sense of the relevant ones in a single completion (or at least I did not find the right prompt to be used only once in this workflow). So I had to first ask it to qualify results before later making sense of them. This section is made for qualifying results.
 
 First, I used a [for loop](/docs/flows/flow_loops) to iterate over the list of search results.
 
@@ -248,7 +248,7 @@ We use this latest function to give the branch (af) and the loop (ac) the result
 
 Thanks to the previous steps we know have: 1. the user's email, 2. between 1 and 4 qualified titles of Google searches.
 
-Making sense of this material is easy but time consuming: the perfect use case for AI. So, we use antoher [branch](/docs/flows/flow_branches) conditioned on the existence of at least one qualified search result and we go with a new [OpenAI completion](https://hub.windmill.dev/scripts/openai/1452/create-completion-openai). Using the same paramters as the last completion, this time we ask:
+Making sense of this material is easy but time consuming: the perfect use case for AI. So, we use another [branch](/docs/flows/flow_branches) conditioned on the existence of at least one qualified search result and we go with a new [OpenAI completion](https://hub.windmill.dev/scripts/openai/1452/create-completion-openai). Using the same parameters as the last completion, this time we ask:
 
 > "Give with the exact format 'Number. Category: Result + jump line' the 1. First Name, 2. Last Name, 3. Profession, 4. Company and 5. What the Company Does of: email = " + flow_input.email + ". Some infos: " + results.ac[0] + ". " + results.ac[1] + ". " + results.ac[2] + ". " + results.ac[3] + ". Say 'n/a' if not sure. Do not make up names but you can guess where to split first name and last name from email (but do not add just a letter as a name). You can take more risk for What the Company Does"
 
@@ -329,7 +329,7 @@ export async function main(
 
 You probably saw throughout this workflow that we often used [branches](/docs/flows/flow_branches). In particular, branches al and aj are made for handling cases where key conditions are not made (no search result was found, no result was qualified by OpenAI). In that case, we asked Airtable to create a single record with just the email (that is an input of the flow) and "n/a" for other values.
 
-In the case of unpredicted errors (e.g. if OpenAI randomly makes a completition that can't be read by our parsers) I also introduced an [error handler](/docs/flows/flow_error_handler) to be executed by default if an error occurs. Again, it fills an Airtable record with "n/a" for all categories but email.
+In the case of unpredicted errors (e.g. if OpenAI randomly makes a completion that can't be read by our parsers) I also introduced an [error handler](/docs/flows/flow_error_handler) to be executed by default if an error occurs. Again, it fills an Airtable record with "n/a" for all categories but email.
 
 ## Scale the flow
 

@@ -8,7 +8,7 @@ description: How do I connect Supabase to Windmill? Query Supabase databases and
 
 Learn how to connect to your Supabase project from Windmill Scripts, Flows and Apps.
 
-![Integrattion between Supabase and Windmill](../assets/integrations/sb-0-header.png.webp 'Connect a Supabase project with Windmill')
+![Integration between Supabase and Windmill](../assets/integrations/sb-0-header.png.webp 'Connect a Supabase project with Windmill')
 
 :::info
 

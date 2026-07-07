@@ -103,7 +103,7 @@ Windmill.
 
 ## Step 2: Selenoid configuration
 
-We will also use Docker to configue Selenoid.
+We will also use Docker to configure Selenoid.
 
 - Create a new folder in the same directory and name it `config`
 - In the `config` directory create two new empty folder's and name them `video`
@@ -401,7 +401,7 @@ Go to `localhost:8080` (selenoid-ui) to see your script in action!
 
 ![Selenoid UI home-screen](./2-selenoid_ui_screenshot.png.webp)
 
-![Selenoid UI broser](./3-seleniud_ui_vnc_screenshot.png.webp)
+![Selenoid UI browser](./3-seleniud_ui_vnc_screenshot.png.webp)
 
 To run multiple scripts at once you will have to give a unique port to each
 script. In the first step we opened the ports between `9920 - 9930` you can

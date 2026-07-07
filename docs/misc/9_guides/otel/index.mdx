@@ -9,7 +9,7 @@ import DocCard from '@site/src/components/DocCard';
 
 [OpenTelemetry (OTEL)](https://opentelemetry.io/) is an open-source observability framework that provides a set of APIs, libraries, agents, and instrumentation to capture and export telemetry data such as traces, metrics, and logs. It is designed to help developers and operators gain insights into the performance and behavior of their applications and infrastructure.
 
-### Core Components and Vocabulary
+## Core components and vocabulary
 
 - **Traces**: Represent the execution path of a request as it traverses through various services. A trace is composed of multiple spans.
 - **Spans**: The building blocks of a trace, representing a single operation within a trace. Each span contains metadata such as operation name, start and end timestamps, and attributes.
@@ -38,13 +38,13 @@ While Windmill offers internal service logs and alerts accessible via the Windmi
 	/>
 </div>
 
-# Tracing with Jaeger
+## Tracing with Jaeger
 
 [Jaeger](https://www.jaegertracing.io/) Jaeger is an open-source distributed tracing system for monitoring and debugging microservices. Originally developed by Uber, it helps track requests across services, analyze latency, identify bottlenecks, and diagnose failures.
 
 Key use cases include debugging production issues, monitoring performance, visualizing service dependencies, and optimizing system reliability. As Jaeger supports the OpenTelemetry protocol, it can be used to collect traces from Windmill.
 
-## Setting up Jaeger
+### Setting up Jaeger
 
 If you do not have an existing Jaeger instance, you can start a container running Jaeger with by adding the following to your `docker-compose.yml` file or use this [docker-compose.yml](https://github.com/windmill-labs/windmill/tree/main/examples/deploy/otel-tracing-jaeger) file as a starting point.
 
@@ -59,7 +59,7 @@ If you do not have an existing Jaeger instance, you can start a container runnin
 
 this will expose Jaegers UI on port 16686 and the OpenTelemetry collector on port 4317.
 
-## Configuring Windmill to use Jaeger
+### Configuring Windmill to use Jaeger
 
 In the Windmill UI, go to the "Instances Settings" and "OTEL/Prom" tab and fill in the Jaeger endpoint and service name and toggle the Tracing option to send traces to Jaeger.
 
@@ -67,7 +67,7 @@ If you are using the Jaeger container, the endpoint will be `http://jaeger:4317`
 
 ![Jaeger Endpoint](./jaeger_endpoint.png)
 
-## Open the Jaeger UI
+### Open the Jaeger UI
 
 The Jaeger UI if hosted with the `docker-compose.yaml` file above will be available at `http://localhost:16686`. When running a script or workflow with Windmill, you will be able to see the traces in the Jaeger UI and investigate them. This can be useful to understand the performance of a workflow and identify bottlenecks in the Windmill server or client.
 
@@ -75,7 +75,7 @@ The Jaeger UI if hosted with the `docker-compose.yaml` file above will be availa
 ![Jaeger Flamegraph](./jaeger_flamegraph.png)
 ![Jaeger Trace](./jaeger_trace_graph.png)
 
-## Searching for specific traces
+### Searching for specific traces
 
 To search/filter for a specific trace, for example a workflow, you can use the search function in the Jaeger UI by filtering by tags set by Windmill.
 
@@ -100,7 +100,7 @@ These attributes are recorded on both the `job` and `job_postprocessing` spans, 
 
 ![Jaeger Search](./jaeger_search.png)
 
-## OTEL trace context in jobs
+### OTEL trace context in jobs
 
 When OTEL tracing is enabled, Windmill exposes the trace context of each job as environment variables inside the job's runtime, so user scripts can propagate trace context to downstream services:
 
@@ -114,7 +114,7 @@ These variables are set for Python, Bash, Bun, Deno, Go, TypeScript, Rust, C#, R
 
 When OTEL tracing is disabled (or on Community Edition), these env vars are not set.
 
-## Connecting jobs to an inbound distributed trace
+### Connecting jobs to an inbound distributed trace
 
 When a caller that is already part of a distributed trace runs a job through a [webhook](../../../core_concepts/4_webhooks/index.mdx) or REST run endpoint with a [W3C `traceparent`](https://www.w3.org/TR/trace-context/) header, Windmill connects the resulting job to that trace. The job span, along with the spans of its flow steps and script subprocess, is relocated under the caller's span, so the whole execution shows up as part of the same end-to-end trace in your tracing backend instead of as a disconnected one.
 
@@ -127,10 +127,10 @@ A few details:
 - It applies to the run endpoints that accept a request body: running a script or flow by path, hash or version, including the synchronous `run_wait_result` variants. [HTTP routes](../../../core_concepts/39_http_routing/index.mdx) and other native triggers are not picked up as inbound trace sources.
 - An invalid or malformed `traceparent` header is ignored: the job keeps its own trace derived from the job UUID, so the `job_id` / `root_job` lookup and dashboards built on it keep working.
 
-## Monitoring metrics with Jaeger
+### Monitoring metrics with Jaeger
 
 Jaeger can be used to generate time series for metrics of the collected traces. These time series can be used to compare the performance of individual steps within a workflow and their overall
-performance and realtive contribution over time as well as identify and troubleshoot issues and anomalies.
+performance and relative contribution over time as well as identify and troubleshoot issues and anomalies.
 
 To set this up, Jaeger needs to store the generated metrics in PromQL-compatible storage such as Prometheus.
 
@@ -239,7 +239,7 @@ In the Jaeger UI, you will now be able to see metrics time series for the traces
 
 ![Jaeger Metrics](./jaeger_metrics.png)
 
-## Exporting Windmill metrics via OTLP
+### Exporting Windmill metrics via OTLP
 
 In addition to traces and logs, Windmill can export its own operational metrics to any OTLP-compatible collector. Enable the **Metrics** toggle in **Instance settings > OTEL/Prom** — metrics are then exported alongside traces and logs to the same collector endpoint.
 
@@ -247,7 +247,7 @@ These metrics complement the [Prometheus `/metrics` endpoint](../../../advanced/
 
 Flipping the toggle triggers a delayed worker restart so the OTLP meter provider can be initialized.
 
-## Exported metrics
+### Exported metrics
 
 | Metric | Type | Attributes |
 |---|---|---|
@@ -274,7 +274,7 @@ Flipping the toggle triggers a delayed worker restart so the OTLP meter provider
 
 Metrics export is an [Enterprise Edition](/pricing) feature.
 
-## Selecting the exporter protocol
+### Selecting the exporter protocol
 
 The **OTEL/Prom** instance settings tab exposes a **Protocol** dropdown that applies to all three signal types (traces, logs, metrics):
 
@@ -283,11 +283,11 @@ The **OTEL/Prom** instance settings tab exposes a **Protocol** dropdown that app
 
 Use `http/protobuf` when your network or collector does not support gRPC (for example, some managed observability backends only expose HTTP endpoints).
 
-# Tracing with Tempo and Grafana
+## Tracing with Tempo and Grafana
 
 [Tempo](https://grafana.com/docs/tempo/) is a distributed tracing system that is part of the Grafana stack. It is designed to collect, store, and query traces from distributed systems. Tempo is a scalable and efficient solution for tracing, providing a comprehensive view of the performance and behavior of your applications and infrastructure.
 
-## Setting up an OpenTelemetry collector and Tempo
+### Setting up an OpenTelemetry collector and Tempo
 
 Use the [docker-compose.yml](https://github.com/windmill-labs/windmill/tree/main/examples/deploy/otel-tracing-grafana) file in the Windmill repo as a starting point. Compared to the Jaeger setup, this setup also includes a Loki instance to store the logs as well as a dedicated OpenTelemetry collector that will be used to collect traces from the Windmill instance and distribute them to Tempo and Loki.
 
@@ -390,7 +390,7 @@ overrides:
       generate_native_histograms: both
 ```
 
-## Setting up Loki
+### Setting up Loki
 
 Loki is a log storage system that is part of the Grafana stack. It is designed to store and query logs from distributed systems. Loki is a scalable and efficient solution for logging, providing a comprehensive view of the performance and behavior of your applications and infrastructure.
 
@@ -430,7 +430,7 @@ limits_config:
   allow_structured_metadata: true
 ```
 
-## Setting up Prometheus
+### Setting up Prometheus
 
 Prometheus is a monitoring and observability platform that is part of the Grafana stack. In this context it is designed to store and query metrics generated by Tempo.
 
@@ -451,33 +451,33 @@ scrape_configs:
       - targets: [ 'tempo:3200' ]
 ```
 
-## Setting up Grafana
+### Setting up Grafana
 
 Grafana is a monitoring and observability platform that is part of the Grafana stack. It is designed to visualize and query metrics, traces and logs from distributed systems.
 
 Learn more about Grafana and how to configure it [here](https://grafana.com/docs/grafana/latest/). For Windmill, we'll use the Tempo datasource for traces and Loki as a log datasource. Furthermore, metrics can be visualized in Grafana by using the Prometheus datasource and the metrics generated by Tempo.
 
-## Configure Windmill to use Tempo and Loki
+### Configure Windmill to use Tempo and Loki
 
 In the Windmill UI, go to the "Instances Settings" and "OTEL/Prom" tab and fill in the OpenTelemetry collector endpoint `http://otel-collector:4317` and toggle both the Tracing and Logs options.
 
 ![OTEL Endpoint](./otel_endpoint.png)
 
-## Open the Grafana UI
+### Open the Grafana UI
 
 The Grafana UI if hosted with the `docker-compose.yaml` file above will be available at `http://localhost:3000`.
 
-### Traces
+#### Traces
 As with Jaeger, you can search for specific traces by filtering by tags set by Windmill.
 
 ![Grafana Traces](./tempo_traces.png)
 
-### Logs
+#### Logs
 For logs, select the Loki datasource and you will be able to see the logs in the Loki UI.
 
 ![Grafana Logs](./loki_logs.png)
 
-### Metrics
+#### Metrics
 For metrics, select the Prometheus datasource and you will be able to see the metrics in the Prometheus UI.
 
 The metrics generated by Tempo are labeled as:

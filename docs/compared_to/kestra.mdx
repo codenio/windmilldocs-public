@@ -149,7 +149,7 @@ However, there are a few features where they stand out from each other.
 
 ## Performance
 
-Windmill's architecture allows runnning each task on the current fleet of worker
+Windmill's architecture allows running each task on the current fleet of worker
 (which you can auto-scale automatically) and hence do not suffer from cold start.
 Isolation and creating dedicated dependency environment is the secret sauce that makes Windmill
 the fastest execution runtime for scripts (10ms cold start).
@@ -160,7 +160,7 @@ Also, Windmill has a [transparent API](https://app.windmill.dev/openapi.html#/),
 
 We have conducted [benchmarks](../misc/3_benchmarks/index.mdx) to measure our performance against our competitors.
 
-In normal mode, Windmill is slighlty faster than Kestra, while in [dedicated worker](../core_concepts/25_dedicated_workers/index.mdx) mode, Windmill is 3x faster.
+In normal mode, Windmill is slightly faster than Kestra, while in [dedicated worker](../core_concepts/25_dedicated_workers/index.mdx) mode, Windmill is 3x faster.
 
 <div className="grid">
 	<BenchmarkVisualization

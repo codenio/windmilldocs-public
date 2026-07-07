@@ -6,7 +6,7 @@ import DocCard from '@site/src/components/DocCard';
 
 # Deploy to prod
 
-When working on Windmill, you will quickly be looking for ways to iterate on and test your scripts, flows, and apps all the while having a working version running. The following section explains the different methods available in Windmill to have a production environement and deploy to it.
+When working on Windmill, you will quickly be looking for ways to iterate on and test your scripts, flows, and apps all the while having a working version running. The following section explains the different methods available in Windmill to have a production environment and deploy to it.
 
 :::tip Canonical deployment setups
 
@@ -21,7 +21,7 @@ Deployments in Windmill are commonly done from the same workspace using the [Dra
 
 ## Option 2. Workspace forks - Multi workspace (recommended)
 
-[Windmill workspaces](../20_workspace_forks/index.mdx) can be forked, creating a new copy of the workspace at that point in time. The forked workspace can be iterated on, tested, and once changes are ready, merged back to the original workspace, thus deploying the new versions of the scripts, flows, or apps. The workflow will be familiar to anyone who has used branches in version control tools such as git. The analogy can be further reinforced if [Git Sync](../11_git_sync/index.mdx) is setup: Windmill will autmatically create branches for each of the forks, and merging can be controlled direclty through git.
+[Windmill workspaces](../20_workspace_forks/index.mdx) can be forked, creating a new copy of the workspace at that point in time. The forked workspace can be iterated on, tested, and once changes are ready, merged back to the original workspace, thus deploying the new versions of the scripts, flows, or apps. The workflow will be familiar to anyone who has used branches in version control tools such as git. The analogy can be further reinforced if [Git Sync](../11_git_sync/index.mdx) is setup: Windmill will automatically create branches for each of the forks, and merging can be controlled directly through git.
 
 For a long-lived dev/prod pair instead of throwaway branches, use a [dev workspace](../26_dev_workspaces/index.mdx): a persistent fork that is the standing editable environment, paired with a prod workspace that can be locked so changes only reach it through promotion.
 

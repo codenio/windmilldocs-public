@@ -24,7 +24,7 @@ bot, we need:
 
 - to configure GitHub to send a webhook to Windmill when a new issue is opened
 - to determine what labels should be applied
-- to apply the lables to the issue
+- to apply the labels to the issue
 
 ## The building blocks
 

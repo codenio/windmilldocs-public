@@ -25,7 +25,7 @@ wmill user add <email:string> [password:string] [--superadmin] [--company <compa
 | -------------- | ---------- | ------------------------------------------- |
 | `--superadmin` |            | Specify to make the new user superadmin.    |
 | `--company`    | `company`  | Specify to set the company of the new user. |
-| `--name`       | `name`     | Specify to set the company of the new user. |
+| `--name`       | `name`     | Specify to set the name of the new user.    |
 
 ### Examples
 

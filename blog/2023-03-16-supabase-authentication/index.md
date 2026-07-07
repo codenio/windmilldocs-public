@@ -209,7 +209,7 @@ the Supabase script named "Authenticate with email and password". All you have t
 the arguments for the script.
 
 The `auth` argument is a special type that is a `Resource`. [Resources][resource-doc] take
-integrations and bundle the most important data required by those integraions. The
+integrations and bundle the most important data required by those integrations. The
 `Supabase` type contains the URL and the public API key of your Supabase project. Read
 the [Supabase credentials](#supabase-credentials) section to see how to obtain them.
 

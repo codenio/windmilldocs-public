@@ -81,7 +81,7 @@ We will split the product view into two parts, with the [vertical split](./4_app
 
 #### Products list
 
-A product has the folowing fields:
+A product has the following fields:
 
 - **id** - the unique identifier of the product
 - **title** - the title of the product

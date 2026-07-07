@@ -30,7 +30,7 @@ Empower your support team with a bot that answers questions about technical docu
 <sup>
 	<i>
 		Midjourney prompt: a blog cover about a discord bot that answers questions about technical
-		documentations, surrended by books --aspect 3:2
+		documentations, surrounded by books --aspect 3:2
 	</i>
 </sup>
 
@@ -148,7 +148,7 @@ Then we use a [for-loop](/docs/flows/flow_loops) to iterate over the results and
 1. [Create the embeddings](#create-the-embeddings) using OpenAI
 2. [Store the embeddings](#store-the-embeddings-on-supabase) in Supabase using pgvector
 
-Each iteration of the for-loop are indiviual jobs and can be run [in parallel](/docs/flows/flow_branches#branch-all), [retried](/docs/flows/retries) and [error handled](/docs/flows/flow_error_handler) independently.
+Each iteration of the for-loop are individual jobs and can be run [in parallel](/docs/flows/flow_branches#branch-all), [retried](/docs/flows/retries) and [error handled](/docs/flows/flow_error_handler) independently.
 
 From Windmill, pick `+ Flow`, and either import YAML or JSON from the [Hub](https://hub.windmill.dev/flows/45/) or start building manually.
 
@@ -156,7 +156,7 @@ From Windmill, pick `+ Flow`, and either import YAML or JSON from the [Hub](http
 
 We could have written the script that fetches from GitHub, but since it's generic task, there is already a community-contributed script that does exactly that on the [Windmill Hub](https://hub.windmill.dev/scripts/github/1568/).
 
-Direclty from Windmill, we picked the script that fetches the content of a repository from GitHub and forked it.
+Directly from Windmill, we picked the script that fetches the content of a repository from GitHub and forked it.
 
 We modified it to only extract content from markdown files. As we are using [Docusaurus](https://docusaurus.io/docs), we also need to transform the path of the file to get the correct URL.
 
@@ -798,7 +798,7 @@ Let's create the URL for the Discord Interaction endpoint.
 
 Windmill supports a special query parameter `?include_header=<header1>,<header2>` that can be used to pipe headers from the request to the script or flow parameters.
 
-Discord mandates that we verify the request before responding to it, so we need to include the `X-Signature-Ed25519` and `X-Signature-Timestamp` headers in the request to verfiy the Discord request. We also added the `raw` query parameter to get the raw stringified body.
+Discord mandates that we verify the request before responding to it, so we need to include the `X-Signature-Ed25519` and `X-Signature-Timestamp` headers in the request to verify the Discord request. We also added the `raw` query parameter to get the raw stringified body.
 
 The URL should look like this:
 

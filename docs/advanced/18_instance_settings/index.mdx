@@ -36,7 +36,7 @@ Automatic username creation derives a stable, instance-wide username from each u
 
 A more common way to add users is to use [SSO/OAuth](#authoauth).
 
-For each user, you can see Email, Auth (manually-set password or Auth methods), Name, Kind ([Developer](../../core_concepts/16_roles_and_permissions/index.mdx#developer) or [Operator](../../core_concepts/16_roles_and_permissions/index.mdx#operator) where an operator at the instace level is an operator in all workspaces they are members of), and Role (User or [Superadmin](../../core_concepts/16_roles_and_permissions/index.mdx#superadmin)).
+For each user, you can see Email, Auth (manually-set password or Auth methods), Name, Kind ([Developer](../../core_concepts/16_roles_and_permissions/index.mdx#developer) or [Operator](../../core_concepts/16_roles_and_permissions/index.mdx#operator) where an operator at the instance level is an operator in all workspaces they are members of), and Role (User or [Superadmin](../../core_concepts/16_roles_and_permissions/index.mdx#superadmin)).
 
 You can also toggle on 'Recently active only' to only show users who have performed at least one action in the last 30 days. Only those users are counted in our [Pricing](/pricing). When enabled, the table also displays each user's Kind (Developer or Operator), reflecting their highest permission level across all workspaces they belong to. 
 
@@ -84,7 +84,7 @@ You will find a helper to convert days, hours, minutes, and seconds to seconds.
 
 ### Keep job directories for debug
 
-Toogle to keep Job directories after execution at `/tmp/windmill/<worker>/<job_id>`.
+Toggle to keep Job directories after execution at `/tmp/windmill/<worker>/<job_id>`.
 
 ### License key
 
@@ -194,7 +194,7 @@ This setting is only available on [Enterprise Edition](/pricing).
 
 Base url of your [Private Hub](../../core_concepts/32_private_hub/index.mdx) instance, without trailing slash.
 
-The url above will be used both when accesing the hub from the instance and from the user browser.
+The url above will be used both when accessing the hub from the instance and from the user browser.
 If end users cannot access the Private Hub with the url above, you can enable the toggle just below the field to set a different url for the Private Hub which is accessible to the users (Private Hub accessible url).
 
 This setting is only available on [Enterprise Edition](/pricing).
@@ -411,7 +411,7 @@ You have another field to test the SMTP settings.
 <br/>
 
 <details>
-  <summary>Set-up SMTP from the `.env` file (depreciated) </summary>
+  <summary>Set-up SMTP from the `.env` file (deprecated) </summary>
 
 The relevant environment variables are:
 
@@ -554,7 +554,7 @@ The allocated memory arena for the indexer. A bigger value means less writing to
 
 ### Commit max batch size
 
-The max amount of documents (here jobs) per commit. To optimize indexing throughput, it is best to keep this as high as possible. However, especially when reindexing the whole instance, it can be useful to have a limit on how many jobs can be written without being commited. A commit will make the jobs available for search, constitute a "checkpoint" state in the indexing and will be logged.
+The max amount of documents (here jobs) per commit. To optimize indexing throughput, it is best to keep this as high as possible. However, especially when reindexing the whole instance, it can be useful to have a limit on how many jobs can be written without being committed. A commit will make the jobs available for search, constitute a "checkpoint" state in the indexing and will be logged.
 
 ### Refresh index period
 
@@ -566,11 +566,11 @@ Job logs are included when indexing, but to avoid the index size growing artific
 
 ### Commit max batch size
 
-The max amount of documents per commit. In this case 1 document is one log file representing all logs during 1 minute for a specific host. To optimize indexing throughput, it is best to keep this as high as possible. However, especially when reindexing the whole instance, it can be useful to have a limit on how many logs can be written without being commited. A commit will make the logs available for search, appear as a log line, and be a "checkpoint" of the indexing progress.
+The max amount of documents per commit. In this case 1 document is one log file representing all logs during 1 minute for a specific host. To optimize indexing throughput, it is best to keep this as high as possible. However, especially when reindexing the whole instance, it can be useful to have a limit on how many logs can be written without being committed. A commit will make the logs available for search, appear as a log line, and be a "checkpoint" of the indexing progress.
 
 ### Refresh index period
 
-The index will query new service logs peridically and write them on the index. This setting sets that period in seconds.
+The index will query new service logs periodically and write them on the index. This setting sets that period in seconds.
 
 ## Telemetry
 

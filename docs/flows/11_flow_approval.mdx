@@ -21,7 +21,7 @@ Other ways to pause a workflow include:
 
 - [Early stop/Break](./2_early_stop.md): if defined, at the end of the step, the predicate expression will be evaluated to decide if the flow should stop early.
 - [Sleep](./15_sleep.md): if defined, at the end of the step, the flow will sleep for a number of seconds before scheduling the next job (if any, no effect if the step is the last one).
-- [Retry](./14_retries.md) a step a step until it comes successful.
+- [Retry](./14_retries.md) a step until it is successful.
 - [Schedule the trigger](../core_concepts/1_scheduling/index.mdx) of a script or flow.
 
 :::
@@ -432,7 +432,7 @@ By enabling this option, the cancel button will not be displayed on the approval
 
 ![Hide cancel approval page](../assets/flows/hide_cancel_approval_page.png 'Hide cancel approval page')
 
-Alternatively, adding the cancel url as a result of the stpep will also render a cancel button, providing the operator with an option to cancel the step. e.g:
+Alternatively, adding the cancel url as a result of the step will also render a cancel button, providing the operator with an option to cancel the step. e.g:
 
 ```ts
 import * as wmill from "windmill-client"
@@ -698,7 +698,7 @@ Then, we picked an approval step on the Hub to [Request Interactive Slack Approv
 - "channel": Slack channel to publish message, as string.
 - "text: `Refund request by _${flow_input["User email"]}_ on order ${flow_input["Order number"]}.`.
 
-This will alow the user to approve or reject the refund request directly from Slack without having to go back to the Windmill UI.
+This will allow the user to approve or reject the refund request directly from Slack without having to go back to the Windmill UI.
 
 ![Slack inputs](../assets/flows/tuto_approval_slack.png.webp)
 

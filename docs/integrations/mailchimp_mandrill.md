@@ -6,7 +6,7 @@ description: How do I use Mailchimp Mandrill with Windmill? Trigger scripts and 
 
 [Mailchimp Mandrill](https://mailchimp.com/en/features/transactional-email/) is a delivery service for transactional emails from websites and application.
 
-Integrating Mailchimp Mandrill is a powerfull way of [triggering scripts and flows](../getting_started/8_triggers/index.mdx) by e-mail.
+Integrating Mailchimp Mandrill is a powerful way of [triggering scripts and flows](../getting_started/8_triggers/index.mdx) by e-mail.
 
 <video
     className="border-2 rounded-xl object-cover w-full h-full dark:border-gray-800"
@@ -56,7 +56,7 @@ Here are the steps to follow:
 
 5. Add the MX records to your DNS provider and validate them from Mandrill.
 
-6. From Mandrill, click the dropdown next to the `Test DNS Settings` button, select `Routes`, and then select the `Add New Route button`. Configure a new route. That will be the accepted email(s) to trigger your script or flow. Please note that these e-mail adresses do not have to pre-exist to be treated by Mailchimp.
+6. From Mandrill, click the dropdown next to the `Test DNS Settings` button, select `Routes`, and then select the `Add New Route button`. Configure a new route. That will be the accepted email(s) to trigger your script or flow. Please note that these e-mail addresses do not have to pre-exist to be treated by Mailchimp.
 
 7. From Windmill, go to the `Details` menu of your script or flow. If not any, create a token. Pick a webhook (`UUID/Async` [is commonly preferred](../core_concepts/4_webhooks/index.mdx#synchronous)).
 
@@ -193,7 +193,7 @@ In this flow, when "Fwd" is not found, it considers it was not a forwarded e-mai
 
 ## How to go further?
 
-The present example is a very simple use case: when an email is transfered to a given address, it triggers a flow that reports the main details of the mail to Slack.
+The present example is a very simple use case: when an email is transferred to a given address, it triggers a flow that reports the main details of the mail to Slack.
 
 However, you could go with much more complex workflows:
 

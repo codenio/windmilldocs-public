@@ -49,7 +49,7 @@ We will go over the following topics:
 - [Code editing and bug fixing](#code-editing-and-bug-fixing)
 
 :::info What is Windmill and why add an AI Copilot?
-The technics explored in this post are applicable to any product that involves code generation.
+The techniques explored in this post are applicable to any product that involves code generation.
 But to give you some context, Windmill enables developers to build and deploy endpoints, workflows and apps through the combination of code.
 So it was only logical to add an AI code copilot to help users create, edit and fix their code.
 :::
@@ -68,7 +68,7 @@ Learn more [here](https://help.openai.com/en/articles/4936856-what-are-tokens-an
 
 We chose this model over others because of its superior performance and its ease of use.
 However, we are looking forward to experimenting with other models in the future, especially OSS ones such as StarCoder and Llama-2.
-The technics we have used here should be applicable to those as well.
+The techniques we have used here should be applicable to those as well.
 
 We interact with GPT-4 (8K context) using the OpenAI Node API v4 library (currently in beta).
 You can explore all our code on GitHub [here](https://github.com/windmill-labs/windmill/blob/main/frontend/src/lib/components/copilot/lib.ts).
@@ -91,7 +91,7 @@ A higher temperature value (e.g., 1.5) leads to more diverse and creative text, 
 
 ### Prompt templates
 
-Below is our system message template for code generation where we specifiy that it should output code with comments and wrap it in a code block.
+Below is our system message template for code generation where we specify that it should output code with comments and wrap it in a code block.
 We use the same system message for all the different languages supported by Windmill.
 
 ````

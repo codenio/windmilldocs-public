@@ -2,7 +2,7 @@
 description: How do I enforce governance policies on workspace changes in Windmill? Protection rulesets control deployments, enforce reviews and protect production.
 ---
 
-# Protection Rulesets
+# Protection rulesets
 
 :::info Enterprise Edition
 Protection Rulesets are an [Enterprise Edition](/pricing) feature.
@@ -10,9 +10,9 @@ Protection Rulesets are an [Enterprise Edition](/pricing) feature.
 
 Protection rulesets allow workspace admins to enforce governance policies that control how changes can be made within a workspace. These rules help maintain code quality, enforce review processes, and prevent accidental modifications in production environments.
 
-## Available Rules
+## Available rules
 
-#### Disable Direct Deployment
+#### Disable direct deployment
 
 When enabled, this rule prevents users from directly deploying scripts, flows, or apps to the workspace. Instead, users must:
 - Use [workspace forks](../../advanced/20_workspace_forks/index.mdx) to develop and test changes in isolation
@@ -21,11 +21,11 @@ When enabled, this rule prevents users from directly deploying scripts, flows, o
 
 This rule is particularly useful for production workspaces where all changes should go through a review process before being deployed.
 
-#### Disable Workspace Forking
+#### Disable workspace forking
 
 When enabled, this rule prevents users from creating [workspace forks](../../advanced/20_workspace_forks/index.mdx) of the current workspace.
 
-## Creating a Protection Ruleset
+## Creating a protection ruleset
 
 1. Navigate to **Workspace Settings** > **Protection Rulesets**
 2. Click **Add Rule** to create a new protection rule
@@ -37,14 +37,14 @@ When enabled, this rule prevents users from creating [workspace forks](../../adv
 
 The rule can take up to 60s to activate.
 
-## Bypass Permissions
+## Bypass permissions
 
 Each protection rule can be configured with bypass permissions, allowing specific users or groups to override the rule when necessary.
 
 Users with bypass permissions will see a checkbox to bypass the rule. Once checked, the disabled actions become available.
 When using the CLI or API endpoints directly, bypassers will be able to perform the actions as if no rule was in place.
 
-## Use Cases
+## Use cases
 
 **Production Environment Protection**
 

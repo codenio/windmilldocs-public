@@ -24,7 +24,7 @@ Data science requires the manipulation of large amounts of data from multiple so
 
 Windmill facilitates the creation of robust workflows by enabling seamless sequencing of steps and their outputs while automatically generating user-friendly interfaces.
 
-We tried other solutions and found the configuration of parameters between steps was difficult, making it painful to create simple worflows.
+We tried other solutions and found the configuration of parameters between steps was difficult, making it painful to create simple workflows.
 
 In particular, we use Windmill for:
 
@@ -48,7 +48,7 @@ The associated results:
 
 :::
 
-You can have more details on our use of worflow engines for geospatial data processing with this [video](https://pretalx.com/fossgis2023/talk/JAMMJ8/) (in German 🇩🇪) of my presentation at the 2023 Berlin FOSSGIS conference on free and open source software for geographic information systems.
+You can have more details on our use of workflow engines for geospatial data processing with this [video](https://pretalx.com/fossgis2023/talk/JAMMJ8/) (in German 🇩🇪) of my presentation at the 2023 Berlin FOSSGIS conference on free and open source software for geographic information systems.
 
 ## How to use Windmill?
 

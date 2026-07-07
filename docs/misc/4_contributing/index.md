@@ -74,7 +74,7 @@ interface OAuthConfig {
 ## Mapping python imports
 
 Python can automatically [infer requirements from imports](../../advanced/15_dependencies_in_python/index.mdx).
-However it is not always accurate because import can missmatch with the requirement.
+However it is not always accurate because import can mismatch with the requirement.
 To handle this case, there is [import map](https://github.com/windmill-labs/windmill/blob/main/backend/parsers/windmill-parser-py-imports/src/mapping.rs).
 You can help us and others by adding new entries there and opening PR.
 

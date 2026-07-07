@@ -25,7 +25,7 @@ Let's walk through an example to better understand it.
 - The change is reviewed by someone with merge rights to `prod-repo` and merged.
 - Once merged, the Git Sync setup between `prod` and `prod-repo` ensures the change is reflected in the `prod` workspace. Deployment complete
 
-Note that `prod-repo` and `staging-repo` can be (and often are) the same repo but targetting a different branch.
+Note that `prod-repo` and `staging-repo` can be (and often are) the same repo but targeting a different branch.
 
 Here is a diagram to better illustrate the workflow with this setup.
 
@@ -79,7 +79,7 @@ Additionally, you will be asked to choose between:
 - **Create one branch per deployed object** (default)
 - **Group deployed objects by folder**: Create a branch per folder containing objects being deployed
 
-Now you've succesfully set-up the `prod-branch` as the promotion target for the `staging` workspace. Any changes done to the staging workspace will now also be committed on a branch off of `prod-branch` named `wm_deploy/[WORKSPACE_NAME]/f/folder/item`. In the next step we will create a Github Action that automaticccaly creates a PR to merge these.
+Now you've successfully set-up the `prod-branch` as the promotion target for the `staging` workspace. Any changes done to the staging workspace will now also be committed on a branch off of `prod-branch` named `wm_deploy/[WORKSPACE_NAME]/f/folder/item`. In the next step we will create a Github Action that automatically creates a PR to merge these.
 
 ### GitHub Actions setup
 
@@ -129,7 +129,7 @@ You are now ready to test the workflow. You can do so by:
 
 If you have issues you can try the following:
 - To see the sync job if you need to debug, go to the runs page and select the "Sync" filter. Git sync jobs should appear there. 
-- Check the GitHub action runs to see if they were succesful
+- Check the GitHub action runs to see if they were successful
 
 ## Managing multiple teams and folders
 

@@ -136,7 +136,7 @@ wmill workspace remove MyWorkspace
 
 At any point you can ask help with the command `-h` after a given instruction to see the list of options & commands.
 
-Example here just using `windmill -h`:
+Example here just using `wmill -h`:
 
 <br/>
 

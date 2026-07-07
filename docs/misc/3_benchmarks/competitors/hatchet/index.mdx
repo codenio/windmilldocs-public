@@ -28,7 +28,7 @@ We set up Hatchet version 0.62.0 using the [docker-compose.yml from the official
 
 The following workflows were used to run the benchmarks:
 
-Note that for multi-worker scenarios, we tried both using `RunBulkNoWait` that splits up all individual fibonacci tasks as separate workflows and setting `PARALLEL=true` that runs all fibonacci tasks in parallel in a single workflow with parrallel tasks. We did not see significant difference in the results.
+Note that for multi-worker scenarios, we tried both using `RunBulkNoWait` that splits up all individual fibonacci tasks as separate workflows and setting `PARALLEL=true` that runs all fibonacci tasks in parallel in a single workflow with parallel tasks. We did not see significant difference in the results.
 
 <Tabs>
   <TabItem value="python" label="Python">

@@ -49,10 +49,10 @@ There are 5 main kinds of jobs, that each have a dedicated tab in the [runs page
   uniquely and immutably defines a specific version of a script), its input
   arguments (args) and the `permissioned_as` user or group of whom it is going to
   act on behalf of and inherit the visibility to other items such as resources
-  and variables from. An user can **NEVER** escalates his privileges but only
-  de-escalates it by launching a script with either the same permissions as
-  himself or a subset of it (by giving the permissions of a group that he is
-  member of).
+  and variables from. A user can **NEVER** escalate their privileges but only
+  de-escalate them by launching a script with either the same permissions as
+  themselves or a subset of them (by giving the permissions of a group that they
+  are a member of).
 
 - **Preview jobs**: similar to script jobs but instead of hash, they contain the
   whole raw code they will run. Those are the jobs that are launched from the
@@ -277,7 +277,7 @@ log_offset (optional integer, default 0): what was the last log offset known by 
 stream_offset (optional integer, default 0): what was the last log offset known by the client to start from when streaming the result stream
 get_progress (optional integer, default false): should the updates contains [explicit job progress](/docs/advanced/explicit_progress)
 only_result (optional integer, default false): should we only care about the result and ignore all else
-no_logs (optionbal boolean, default false): should we skip streaming logs
+no_logs (optional boolean, default false): should we skip streaming logs
 ```
 
 ### Job Progress event response

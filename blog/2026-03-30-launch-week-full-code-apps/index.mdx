@@ -136,7 +136,7 @@ export default function App() {
 
 ```python
 # backend/get_failed_payments.py
-def main(stripe_ressource: stripe, days_back: int = 7, limit: int = 100):
+def main(stripe_resource: stripe, days_back: int = 7, limit: int = 100):
     # ...
 ```
 
@@ -145,7 +145,7 @@ The generated types will be:
 ```typescript
 export const backend: {
   get_failed_payments: (v: {
-    stripe_ressource: { token: string };
+    stripe_resource: { token: string };
     days_back?: number;
     limit?: number;
   }) => Promise<FailedPaymentsResult>;

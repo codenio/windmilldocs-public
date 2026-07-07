@@ -112,7 +112,7 @@ If you have existing schedules using the legacy cron syntax, you can migrate the
 1. Go to the `Schedules` menu and select the schedule you want to edit.
 2. Toggle the `enable latest Cron syntax`
 3. Double check the preview for upcoming events and make sure it matches your expectations.
-3. Click on the `Save` button.
+4. Click on the `Save` button.
 
 This will update the schedule to use the new cron syntax. Note, you will not be able to revert to the legacy syntax.
 <br />
@@ -231,9 +231,7 @@ More at:
 
 ## Scheduled polls
 
-A particular use case for schedules are [Trigger scripts](../../flows/10_flow_trigger.mdx).
-
- and have it return all of the new items since the last run as scheduled polls, without resorting to external webhooks.
+A particular use case for schedules are [Trigger scripts](../../flows/10_flow_trigger.mdx): schedule a script that pulls data from an external source and have it return all of the new items since the last run, as scheduled polls, without resorting to external webhooks.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
@@ -263,11 +261,11 @@ You can pick the Slack or Microsoft Teams pre-set schedule error handler.
 
 <br/>
 
-Schedule Error hander is an [Enterprise Edition](/pricing) feature.
+Schedule error handler is an [Enterprise Edition](/pricing) feature.
 
 ### Schedule recovery handler
 
-From the schedule configuration, add a special script or flow to execute in case of of recovery from Error.
+From the schedule configuration, add a special script or flow to execute in case of recovery from error.
 
 You can pick the Slack or Microsoft Teams pre-set schedule recovery handler.
 

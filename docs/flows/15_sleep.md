@@ -2,7 +2,7 @@
 description: How do I add sleep delays between flow steps in Windmill?
 ---
 
-# Sleeps / Delays in flows
+# Sleep / Delays in flows
 
 Executions within a flow can be suspended for a given time.
 

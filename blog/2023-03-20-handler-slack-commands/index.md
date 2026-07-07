@@ -34,7 +34,7 @@ We've seen in a [previous article](/docs/integrations/slack) how to connect Slac
 
 Long story short, the first article explained how to connect Slack with Windmill and to create a `/windmill` command on Slack linked to a script hosted on Windmill. Handling several commands on your Slackbot uses just the same logic, but we'll use one single Windmill workflow instead of a script.
 
-[Workflows](/docs/flows/flow_editor) on Windmill are based on scripts. Workflows are the architecture that allows you to chain scripts with branches, loops etc. while connecting scripts' inputs to previous ouputs.
+[Workflows](/docs/flows/flow_editor) on Windmill are based on scripts. Workflows are the architecture that allows you to chain scripts with branches, loops etc. while connecting scripts' inputs to previous outputs.
 
 ![Windmill Workflows](./1-windmill-workflows.png.webp 'Windmill workflows')
 
@@ -111,7 +111,7 @@ The goal of the current section is to give you more hints on the potentiality of
 
 <!--(but maybe our users have more ideas) + link to Atelier post, when published-->
 
-![Slack commands hander, 2nd example](./3-commands-handler-n2.png.webp 'Second example of a Slack commands handler')
+![Slack commands handler, 2nd example](./3-commands-handler-n2.png.webp 'Second example of a Slack commands handler')
 
 ### Control the Slackbot by getting username
 
@@ -225,7 +225,7 @@ To give the permission, go to "Resources" (and "Variables") menu, click on `Shar
 
 <br/>
 
-One simplier way to handle permissions is to host resources and variables on a [folder](/docs/core_concepts/groups_and_folders#folders) that is part of the [group](/docs/core_concepts/groups_and_folders#groups) `slack`.
+One simpler way to handle permissions is to host resources and variables on a [folder](/docs/core_concepts/groups_and_folders#folders) that is part of the [group](/docs/core_concepts/groups_and_folders#groups) `slack`.
 
 <br/>
 

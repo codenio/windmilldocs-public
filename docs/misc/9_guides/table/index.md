@@ -10,7 +10,7 @@ This guide uses the legacy low-code app editor. For new apps, we recommend [full
 
 :::
 
-This is a introduction on how to use the Table component in Windmill.
+This is an introduction on how to use the Table component in Windmill.
 
 ![Table API](../../../assets/apps/4_app_component_library/table.png.webp)
 
@@ -19,13 +19,13 @@ This is a introduction on how to use the Table component in Windmill.
 In Windmill there are 3 table components: one simply called Table,
 [AgGrid](../aggrid_table/index.md) and [Database studio](../../../apps/4_app_configuration_settings/database_studio.mdx).
 
-The Table component is for most usecases. In it's simplest form it takes an
-array of objects as input, and uses the key of the object as the header of the
+The Table component covers most use cases. In its simplest form, it takes an
+array of objects as input and uses the keys of the objects as the headers of the
 table.
 
-See bottom of this document for the current Limitations.
+See the bottom of this document for the current limitations.
  
-[AgGrid](../aggrid_table/index.md) component provides you with a lot of advanced features.
+The [AgGrid](../aggrid_table/index.md) component provides many advanced features.
 
 [Database studio](../../../apps/4_app_configuration_settings/database_studio.mdx) is a web-based database management tool. It allows you to display and edit the content of a database.
 
@@ -33,37 +33,37 @@ See bottom of this document for the current Limitations.
 
 :::info
 
-[Table Showcase](https://hub.windmill.dev/apps/19/table-component-showcase) - See the hub for a app that showcases all Table options as working code
-See below to copy/paste fast. Hopefully you then have the best from both world. Easy copy/paste, and working code you can look at
+[Table Showcase](https://hub.windmill.dev/apps/19/table-component-showcase) - See the Hub for an app that showcases all Table options as working code.
+You can copy/paste from it directly, giving you both working code to look at and a fast starting point.
 :::
 
 ## Table data (data source)
 
-As in almost all the fields in the app, you can have either `static`,
-`connected` or `eval` data.
+As with almost all fields in the app, the data can be `static`,
+`connected` or `eval`.
 
-**static** - a static json you defined.
+**static** - a static JSON you define.
 
-**connected** - connect with a result of another script or component or the
+**connected** - connect to the result of another script or component, or to the
 state of the app.
 
-**eval** - run a inline eval that can ref to state or script like connected.
-eval lets you type instead of clicking. But you can also choose to ref to a
-script from your workspace or create a inline script.
+**eval** - run an inline eval that can refer to the state or to scripts, like connected.
+Eval lets you type instead of clicking. You can also choose to refer to a
+script from your workspace or create an inline script.
 
 :::tip
 
-You can not edit a result of a script, so if you want to later change the data
-based on another component the recommendation is to store that data as a state.
+You cannot edit the result of a script, so if you want to later change the data
+based on another component, the recommendation is to store that data as a state.
 :::
 
 ## Referring to data from the row to create a new row in the table
 
-Sometimes you want to ref to table data in the table. E.g if you want to have a
-select that is specify to each row using another field. This can be achieved
+Sometimes you want to refer to the table data within the table itself, e.g. if you want to have a
+select that is specific to each row using another field. This can be achieved
 with the `row.value` and `row.index` properties.
 
-You will find example of using `row.value` and `row.index`
+You will find examples of using `row.value` and `row.index` in the showcase app above.
 
 ### Initial state
 
@@ -72,22 +72,21 @@ You will find example of using `row.value` and `row.index`
 The initial state is from
 https://tanstack.com/table/v8/docs/api/core/table#initialstate but not all
 states work, currently `columnVisibility`, `columnOrder`, `columnPinning` and
-`columnSizing` is implemented.
+`columnSizing` are implemented.
 
-pagination and search/filter is supported in the GUI, but not trough this
+Pagination and search/filter are supported in the GUI, but not through this
 config.
 
-So currently, there is grouping, row selection, sorting and expand that there is
-not any support for
+Grouping, row selection, sorting and expand are currently not supported.
 
 :::
 
 #### Hide columns
 
-By default the table components is showing all columns. You can hide columns
-with the following syntax
+By default the Table component shows all columns. You can hide columns
+with the following syntax.
 
-In the `Inital State` field in the table config add:
+In the `Initial State` field in the table config add:
 
 ```tsx
 {
@@ -97,12 +96,12 @@ In the `Inital State` field in the table config add:
 }
 ```
 
-here we hide the column id.
+Here we hide the `id` column.
 
 ### Reorder columns
 
-By default the table components is showing columns in the order it is added to
-the array. You can rearrange the order of the column with the following config
+By default the Table component shows columns in the order they are added to
+the array. You can rearrange the order of the columns with the following config.
 
 In the `Initial State` field in the table config add:
 
@@ -152,28 +151,28 @@ In the `Initial State` field in the table config add:
 }
 ```
 
-Leave out the fields you do not need, you are only spes the desire behavior, it's still tanstack logic that do the final calculations.
+Leave out the fields you do not need: you only specify the desired behavior, and it is still TanStack logic that does the final calculations.
 
 ## Search
 
-**by component** - a nice feature of the table component is that it can do the
+**by component** - a nice feature of the Table component is that it can do the
 search for you based on the data in the component
 
-**by runnable** - if you want to have programmatic control over the search. You
-here need to have to use a script as the datasource and connect the tables
-"search" key to the input of the script.
+**by runnable** - if you want programmatic control over the search. You
+need to use a script as the data source and connect the table's
+"search" key to an input of the script.
 
 Please see the [Examples](#examples) for working code.
 
 ### Limits
 
-- Button and Select/Dropdown is always in the last column called actions
+- Button and Select/Dropdown are always in the last column, called actions
 
 ## Not supported features
 
-- Resizeable by the user
+- Resizable by the user
 - Grouping
-- sorting (But can be done by a transformer, but not the user)
+- Sorting (can be done by a transformer, but not by the user)
 
 :::info Transformer
 
@@ -184,5 +183,5 @@ for more information.
 
 :::
 
-If some of these features is important we recommend to use the
-[AgGrid Component](../aggrid_table/index.md)
+If some of these features are important, we recommend using the
+[AgGrid component](../aggrid_table/index.md)

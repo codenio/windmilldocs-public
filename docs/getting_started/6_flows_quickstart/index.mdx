@@ -26,7 +26,7 @@ The present document will introduce you to [Flows](../../flows/1_flow_editor.mdx
 
 Have in mind that in Windmill, Scripts are at the basis of Flows and Apps. To sum up roughly, workflows are state machines [represented as DAGs](../../flows/16_architecture.mdx) (Directed Acyclic Graphs) to compose scripts together. To learn more about scripts, check the [Script quickstart](../0_scripts_quickstart/index.mdx). You will not necessarily have to re-build each script as you can reuse them from your workspace or from the [Hub](https://hub.windmill.dev/).
 
-Those workflows can run for-loops, branches (parralellizable) suspend themselves until a timeout or receiving events such as webhooks or approvals. They can be scheduled very frequently and check for new external items to process (what we call "Trigger" script).
+Those workflows can run for-loops, branches (parallelizable), suspend themselves until a timeout or receiving events such as webhooks or approvals. They can be scheduled very frequently and check for new external items to process (what we call "Trigger" script).
 
 The result of a flow is the result of the last step executed, unless [error](../../flows/8_error_handling.mdx) was returned before or [Early return](../../flows/19_early_return.mdx) is set.
 
@@ -144,7 +144,7 @@ On the left of the editor, you'll find a graphical view of the flow. From there 
 Keep your flows organized and documented with [sticky notes](../../flows/24_sticky_notes.mdx) for free-floating comments and TODOs, and with [flow groups](../../flows/1_flow_editor.mdx#flow-groups) to visually cluster related steps and document complex workflow sections.
 :::
 
-There are four kinds of scripts: [Action](../../flows/3_editor_components.mdx#flow-actions), [Trigger](../../flows/10_flow_trigger.mdx), [Approval](../../flows/11_flow_approval.mdx) and [Error handler](../../flows/7_flow_error_handler.md). You can sequence them how you want. Action is the default script type.
+There are five kinds of scripts: [Action](../../flows/3_editor_components.mdx#flow-actions), [Trigger](../../flows/10_flow_trigger.mdx), [Approval](../../flows/11_flow_approval.mdx), [Error handler](../../flows/7_flow_error_handler.md) and [Preprocessor](../../core_concepts/43_preprocessors/index.mdx). You can sequence them how you want. Action is the default script type.
 
 Each script can be called from Workspace or [Hub](https://hub.windmill.dev/), you can also decide to write them inline.
 

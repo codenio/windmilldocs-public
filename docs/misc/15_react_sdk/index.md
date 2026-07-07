@@ -39,7 +39,7 @@ export default defineConfig({
 });
 ```
 
-An example is provided directly in the `windmill-react-sdk` repository.s
+An example is provided directly in the `windmill-react-sdk` repository.
 
 ### Using webpack 5 (Next.js)
 

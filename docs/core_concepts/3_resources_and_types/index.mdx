@@ -140,7 +140,7 @@ export async function main() {
 
 You can find this script on [WindmillHub](https://hub.windmill.dev/scripts/windmillhub/9069/synchronize-hub-resource-types-with-instance-windmillhub#approved).
 
-This script is probably already on your [Admins workspace](../../advanced/18_instance_settings/index.mdx#admins-workspace), as it was suggested during Windmill [self-hosting setup](../../advanced/1_self_host/index.mdx). Having this script run on your Admins workspace will sync resources accross all workspaces of your instance.
+This script is probably already on your [Admins workspace](../../advanced/18_instance_settings/index.mdx#admins-workspace), as it was suggested during Windmill [self-hosting setup](../../advanced/1_self_host/index.mdx). Having this script run on your Admins workspace will sync resources across all workspaces of your instance.
 
 To avoid running it manually, we recommend [scheduling](../1_scheduling/index.mdx) this script regularly.
 
@@ -348,7 +348,7 @@ Resources can be passed using the [auto-generated UI](../6_auto_generated_uis/in
 
 Provided you have the right permissions and the resource type exists in the workspace, you can access resource types from scripts, flows and apps using the Windmill client or [TypedDict](https://mypy.readthedocs.io/en/stable/typed_dict.html) in Python.
 
-From the code editor's toolbar, click on the `+ Type` button and pick the right resource type. For example, to access the `u/user/my_postgresql` resource of the `posgtgresql` Resource Type we would create a script:
+From the code editor's toolbar, click on the `+ Type` button and pick the right resource type. For example, to access the `u/user/my_postgresql` resource of the `postgresql` Resource Type we would create a script:
 
 <Tabs className="unique-tabs">
 <TabItem value="TypeScript" label="TypeScript" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
@@ -501,7 +501,7 @@ You first need to create the resource type. You will find a toggle to indicate t
 
 ![Create a Text File Resource Type](./create_text_file_resource_type.png)
 
-Under the hood, this resource type is just like others, but the schema only has a `content` field where the file contents are stored. Additionally, the format that you input will be used to diplay the contents on the frontend and also when pulling with the CLI and create a type to represent Ansible Inventories.
+Under the hood, this resource type is just like others, but the schema only has a `content` field where the file contents are stored. Additionally, the format that you input will be used to display the contents on the frontend and also when pulling with the CLI and create a type to represent Ansible Inventories.
 
 Now you can create the resource by adding a resource and searching your newly created resource type:
 

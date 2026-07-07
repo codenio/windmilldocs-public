@@ -38,7 +38,7 @@ Airtable authenticates with personal access tokens (legacy API keys were removed
 />
 <br/>
 
-Now specify Airtable which databse and table you want to interact with:
+Now specify Airtable which database and table you want to interact with:
 
 - **Database ID** can be found on the URL of the page. It starts with "app" and ends before the next "/". e.g. appcy7pfdzgJIhto.
 - **Table name** is the name of the tab. By default it is called "Table 1".

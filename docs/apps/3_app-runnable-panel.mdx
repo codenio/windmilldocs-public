@@ -10,7 +10,7 @@ The strength of Windmill's app editor is the ability to connect everything toget
 
 - components [can be linked to each other](./2_connecting_components/index.mdx)
 - components can be directly [linked to scripts](#inline-scripts) and trigger them
-- [background runnables](#background-runnables) can be that are run in the background on app refresh on when an input changes
+- [background runnables](#background-runnables) are run in the background on app refresh or when an input changes
 - [evals](#evals) can be used to manipulate the client app state
 
 On the bottom of the app editor, you can find the runnable editor. The runnable editor is a [code editor](../code_editor/index.mdx) that allows to create, edit, or manage the scripts or flows linked to components (runnables) and background runnables.
@@ -239,7 +239,7 @@ You may want to disable this so that the background runnable is only triggered b
 
 ![Run on start and app refresh](../assets/apps/0_app_editor/app_refresh.png 'Run on start and app refresh')
 
-#### Recompute on Any Input Change
+#### Recompute on any input change
 
 Runnables can be configured to recompute whenever an input changes. This is useful for recomputing a component's runnable when an input changes.
 

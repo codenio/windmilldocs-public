@@ -372,7 +372,7 @@ stores the run as a failure (triggering any configured error handlers) and the s
 
 It is possible to define a node at which the flow will return at for sync endpoints. The rest of the flow will continue asynchronously.
 
-Useful when some webhooks need to return extremely fast but not just the uuid (define first step as [early return](../../flows/19_early_return.mdx)) or when the expected return from the webhook doesn't need to the full flow being computed.
+Useful when some webhooks need to return extremely fast but not just the uuid (define first step as [early return](../../flows/19_early_return.mdx)) or when the expected return from the webhook doesn't need the full flow to be computed.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
@@ -477,7 +477,7 @@ For the stream endpoint, you will mainly get the following events with different
 {
 	"type": "update",
 	"completed": true, // boolean: whether the job is completed
-	"only_result": ..., // String of the complete stream or JSON object with a `wm_stream` field contianing the complete stream
+	"only_result": ..., // String of the complete stream or JSON object with a `wm_stream` field containing the complete stream
 	"new_result_stream": "string", // optionally, the last part of the stream
 }
 ```
