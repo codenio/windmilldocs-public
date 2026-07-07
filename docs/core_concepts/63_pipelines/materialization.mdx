@@ -1,3 +1,7 @@
+---
+description: How do I materialize DuckLake tables in Windmill pipelines? Managed writes, SCD2 history, time-travel, schema capture, data tests and manual mode.
+---
+
 import DocCard from '@site/src/components/DocCard';
 
 # Materialization
@@ -56,9 +60,45 @@ WHERE wm_partition(created_at) = {partition}
   - `append` → **insert-only**: for immutable event logs. Re-running duplicates rows, so use only for append-only sources. (`append` wins over `key=` if both are given.)
   - `key=<col> history` → **SCD2 history**: keep every version of every row instead of overwriting on change. See [SCD2 history](#scd2-history-slowly-changing-dimensions).
   - `on_schema_change=<warn|ignore|fail|sync>` combines with any strategy and controls what a run does when the SELECT's columns diverge from the target's stored schema, from warning downstream consumers (`warn`, the default) to aborting the run (`fail`) or auto-syncing the table (`sync`). See [on_schema_change](#on_schema_change).
-- **`manual`** — the escape hatch: your script writes its own DDL and Windmill only records that the slice was materialized (no snapshot capture, no idempotency guarantee). Rare; explicit.
+- **`manual`** — the escape hatch: your script writes its own DDL and Windmill only records that the slice was materialized (no snapshot capture, no idempotency guarantee). Rare; explicit. See [Manual materialization](#manual-materialization-track-only).
 
 `// materialize` is for DuckDB SQL. From **Python or TypeScript**, use the `wmill.ducklake` helpers (`upsert_partition`, `append_partition`, `read`) which give the same managed, idempotent write from arbitrary code.
+
+## Manual materialization (track-only)
+
+`// materialize manual` is the escape hatch for a write the managed wrapper cannot express: multi-statement DDL, a `MERGE` you want to own, a reshape the strategies don't cover. The single-trailing-`SELECT` rule does not apply - the script is ordinary DuckDB that creates and writes the target itself - and Windmill only records that the slice was materialized.
+
+```sql
+-- pipeline
+-- on ducklake://main/stg_payments
+-- partitioned daily
+-- materialize manual ducklake://main/payment_totals
+
+ATTACH 'ducklake://main' AS dl;
+
+CREATE TABLE IF NOT EXISTS dl.payment_totals (
+  day DATE, method TEXT, total DECIMAL(18, 2)
+);
+
+-- You own idempotency: delete-then-insert makes re-runs and backfills safe.
+DELETE FROM dl.payment_totals WHERE day = $partition::DATE;
+
+INSERT INTO dl.payment_totals
+SELECT created_at::DATE, method, sum(amount)
+FROM dl.stg_payments
+WHERE created_at::DATE = $partition::DATE
+GROUP BY 1, 2;
+```
+
+Note `$partition`, not `{partition}`: the [`{partition}` token](./partitioning.mdx#the-partition-token) is substituted only in managed materialize scripts (and the injected `wm_partition` macro is managed-only too), but the `partition` argument is auto-declared for every `// partitioned` DuckDB script, so a manual script binds `$partition` like any other argument.
+
+What the track-only edge records, and what it gives up:
+
+- Recorded: the asset and partition are marked materialized (or failed) with the producing job id and time, so the [partition-status grid](#partition-status-and-backfill) fills in, [backfill](#partition-status-and-backfill) enumerates and re-runs the script per partition, and the write fires downstream subscribers through the [cascade](./index.mdx#triggering-a-pipeline) like any other output.
+- Not recorded: no snapshot id and no row count - the run result is your query's own output rather than the managed summary, and consumers' [Upstream snapshots](#upstream-snapshots) panels skip the asset. Idempotency is whatever your own SQL does (the delete-then-insert above).
+- Inert: [data tests](#data-tests) are rejected on a manual target, no [schema capture](#schema-capture) happens (so consumers get no [schema-contract](#schema-contracts) warnings against it), and [`on_schema_change`](#on_schema_change) has nothing to act on - the deploy logs a warning saying so.
+
+If replace, `key=` merge or `append` can express the write, prefer the managed form: `manual` trades the whole safety net for full control of the SQL.
 
 ## Strategy and unit
 

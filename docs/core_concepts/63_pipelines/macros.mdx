@@ -36,6 +36,45 @@ Detection is lexical, so a call hidden inside a string — for example dynamic S
 
 Deploying a script whose `// use` target is not deployed yet is a warning rather than an error, so git-synced workspaces can deploy in any order; the missing library only fails at run time. Renaming a library keeps the registry consistent automatically, but `// use <lib_path>` strings in consumers are plain text and fail at run time until updated.
 
+## Testing macros
+
+Deploy validates a library's shape (definition order, name collisions, built-in shadowing) but never runs the macros on data. Two lightweight patterns cover behavior.
+
+An assertion script: registered macros are callable from any DuckDB script, including one you run from the editor's Test panel, so a plain script next to the library can call each macro on known inputs and fail loudly on a regression. DuckDB's `error()` function aborts the query with a message, so wrap each expectation in a `CASE`:
+
+```sql
+-- Assertions for shop_macros: any failing case aborts the run with its message.
+SELECT * FROM (VALUES
+  (CASE WHEN safe_div(10, 0, fallback := -1) <> -1 THEN error('safe_div: fallback not used on /0') ELSE 'safe_div /0 ok' END),
+  (CASE WHEN safe_div(10, 4) <> 2.5 THEN error('safe_div: wrong quotient') ELSE 'safe_div ok' END),
+  (CASE WHEN pct(1, 3) <> 33.33 THEN error('pct: expected 33.33') ELSE 'pct ok' END)
+) AS t(assertion);
+```
+
+Macros are late-bound, so the script always exercises the deployed definitions: redeploy the library, re-run the test. To iterate on definitions you have not deployed yet, paste them at the top of the assertion script - a local `CREATE MACRO` wins over the registry, so the same assertions run against the work-in-progress version, and deleting the local copies points them back at the registry.
+
+A fixture data test: to assert macro behavior as part of the pipeline rather than on demand, materialize a tiny fixture through the macros and attach a [data test](./materialization.mdx#data-tests):
+
+```sql
+-- pipeline
+-- on schedule
+-- materialize ducklake://main/shop_macro_checks
+-- data_test f/shop/macro_checks_test
+
+SELECT 'safe_div fallback' AS check_name, safe_div(10, 0, fallback := -1) = -1 AS ok
+UNION ALL
+SELECT 'pct rounding', pct(1, 3) = 33.33;
+```
+
+with the [custom data test](./materialization.mdx#custom-data-tests) `f/shop/macro_checks_test` returning the checks that did not pass:
+
+```sql
+-- Violating rows: an empty result means every macro check passed.
+SELECT check_name FROM _wm_target.shop_macro_checks WHERE NOT ok;
+```
+
+A regression in the library then fails this producer's run like any other data-test violation, so macro breakage surfaces on the pipeline graph instead of in a downstream consumer's numbers.
+
 ## Discovering macros
 
 - The DuckDB editor autocompletes every workspace macro while you type, showing the signature, scalar/table kind and provider path, with the full definition on hover.

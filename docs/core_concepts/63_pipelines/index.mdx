@@ -204,9 +204,77 @@ The asset cascade is depth-capped so a cycle or a runaway fan-out cannot loop fo
 
 :::
 
+### Plain S3 outputs (S3 object and S3 Parquet)
+
+DuckLake is the canonical target, but not the only dataset a step can produce: a step can output a plain S3 object - a Parquet dataset, a JSON or CSV export, any file in [object storage](../38_object_storage_in_windmill/index.mdx) - and the cascade treats it exactly like a materialized table. The write is [detected from code](#how-outputs-are-detected) (no annotation needed), the object shows as an asset node in the graph, and every script that reads it runs when it is written.
+
+In the pipeline editor, the "+" script creator asks for the new step's output kind and scaffolds a runnable body for it. Besides the kinds documented on their own pages ([Materialized table](./materialization.mdx), [Data test](./materialization.mdx#custom-data-tests), [Macro library](./macros.mdx)), it offers S3 Parquet (a columnar file in object storage), S3 Object (a generic file: JSON, CSV, binary), [Data table](../11_persistent_storage/data_tables.mdx) (Postgres-backed), Ducklake (a raw, unmanaged write) and No output (side-effect only). The S3 kinds are available for TypeScript, Python and DuckDB (S3 Object also for Bash and PowerShell), and the scaffold seeds a write to `s3:///pipelines/<folder>/<name>.parquet` (or `.json` / `.csv`) that you can repoint anywhere.
+
+A producer/consumer pair, with no lake anywhere:
+
+```ts
+// pipeline
+// on schedule
+import * as wmill from 'windmill-client';
+
+export async function main() {
+	const orders = await (await fetch('https://shop.example.com/api/orders')).json();
+	// Detected as a write of s3:///pipelines/f/demo/orders.json
+	await wmill.writeS3File({ s3: 'pipelines/f/demo/orders.json' }, JSON.stringify(orders));
+}
+```
+
+```sql
+-- pipeline
+
+-- The read_json auto-derives the cascade edge: this script runs whenever
+-- orders.json is written. The COPY ... TO is detected as the parquet output.
+COPY (
+  SELECT order_id, amount, status
+  FROM read_json('s3:///pipelines/f/demo/orders.json')
+) TO 's3:///pipelines/f/demo/orders.parquet' (FORMAT 'parquet');
+```
+
+Any script that reads `s3:///pipelines/f/demo/orders.parquet` (a DuckDB `read_parquet`, an SDK `loadS3File`) chains next. Steps like these compose with every feature that is not tied to the managed DuckDB write - [partitions](./partitioning.mdx), [joins](#joining-inputs-any-vs-all), [debounce](#debounce), [freshness](#freshness) - and a later step can [materialize](./materialization.mdx) the same data into DuckLake when you want the managed layer.
+
+### Volumes in pipelines (`volume://`)
+
+Steps whose data is a directory of files rather than a single object - a model checkpoint, a build cache, an agent workspace - can exchange a [volume](../56_volumes/index.mdx). Volumes are an [Enterprise Edition](/pricing) feature (the Community Edition caps them at 20 volumes per workspace and 50 MB per file).
+
+A script mounts a volume with the `// volume: <name> <mount_path>` annotation (see [Volumes](../56_volumes/index.mdx) for the grammar and permissions). In a pipeline, that mount is the asset usage: the script is recorded as a read-write user of `volume://<name>`, it shows connected to the volume node in the graph, and each of its completed runs counts as a write of the volume.
+
+Volume reads are not [auto-derived](#asset-triggers-the-cascade) (only `ducklake://` and `s3://` reads are), so a consumer must declare its edge explicitly with `// on volume://<name>`. The URI is the volume name only - volume assets are tracked per volume, not per file inside it.
+
+```python
+# pipeline
+# on schedule
+# volume: model-artifacts models
+
+def main():
+    weights = train()
+    # Files written under models/ are synced back when the run ends, and the
+    # completed run fires every `# on volume://model-artifacts` subscriber.
+    with open("models/weights.bin", "wb") as f:
+        f.write(weights)
+```
+
+```python
+# pipeline
+# on volume://model-artifacts
+# volume: model-artifacts models
+
+def main():
+    with open("models/weights.bin", "rb") as f:
+        report_quality(evaluate(f.read()))
+```
+
+Volume access is [exclusively leased](../56_volumes/index.mdx#exclusive-leasing) (one job at a time), so overlapping runs serialize instead of reading a half-synced directory. One caveat: a mount is always recorded as read-write, so the consumer above is itself a producer of `volume://model-artifacts` - when several subscribers mount one volume, each completed run re-fires the others (the cascade's cycle guard keeps this bounded, but it multiplies runs). Prefer a single mounting consumer per volume, or `s3://` objects when many readers should fan out.
+
 ## The pipeline graph
 
 Open the folder and select the pipeline view to see the graph ([the example above](#an-end-to-end-example) shows it for `f/ecommerce`). Script nodes are connected to the assets they read and write, so you can see the full lineage at a glance: schedule nodes at the top, run-count and `daily` badges on scripts, test and column badges on write edges, a bell-off badge on a [muted](#muting-a-read-edge) read edge (read but not cascaded on), and dashed ƒ edges from macro libraries to their consumers. From any node you can run a single step or a step and everything downstream of it, and the [Activity panel](#an-end-to-end-example) streams live run status as a cascade progresses.
+
+The page has two modes: view, the read-only default showing the deployed pipeline, and edit, where your unsaved drafts overlay the deployed graph. Running does not require edit mode: the Run pipeline button in the header is available in both (it runs every step in dependency order, roots first, cascading downstream), and the node-level Run + downstream and [bounded selective runs](#selective-execution-run-up-to-here) work from view mode too. A view-mode run targets the deployed version of each script; an edit-mode run covers the displayed graph, drafts included.
 
 Selecting a node opens its details pane: source and annotations for a script, and for a materialized asset its [partition grid](./materialization.mdx#partition-status-and-backfill), [captured schema](./materialization.mdx#schema-capture) and [column lineage](./materialization.mdx#column-level-lineage). When a selected script declares inputs, a compact arguments form appears under the Test button so the run can be parameterized before launching it from the graph. A `// partitioned` producer gets a dedicated [partition picker](./partitioning.mdx#the-partition-picker) here instead of a bare text field.
 
