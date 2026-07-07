@@ -275,7 +275,7 @@ It takes as query args:
 running (optional boolean, default false): was the job already running ? Optimization for the backend to not waste time checking if the job is running if we know it's already the case
 log_offset (optional integer, default 0): what was the last log offset known by the client to start from when streaming new logs
 stream_offset (optional integer, default 0): what was the last log offset known by the client to start from when streaming the result stream
-get_progress (optional integer, default false): should the updates contains [explicit job progress](/docs/advanced//19_explicit_progress/index.mdx)
+get_progress (optional integer, default false): should the updates contains [explicit job progress](/docs/advanced/explicit_progress)
 only_result (optional integer, default false): should we only care about the result and ignore all else
 no_logs (optionbal boolean, default false): should we skip streaming logs
 ```

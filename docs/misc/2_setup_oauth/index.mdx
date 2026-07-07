@@ -594,14 +594,14 @@ Then under "API permissions" you have to select the appropriate permissions that
 
 ![Azure Oauth API permissions](./azure_oauth_api_permissions.png.webp)
 
-Next create a new OAuth client in the [Windmill instance settings](../advanced/instance_settings#authoauth) and fill in
+Next create a new OAuth client in the [Windmill instance settings](../../advanced/18_instance_settings/index.mdx#authoauth) and fill in
 - the "Client ID" corresponding to the "Application (client) ID" in Azure "Overview" menu item
 - the "Client Secret" corresponding to the Secret Value from client secret you created earlier
 - the "Tenant ID" from the "Overview" menu item
 
 ![Azure IDs](./azure_oauth_ids.png.webp)
 
-Now depending on which application you're trying to use you, you will need to as extra "scopes" such as `https://database.windows.net//.default` for [MS SQL Server](../getting_started/scripts_quickstart/sql#ms-sql).
+Now depending on which application you're trying to use you, you will need to as extra "scopes" such as `https://database.windows.net//.default` for [MS SQL Server](../../getting_started/0_scripts_quickstart/5_sql_quickstart/index.mdx#ms-sql).
 
 ![Azure Windmill](./azure_oauth_windmill.png.webp)
 

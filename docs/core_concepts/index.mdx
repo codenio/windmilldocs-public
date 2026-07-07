@@ -142,6 +142,16 @@ On top of its editors to build endpoints, flows, [low-code apps](../apps/0_app_e
 		href="/docs/core_concepts/object_storage_in_windmill"
 	/>
 	<DocCard
+		title="Volumes"
+		description="Persistent file storage attached to scripts via code annotations, synced to object storage across job runs."
+		href="/docs/core_concepts/volumes"
+	/>
+	<DocCard
+		title="Custom instance database"
+		description="Use the Windmill Postgres database as persistent storage for your workspace, without any external setup."
+		href="/docs/core_concepts/custom_instance_database"
+	/>
+	<DocCard
 		title="Pipelines (alpha)"
 		description="The recommended model for data pipelines: DuckDB steps that materialize into DuckLake, wired by asset lineage, with partitions, joins, data tests and backfill."
 		href="/docs/core_concepts/pipelines"
@@ -260,6 +270,26 @@ On top of its editors to build endpoints, flows, [low-code apps](../apps/0_app_e
 		title="AI Agents"
 		description="Integrate AI agent steps directly into your Windmill flows."
 		href="/docs/core_concepts/ai_agents"
+	/>
+	<DocCard
+		title="AI sandbox"
+		description="Run AI coding agents like Claude Code, Codex or OpenCode in Windmill with sandboxing and persistent file storage."
+		href="/docs/core_concepts/ai_sandbox"
+	/>
+	<DocCard
+		title="Workspace settings"
+		description="Configuration options specific to each workspace: users, Git sync, storage, and more."
+		href="/docs/core_concepts/workspace_settings"
+	/>
+	<DocCard
+		title="Labels"
+		description="Organize scripts, flows, apps, resources, variables, schedules and triggers with labels."
+		href="/docs/core_concepts/labels"
+	/>
+	<DocCard
+		title="Trashbin"
+		description="Restore accidentally deleted scripts, flows, apps and other workspace items."
+		href="/docs/core_concepts/trashbin"
 	/>
 </div>
 
@@ -494,7 +524,7 @@ All details on Flows can be found in the [Flows section](../flows/1_flow_editor.
 		color="teal"
 		title="Custom timeout for step"
 		description="If the execution takes longer than the time limit, the execution of the step will be interrupted."
-		href="/docs/flows/early_stop"
+		href="/docs/flows/custom_timeout"
 	/>
 	<DocCard
 		color="teal"
@@ -545,8 +575,6 @@ All details on Flows can be found in the [Flows section](../flows/1_flow_editor.
 		href="/docs/flows/step_mocking"
 	/>
 </div>
-
-<div className="grid grid-cols-2 gap-6 mb-4"></div>
 
 ## Full-code app features
 
@@ -769,16 +797,6 @@ All details & features on [Pricing page](/pricing).
 		title="Windows workers"
 		description="Windows workers enable you to run Windmill scripts and flows directly on Windows machines without requiring Docker or WSL, supporting Python, Bun, PowerShell, C#, and Nu executors for native Windows execution."
 		href="/docs/misc/windows_workers"
-	/>
-	<DocCard
-		title="Private Hub"
-		description="Host your own Hub of scripts, flows, apps and resource types for your team."
-		href="/docs/core_concepts/private_hub"
-	/>
-	<DocCard
-		title="White labeling Windmill"
-		description="Windmill offers white labeling capabilities, allowing you to embed and customize the Windmill platform to align with your brand."
-		href="/docs/misc/white_labelling"
 	/>
 	<DocCard
 		title="Full text search"

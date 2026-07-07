@@ -187,7 +187,7 @@ For enterprise environments using Active Directory, enable `integrated_auth` to 
 To specify the application intent for read-only requests, add `-- ApplicationIntent=ReadOnly` to the script.
 
 :::info Azure AD (Entra)
-When using domain credentials via Entra (Azure Active Directory) you need to add the scope `https://database.windows.net//.default` to the [Windmill OAuth instance setting](../../misc/setup_oauth#azure-oauth).
+When using domain credentials via Entra (Azure Active Directory) you need to add the scope `https://database.windows.net//.default` to the [Windmill OAuth instance setting](../../../misc/2_setup_oauth/index.mdx#azure-oauth).
 :::
 
 ### BigQuery
@@ -583,7 +583,7 @@ This notation also works with glob patterns:
 SELECT * FROM read_parquet('s3:///myfiles/*.parquet')
 ```
 
-The s3:// notation now uses the Windmill [S3 Proxy](../../core_concepts/object_storage_in_windmill#s3-proxy) by default.
+The s3:// notation now uses the Windmill [S3 Proxy](../../../core_concepts/38_object_storage_in_windmill/index.mdx#s3-proxy) by default.
 
 You can also attach to other database resources (BigQuery, PostgreSQL and MySQL). We use the official and community DuckDB extensions under the hood :
 ```sql

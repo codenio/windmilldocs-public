@@ -93,7 +93,7 @@ This allows flexibility and security for cases where you either require approval
 
 ![Required approvals](../assets/flows/flow-number-of-approvals.png 'Required approvals')
 
-Note that approval steps can be applied the same configurations as regular steps ([Retries](./14_retries.md), [Early stop/Break](./2_early_stop.md) or [Suspend](./15_sleep.md)).
+Note that approval steps can be applied the same configurations as regular steps ([Retries](./14_retries.md), [Early stop/Break](./2_early_stop.md) or [Sleep](./15_sleep.md)).
 
 ### Timeout
 
@@ -549,7 +549,7 @@ wmill.request_interactive_slack_approval(
 </TabItem>
 </Tabs>
 
-Where [dynamic_enums](./flow_approval#slack-approval-step) can be used to dynamically set the options of enum form arguments and [default_args](./flow_approval#default-args) can be used to dynamically set the default values of form arguments.
+Where [dynamic_enums](#dynamics-enums) can be used to dynamically set the options of enum form arguments and [default_args](#default-args) can be used to dynamically set the default values of form arguments.
 
 If multiple approvals are required you can use the client helper directly and send approval requests to different channels:
 
@@ -658,7 +658,7 @@ const card_block = {
 </TabItem>
 </Tabs>
 
-Where [dynamic_enums](./flow_approval#slack-approval-step) can be used to dynamically set the options of enum form arguments and [default_args](./flow_approval#default-args) can be used to dynamically set the default values of form arguments.
+Where [dynamic_enums](#dynamics-enums) can be used to dynamically set the options of enum form arguments and [default_args](#default-args) can be used to dynamically set the default values of form arguments.
 
 If multiple approvals are required you can use the client helper directly and send approval requests to different channels (same as the Slack example above).
 

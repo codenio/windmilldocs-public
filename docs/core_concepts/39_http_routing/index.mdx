@@ -74,7 +74,7 @@ You can provide the specification in one of three ways:
   - Only internal references (e.g., `#/components/...`) are supported.
 
 
-You can use `:param` in the route path and access these as `params` in a [preprocessor](https://docs.windmill.dev/docs/core_concepts/preprocessors).
+You can use `:param` in the route path and access these as `params` in a [preprocessor](../43_preprocessors/index.mdx).
 
 > ℹ️ **Only workspace admins** can create routes.  
 > Once created, all properties of a route **except the HTTP path** can be modified by any user with **write access** to the route.  
@@ -354,7 +354,7 @@ This gives access to:
 
 - Raw payload
 - Headers, query, and route parameters
-- Secrets stored as [variables](https://docs.windmill.dev/docs/core_concepts/variables_and_secrets)
+- Secrets stored as [variables](../2_variables_and_secrets/index.mdx)
 
 Example script for HMAC signature validation:
 ```ts

@@ -12,7 +12,7 @@ Autoscaling is available in the [Enterprise plan](/pricing).
 
 You configure a minimum and maximum number of [workers](../9_worker_groups/index.mdx). The autoscaler will adjust the number of workers between the minimum and maximum based on the workload, either through the [native Kubernetes integration](#kubernetes) or by calling a custom script that calls your underlying infra orchestrator such as ECS or Nomad (native integrations for those are coming soon).
 
-Autoscaling is configured in each [worker group](/core_concepts/9_worker_groups/index.mdx) config under "Autoscaling". It takes the following configuration:
+Autoscaling is configured in each [worker group](../9_worker_groups/index.mdx) config under "Autoscaling". It takes the following configuration:
 
 ![Autoscaling](./config.png)
 

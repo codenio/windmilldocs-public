@@ -1,3 +1,7 @@
+---
+description: How do I ingest external data into a Windmill pipeline? Write the extract in any language and load it through a managed materialization.
+---
+
 # Ingestion (EL)
 
 Most of the [pipelines](./index.mdx) page assumes data is already in the lake. This page covers the extract-load side: an entry script owns the extract in whatever language fits the source, and the load goes through a managed [materialization](./materialization.mdx) so it gets idempotent write strategies, snapshots and the partition grid.
