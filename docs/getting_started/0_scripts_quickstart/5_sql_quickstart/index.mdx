@@ -187,7 +187,7 @@ For enterprise environments using Active Directory, enable `integrated_auth` to 
 To specify the application intent for read-only requests, add `-- ApplicationIntent=ReadOnly` to the script.
 
 :::info Azure AD (Entra)
-When using domain credentials via Entra (Azure Active Directory) you need to add the scope `https://database.windows.net//.default` to the [Windmill OAuth instance setting](../../../misc/2_setup_oauth/index.mdx#azure-oauth).
+When using domain credentials via Entra (Azure Active Directory) you need to add the scope `https://database.windows.net//.default` to the [Windmill OAuth instance setting](../../../advanced/27_setup_oauth/index.mdx#azure-oauth).
 :::
 
 ### BigQuery
@@ -249,7 +249,7 @@ You can directly "Test connection" if needed.
 
 ### Snowflake
 
-To be able to connect to [Snowflake](https://www.snowflake.com/), you can choose to either setup [OAuth for Snowflake](../../../misc/2_setup_oauth/index.mdx#oauth) or by defining a Snowflake Resource.
+To be able to connect to [Snowflake](https://www.snowflake.com/), you can choose to either setup [OAuth for Snowflake](../../../advanced/27_setup_oauth/index.mdx#oauth) or by defining a Snowflake Resource.
 
 If a Snowflake OAuth connection is present, you can create a new Resource by heading to [Resources](../../../core_concepts/3_resources_and_types/index.mdx), clicking on "Add Resource" in the top right corner and selecting `snowflake_oauth`. Take a look at [this guide](../../../misc/9_guides/snowflake_app_with_user_roles/index.mdx#sample-app-setup) to learn more about how to build an App with Snowflake OAuth integration.
 

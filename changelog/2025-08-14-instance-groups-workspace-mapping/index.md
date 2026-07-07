@@ -11,5 +11,5 @@ features:
     'Support for multiple instance groups per workspace with different role assignments.',
   ]
 image: ./instance_groups_workspace_mapping.png
-docs: /docs/misc/saml_and_scim#workspace-auto-assignment
+docs: /docs/advanced/saml_and_scim#workspace-auto-assignment
 ---

@@ -63,9 +63,24 @@ This is what it looks like if you're using Caddy:
 
 Redirecting requests prefixed by /api/srch to port 8001 (same port as in the docker-compose.yml)
 
-### Setup using helm charts
+### Setup using Helm charts
 
-This section is a work in progress.
+On Kubernetes, the [Windmill Helm chart](https://github.com/windmill-labs/windmill-helm-charts) deploys the indexer for you. The indexer is enabled by default in the chart but is only deployed on [Enterprise Edition](/pricing) instances, so both of the following must be set in your `values.yaml`:
+
+```yaml
+enterprise:
+  enabled: true
+
+windmill:
+  indexer:
+    enabled: true # default
+```
+
+The chart runs a single indexer replica (only one index writer can exist at a time) and its ingress automatically routes search requests (`/api/srch/*`) to the indexer service, so no manual reverse proxy configuration is needed.
+
+Resource limits, node selectors, tolerations and extra environment variables for the indexer pod can be configured under `windmill.indexer` in the chart's [values.yaml](https://github.com/windmill-labs/windmill-helm-charts/blob/main/charts/windmill/values.yaml).
+
+The indexer pod uses ephemeral storage by default, so the index is rebuilt from scratch on every restart. To avoid full reindexing, set up object storage so the index is backed up to and restored from S3 (see [Index persistence](#index-persistence)).
 
 ## Configure the indexer service
 

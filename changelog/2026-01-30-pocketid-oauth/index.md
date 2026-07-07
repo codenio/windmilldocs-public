@@ -7,5 +7,5 @@ features:
   - PocketID as a new SSO/OAuth provider
   - Automatic OIDC endpoint generation from base URL
   - Custom display name for the login button
-docs: /docs/misc/setup_oauth#pocketid
+docs: /docs/advanced/setup_oauth#pocketid
 ---

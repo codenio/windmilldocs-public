@@ -95,7 +95,7 @@ Team plans work at the workspace-level.
 - As an Enterprise user, you will have access to detailed usage information and invoices through the [Windmill customer portal](#windmill-customer-portal) where you can update plan usage and adjust the number of seats.
 
 - To have a fully Enterprise Edition Windmill, we recommend also setting up:
-	- [SSO/SAML](../2_setup_oauth/index.mdx) for user management and authentication.
+	- [SSO/SAML](../../advanced/27_setup_oauth/index.mdx) for user management and authentication.
 	- [S3 / Azure Blob storage integration](../../core_concepts/38_object_storage_in_windmill/index.mdx#workspace-object-storage) within a Windmill workspace to manage large data files.
 	- [Instance object storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage) to have a dedicated S3 storage for large-scale log management and distributed dependency caching.
 	- [Git sync](../../advanced/11_git_sync/index.mdx) to have workspace synchronize with a Git repository for version control.
@@ -144,13 +144,13 @@ To enable the license key, switch from the `windmill` image to the `windmill-ee`
 
 ## Onboarding for enterprise customers
 
-For new enterprise customers, we recommend following the [Enterprise onboarding guide](../19_enterprise_onboarding/index.mdx) to get started.
+For new enterprise customers, we recommend following the [Enterprise onboarding guide](../2_onboarding/index.mdx) to get started.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Enterprise onboarding"
 		description="Essential setup information and best practices for new enterprise customers."
-		href="/docs/misc/enterprise_onboarding"
+		href="/docs/enterprise/onboarding"
 	/>
 </div>
 
@@ -212,7 +212,7 @@ services:
 
 #### Medium setup (8 CUs)
 
-Calculation: 3 workers × 1 CU each + 1 native worker with 8 native subworkers = 8 CUs
+Calculation: 3 workers × 1 CU each + 4 small workers × 0.5 CU each + 2 report workers × 1 CU each + 1 native worker with 8 native subworkers = 8 CUs
 
 ```yaml
 services:
@@ -460,11 +460,7 @@ The portal also surfaces the License ID, whether the key is renewable, the last 
 
 ### Issues and feature requests
 
-The portal hosts the [feature request and issue dashboard](../12_support_and_sla/index.mdx#feature-request-and-issue-dashboard) for [Enterprise](/pricing) customers. You can configure:
-
-- **Authorized domains** — anyone with an email address from these domains can log in to the issues page (read/write issues only, no access to subscriptions).
-- **Linked GitHub users** — issues created on GitHub by these users are automatically added to the dashboard.
-- **Email notification addresses** — addresses that receive notifications about new issues and updates.
+The portal hosts the feature request and issue dashboard for [Enterprise](/pricing) customers, and is where its settings (authorized domains, linked GitHub users, email notification addresses) are configured. See [Feature request and issue dashboard](../3_support_and_sla/index.mdx#feature-request-and-issue-dashboard) for details and usage.
 
 ### API access
 
@@ -483,9 +479,9 @@ Our [Trust center](https://trust.windmill.dev) and SOC 2 compliance cover the En
 
 ## Usage checks
 
-Windmill employs lightweight telemetry to automatically track and report the usage of memory and seats for your subscription. The telemetry endpoint is `stats.windmill.dev`: [Enterprise Edition](/pricing) instances are required to send telemetry tied to their license key to that endpoint so we can verify usage stays within the subscription terms. Telemetry cannot be fully disabled but can be reduced to a minimal mode (see [Instance settings - Telemetry](../../advanced/18_instance_settings/index.mdx#telemetry)). If you have fully air-gapped requirements, [contact us](../19_enterprise_onboarding/index.mdx#air-gapped-environments) to arrange an alternative.
+Windmill employs lightweight telemetry to automatically track and report the usage of memory and seats for your subscription. The telemetry endpoint is `stats.windmill.dev`: [Enterprise Edition](/pricing) instances are required to send telemetry tied to their license key to that endpoint so we can verify usage stays within the subscription terms. Telemetry cannot be fully disabled but can be reduced to a minimal mode (see [Instance settings - Telemetry](../../advanced/18_instance_settings/index.mdx#telemetry)). If you have fully air-gapped requirements, [contact us](../2_onboarding/index.mdx#air-gapped-environments) to arrange an alternative.
 
-For [air-gapped Enterprise Edition](../19_enterprise_onboarding/index.mdx#air-gapped-environments) instances that cannot reach `stats.windmill.dev`, the same telemetry can be exported as a signed JSON file from [Instance settings - Telemetry](../../advanced/18_instance_settings/index.mdx#telemetry) ("Download usage") and uploaded to the [Customer Portal](#windmill-customer-portal). The signature lets Windmill verify the file has not been tampered with, and the file can be inspected before being shared.
+For [air-gapped Enterprise Edition](../2_onboarding/index.mdx#air-gapped-environments) instances that cannot reach `stats.windmill.dev`, the same telemetry can be exported as a signed JSON file from [Instance settings - Telemetry](../../advanced/18_instance_settings/index.mdx#telemetry) ("Download usage") and uploaded to the [Customer Portal](#windmill-customer-portal). The signature lets Windmill verify the file has not been tampered with, and the file can be inspected before being shared.
 
 When minimal telemetry is enabled, only the following is sent:
 - version of your instance

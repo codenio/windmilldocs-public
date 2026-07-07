@@ -17,7 +17,7 @@ Currently supported services:
 
 ## How it works
 
-Native triggers use [OAuth](../../misc/2_setup_oauth/index.mdx) to authenticate with the external service. Each trigger registers a webhook or watch channel on the external service, which sends notifications to Windmill when events occur. Windmill then executes the configured script or flow with the event data.
+Native triggers use [OAuth](../../advanced/27_setup_oauth/index.mdx) to authenticate with the external service. Each trigger registers a webhook or watch channel on the external service, which sends notifications to Windmill when events occur. Windmill then executes the configured script or flow with the event data.
 
 The general setup follows two steps:
 
@@ -34,7 +34,7 @@ Before creating native triggers, you need to connect the external service in you
 
 1. Go to **Workspace settings** > **Integrations** > **Native triggers**
 2. Click **Connect** on the service you want to use (Nextcloud or Google)
-3. Provide the [OAuth](../../misc/2_setup_oauth/index.mdx) credentials (client ID and client secret)
+3. Provide the [OAuth](../../advanced/27_setup_oauth/index.mdx) credentials (client ID and client secret)
 4. Complete the OAuth authorization flow
 5. Choose a [resource](../3_resources_and_types/index.mdx) path where the connection will be stored in the workspace
 

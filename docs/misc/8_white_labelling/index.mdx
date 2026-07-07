@@ -8,27 +8,21 @@ import DocCard from '@site/src/components/DocCard';
 
 Windmill provides a library to embed the entire Windmill app or specific components - such as the [Flow editor](../../flows/1_flow_editor.mdx) or the [low-code app editor](../../apps/0_app_editor/index.mdx) (legacy) - with a simplified UI into your own application or website. This enables you to provide Windmill's services to your clients while maintaining your brand's identity.
 
-Windmill offers an [SDK compatible with any framework](../15_react_sdk/index.md), simplifying its integration across various platforms. It can be built in collaboration with us using React/Svelte and our full SDK.
+Windmill offers an SDK compatible with any framework, simplifying its integration across various platforms. It can be built in collaboration with us using React/Svelte and our full SDK.
 
-In particular, for React, we have a [webpack](https://github.com/windmill-labs/windmill-whitelabelling-react-webpack) that uses an SDK that will contain all components from Windmill frontend.
-For now, the App Viewer and Flow Builder are already available.
-Check our [Demo](https://windmill-sdk-example.com/) of using the Windmill SDK backed by app.windmill.dev to whitelabel Windmill's Flow Builder and App Viewer in a React app using the default create-react-app template.
+In particular, for React, the [React SDK](#react-sdk) below contains all components from the Windmill frontend. The App Viewer and Flow Builder are already available, and we maintain a [webpack example repository](https://github.com/windmill-labs/windmill-whitelabelling-react-webpack) showing how to embed them.
+Check our [demo](https://windmill-sdk-example.com/) of using the Windmill SDK backed by app.windmill.dev to white label Windmill's Flow Builder and App Viewer in a React app using the default create-react-app template.
 
-Also, [Private Hub](../../core_concepts/32_private_hub/index.mdx) is available for white labeling. It allows you to have your own platform and approval process for scripts, flows, apps and resource types suggested within app.
+Also, [Private Hub](../../core_concepts/32_private_hub/index.mdx) is available for white labeling. It allows you to have your own platform and approval process for scripts, flows, apps and resource types suggested within the app.
 
-Whitelabelling requires a special license and the package @windmill-labs/windmill-react-sdk is not public. Please contact us at sales@windmill.dev,
+White labeling requires a special license and the package @windmill-labs/windmill-react-sdk is not public. Please contact us at sales@windmill.dev,
 on [Discord](https://discord.com/invite/V7PM2YHsPB), or schedule a [meeting](https://www.windmill.dev/book-demo) with the founder to get started.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
-		title="Windmill React App Whitelabelling"
-		description="This project showcases how Windmill can be whitelabelled in a React app using webpack."
+		title="Windmill React app white labeling example"
+		description="This project showcases how Windmill can be white labeled in a React app using webpack."
 		href="https://github.com/windmill-labs/windmill-whitelabelling-react-webpack?tab=readme-ov-file"
-	/>
-	<DocCard
-		title="Windmill React SDK"
-		description="The Windmill React SDK provides a suite of tools and components to integrate Windmill applications into React-based projects."
-		href="/docs/misc/react_sdk"
 	/>
 	<DocCard
 		title="Private Hub"
@@ -42,3 +36,99 @@ on [Discord](https://discord.com/invite/V7PM2YHsPB), or schedule a [meeting](htt
 Example of Windmill's [flow editor](../../flows/1_flow_editor.mdx) being white labeled by [Premote](https://www.premote.nl/):
 
 ![Flow editor Premote](./premote_windmill.png.webp 'Flow editor Premote')
+
+## React SDK
+
+The Windmill React SDK provides a suite of tools and components to integrate Windmill applications (scripts editor, flows editor, app editor and its deployed apps) into React-based projects. If you're looking to build a standalone React app connected to Windmill backend runnables, see [full-code apps](../../full_code_apps/index.mdx) instead.
+
+### Installation
+
+Add the following to your project:
+
+```js
+'windmill-react-sdk': 'file:windmill-react-sdk-X.XXX.X.tgz'
+```
+
+:::tip Downloading the SDK
+
+The SDK is not available on NPM. The SDK will be provided as a `.tgz` file.
+
+:::
+
+### Configuration
+
+As Windmill is built with Svelte, you will need to add the Svelte compiler to your project.
+
+#### Using Vite
+
+Add the following to your `vite.config.js`:
+
+```js
+import react from '@vitejs/plugin-react';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
+
+export default defineConfig({
+	plugins: [svelte(), react()]
+});
+```
+
+An example is provided directly in the `windmill-react-sdk` repository.
+
+#### Using webpack 5 (Next.js)
+
+You need to install `svelte-loader` and add the following to your `next.config.js`:
+
+```js
+const nextConfig = {
+	webpack: (config) => {
+		config.module.rules.push({
+			test: /\.(svelte)$/,
+			use: [
+				{
+					loader: 'svelte-loader',
+					options: {
+						emitCss: true,
+						hotReload: true
+					}
+				}
+			]
+		});
+
+		return config;
+	}
+};
+
+module.exports = nextConfig;
+```
+
+### Usage
+
+#### Authentication
+
+```js
+import { UserService } from 'windmill-client';
+
+UserService.login({
+	requestBody: { email: YOUR_EMAIL, password: YOUR_PASSWORD }
+})
+	.then(() => {
+		// Handle successful login
+	})
+	.catch((error) => {
+		// Handle login errors
+	});
+```
+
+Replace YOUR_EMAIL and YOUR_PASSWORD with the corresponding values.
+
+#### App preview
+
+```jsx
+import { AppPreview } from 'windmill-react-sdk';
+
+function MyApp() {
+	return <AppPreview workspace={YOUR_WORKSPACE} appPath={YOUR_APP_PATH} />;
+}
+```
+
+Replace YOUR_WORKSPACE and YOUR_APP_PATH with the corresponding values.

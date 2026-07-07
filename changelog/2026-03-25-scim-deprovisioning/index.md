@@ -9,7 +9,7 @@ features:
     'Disabled users cannot log in but retain workspace memberships.',
     'Manual enable/disable from instance settings.',
   ]
-docs: /docs/misc/saml_and_scim#user-deprovisioning
+docs: /docs/advanced/saml_and_scim#user-deprovisioning
 ---
 
 When your identity provider sends a SCIM PATCH with `active: false`, Windmill now disables the user at the instance level rather than deleting them. Disabled users cannot authenticate but retain their workspace memberships and item ownership for auditability. Admins can also manually disable or re-enable users from instance settings.

@@ -17,7 +17,7 @@ The default OAuth scopes are:
 - `https://www.googleapis.com/auth/admin.directory.user.security`
 - `https://www.googleapis.com/auth/admin.directory.orgunit`
 
-On [self-hosted instances](../advanced/1_self_host/index.mdx), integrating an OAuth API will require [Setup OAuth and SSO](../misc/2_setup_oauth/index.mdx).
+On [self-hosted instances](../advanced/1_self_host/index.mdx), integrating an OAuth API will require [Setup OAuth and SSO](../advanced/27_setup_oauth/index.mdx).
 
 <ResourceUsage name="Google Workspace" hub="gworkspace" />
 

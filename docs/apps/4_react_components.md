@@ -11,7 +11,7 @@ Windmill already provides over [sixty components](./4_app_configuration_settings
 If you're looking for a way to:
 
 - Build a complete React or Svelte app with Windmill backend runnables, see [Full-code apps](../full_code_apps/index.mdx).
-- Integrate Windmill applications into React-based project, see [Windmill React SDK](../misc/15_react_sdk/index.md).
+- Integrate Windmill applications into React-based project, see [Windmill React SDK](../misc/8_white_labelling/index.mdx#react-sdk).
 
 :::
 

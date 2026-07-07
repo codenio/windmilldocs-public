@@ -12,5 +12,5 @@ features:
     'Release tracking and notifications',
   ]
 image: ./dashboard.png
-docs: /docs/misc/support_and_sla#feature-request-and-issue-dashboard
+docs: /docs/enterprise/support_and_sla#feature-request-and-issue-dashboard
 ---

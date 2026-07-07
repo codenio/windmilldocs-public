@@ -1,0 +1,51 @@
+---
+description: Why does Windmill exist? Separate the code that matters from the boilerplate around it, with an open-source platform for scripts, flows and apps.
+---
+
+# Why Windmill
+
+All code is not made equal and can be split in 2 categories:
+
+- **Code that matters**: high-value code containing your business logic, data
+  transformation, internal API calls, and all the logic of your internal
+  long-running services and workflows. This is the crux of the value-added of
+  your engineering. Usually that code is prototyped and started under the form
+  of scripts and SQL files, until it is turned at great expense into
+  micro-services and hard to maintain custom internal tools.
+- **Boilerplate**: all the rest is boilerplate. Be it UI and frontends that
+  allow you to call the code above, API calls to external services, error
+  handling, retries, logic to make your code scalable, dependency management,
+  CI/CD, managing secrets, schedules, permissions, authentication, etc. That
+  code is boilerplate because it _feels_ like you shouldn't have to reinvent the
+  wheel, over and over again.
+
+Many services label themselves as no-code or low-code: they do address the
+challenge of getting rid of the boilerplate and are accessible to all members of
+a diverse organization, not solely engineers. However, we believe they lack the
+full power and flexibility of code, as they either hide it completely or only
+allow it under restricted forms.
+
+Windmill is different:
+
+- Windmill is an [open-source](https://github.com/windmill-labs/windmill) developer platform and infra to turn scripts (TypeScript, Python, Go, PHP, Bash, C#, Java, SQL and Rust, among [others](../../getting_started/0_scripts_quickstart/index.mdx)) into endpoints, workflows and UIs. In that respect, Windmill is an alternative to Retool, Prefect, Temporal and n8n.
+- It empowers semi-technical users to access and edit that code without being
+  overwhelmed by the usual barriers to entry (git, IDE, local environments,
+  secrets management, etc).
+- It meets the standards of senior/staff software engineers for
+  production-grade infrastructure, while staying flexible and customizable with
+  code.
+
+Concretely, Windmill combines:
+
+- A **fast, scalable runtime** for [scripts](../../script_editor/index.mdx) with a self-managed [job queue](../../core_concepts/20_jobs/index.mdx), [dependency management](../../advanced/6_imports/index.mdx) inferred from the code itself, and [auto-generated UIs](../../core_concepts/6_auto_generated_uis/index.mdx) derived from your script parameters.
+- A **workflow engine** with a low-code builder: build and run complex [flows](../../flows/1_flow_editor.mdx) with [retries](../../flows/14_retries.md), [error handling](../../flows/8_error_handling.mdx), [for loops](../../flows/12_flow_loops.md), [branches](../../flows/13_flow_branches.md), [approval steps](../../flows/11_flow_approval.mdx) and [suspended executions](../../flows/15_sleep.md) that consume no resources while waiting.
+- **App builders**: a [low-code UI builder](../../getting_started/7_apps_quickstart/index.mdx) for internal apps, admin panels and dashboards, and a [full-code app builder](../../full_code_apps/index.mdx) for custom React or Svelte frontends connected to Windmill backend runnables.
+- **[Triggers](../../getting_started/8_triggers/index.mdx)** for every script and flow: [webhooks](../../core_concepts/4_webhooks/index.mdx), [schedules](../../core_concepts/1_scheduling/index.mdx), HTTP routes, queues and more, plus an open API to embed Windmill into your existing infrastructure.
+- An **enterprise-grade platform**: [permissions and RBAC](../../core_concepts/16_roles_and_permissions/index.mdx), [secrets](../../core_concepts/2_variables_and_secrets/index.mdx), [OAuth and SSO](../../advanced/27_setup_oauth/index.mdx), [audit logs](../../core_concepts/14_audit_logs/index.mdx), and a [CLI](../../advanced/3_cli/index.mdx) with [Git sync](../../advanced/11_git_sync/index.mdx) for [local development](../../advanced/4_local_development/index.mdx) and version control.
+
+The central tenet is: make building automation fast and easy, and everybody
+will automate repetitive tasks and save a lot of time. Scripts become widely
+useful tools, with an agreed-upon way to run them, UIs that cost nothing to
+build, and production-grade infrastructure that you don't have to maintain.
+
+Windmill is fully open source and can be [self-hosted](../../advanced/1_self_host/index.mdx) with a simple `docker compose up`, or used through the <a href="https://app.windmill.dev/" rel="nofollow">Cloud App</a>. You can find examples and inspiration on [Windmill Hub](https://hub.windmill.dev) or on our [Blog](/blog), and a detailed view of how Windmill compares to other tools on the [Windmill compared to competitors](../../compared_to/peers.mdx) page.

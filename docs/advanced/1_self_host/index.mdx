@@ -19,11 +19,13 @@ You can also run [Windmill workers on Windows](../../misc/17_windows_workers/ind
 
 <br />
 
+## Architecture
+
 Windmill itself just requires 3 components:
 
 - A Postgres database, which contains the entire state of Windmill, including the job queue.
 - The Windmill container running in server mode (and replicated for high availability). It serves both the frontend and the API. It needs to connect to the database and is what is exposed publicly to serve the frontend. It does not need to communicate to the workers directly.
-- The Windmill container running in worker mode (and replicated to handle more job throughput). It needs to connect to the database and does not communicate to the servers.
+- The Windmill container running in worker mode (and replicated to handle more job throughput). It needs to connect to the database and does not communicate to the servers. See [Workers and worker groups](../../core_concepts/9_worker_groups/index.mdx) for how jobs are assigned to workers.
 
 There are 3 optional components:
 
@@ -31,7 +33,9 @@ There are 3 optional components:
 - Windmill [Multiplayer](../../core_concepts/7_multiplayer/index.md) ([Cloud & Enterprise Selfhosted only](/pricing)) to provide real time collaboration.
 - A reverse proxy (caddy in our [Docker compose](#docker)) to the Windmill server, LSP and multiplayer in order to expose a single port to the outside world.
 
-The docker-compose file [below](#docker) uses all six components, and we recommend handling TLS termination outside of the provided Caddy service..
+The docker-compose file [below](#docker) uses all six components, and we recommend handling TLS termination outside of the provided Caddy service.
+
+![Windmill architecture](./diagram.svg 'Windmill architecture')
 
 ## Cloud provider-specific guides
 
@@ -52,7 +56,7 @@ The rule of thumb is 1 worker per 1vCPU and 1-2 GB of RAM. Cloud providers have 
 
 Windmill is compatible with [AWS Aurora](https://aws.amazon.com/rds/aurora/), [GCP Cloud SQL](https://cloud.google.com/sql), [Azure](https://azure.microsoft.com/en-us) and [Neon](https://neon.tech/) serverless database.
 
-Use the managed load balancer to point to your instance on the port you have chosen to expose in the caddy section of the docker-compose (by default 80). We recommend doing TLS termination and associating your domain on your managed load balancer. Once the domain name is chosen, set BASE_URL accordingly in `.env`. That is it for a minimal setup. Read about [Worker groups](../../core_concepts/9_worker_groups/index.mdx) to configure more finely your workers on more nodes and with different resources. Once done, be sure to setup [SSO login](../../misc/2_setup_oauth/index.mdx) with Azure AD, Google Workspace or GitHub if relevant.
+Use the managed load balancer to point to your instance on the port you have chosen to expose in the caddy section of the docker-compose (by default 80). We recommend doing TLS termination and associating your domain on your managed load balancer. Once the domain name is chosen, set BASE_URL accordingly in `.env`. That is it for a minimal setup. Read about [Worker groups](../../core_concepts/9_worker_groups/index.mdx) to configure more finely your workers on more nodes and with different resources. Once done, be sure to setup [SSO login](../../advanced/27_setup_oauth/index.mdx) with Azure AD, Google Workspace or GitHub if relevant.
 
 :::tip AWS ECS
 
@@ -231,7 +235,7 @@ More details at:
 	<DocCard
 		title="Upgrade to Enterprise Edition"
 		description="Docs on how to upgrade to the Enterprise Edition of a Self-Hosted Windmill instance."
-		href="/docs/misc/plans_details#self-host"
+		href="/docs/enterprise/plans_details#self-host"
 	/>
 </div>
 
@@ -658,7 +662,7 @@ healthcheck:
 
 ## First time login
 
-Once you have setup your environment for deployment and have access to the instance, you will be able to login with the default credentials `admin@windmill.dev` / `changeme` (even if you [setup OAuth](../../misc/2_setup_oauth/index.mdx)).
+Once you have setup your environment for deployment and have access to the instance, you will be able to login with the default credentials `admin@windmill.dev` / `changeme` (even if you [setup OAuth](../../advanced/27_setup_oauth/index.mdx)).
 
 ![First time login](./first_time_login.png "First time login")
 

@@ -82,7 +82,7 @@ We prioritize security vulnerabilities and address them promptly. For scanning y
 
 ### Authentication
 
-Configure [SSO](../2_setup_oauth/index.mdx)/[SAML](../14_saml_and_scim/index.md) for user management and authentication. Windmill supports multiple identity providers including Google, Microsoft, Okta, GitHub, GitLab, and custom SAML providers.
+Configure [SSO](../../advanced/27_setup_oauth/index.mdx)/[SAML](../../advanced/28_saml_and_scim/index.mdx) for user management and authentication. Windmill supports multiple identity providers including Google, Microsoft, Okta, GitHub, GitLab, and custom SAML providers.
 
 SAML includes group synchronization capabilities to automatically manage user permissions based on your identity provider groups.
 
@@ -92,7 +92,7 @@ SAML includes group synchronization capabilities to automatically manage user pe
 	<DocCard
 		title="Setup OAuth and SSO"
 		description="Configure Single Sign-On for Google, Microsoft, Okta, GitHub, GitLab and more."
-		href="/docs/misc/setup_oauth"
+		href="/docs/advanced/setup_oauth"
 	/>
 	<DocCard
 		title="Authentication"
@@ -102,7 +102,7 @@ SAML includes group synchronization capabilities to automatically manage user pe
 	<DocCard
 		title="SAML and SCIM"
 		description="Enterprise SSO with SAML 2.0 and automated user provisioning with SCIM."
-		href="/docs/misc/saml_and_scim"
+		href="/docs/advanced/saml_and_scim"
 	/>
 </div>
 
@@ -199,7 +199,7 @@ With Ducklake, you can:
 
 Configure [worker groups](../../core_concepts/9_worker_groups/index.mdx) to assign specific jobs to workers with different specifications (GPU, high memory, etc.). Set init scripts and periodic scripts for custom worker configurations.
 
-Make sure your worker setup [complies with your subscription limits](../7_plans_details/index.mdx#setup-and-compute-units).
+Make sure your worker setup [complies with your subscription limits](../1_plans_details/index.mdx#setup-and-compute-units).
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
@@ -225,7 +225,7 @@ Make sure your worker setup [complies with your subscription limits](../7_plans_
 	<DocCard
 		title="Set up and Compute Units"
 		description="Understand Windmill's pricing plans and compute unit calculations."
-		href="/docs/misc/plans_details#setup-and-compute-units"
+		href="/docs/enterprise/plans_details#setup-and-compute-units"
 	/>
 </div>
 
@@ -319,7 +319,7 @@ Actual capacity depends on your job complexity, number, and duration. Workers ar
 
 We strongly recommend configuring these features for production deployments:
 
-1. **[SSO/SAML](../2_setup_oauth/index.mdx)** - Centralized user authentication and management
+1. **[SSO/SAML](../../advanced/27_setup_oauth/index.mdx)** - Centralized user authentication and management
 2. **[Workspace object storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#workspace-object-storage)** - S3 or Azure Blob integration for large data files
 3. **[Instance object storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage)** - Distributed dependency caching and large-scale log management
 4. **[Git sync](../../advanced/11_git_sync/index.mdx)** - Version control for scripts, flows, and apps
@@ -340,7 +340,7 @@ All of our [pricing](/pricing) is transparent. It is based on the number of [Com
 
 ### Compute Units
 
-A [Compute Unit](../7_plans_details/index.mdx#setup-and-compute-units) (CU) = 2 worker-GB-month.
+A [Compute Unit](../1_plans_details/index.mdx#setup-and-compute-units) (CU) = 2 worker-GB-month.
 
 - Standard worker (2GB memory) = 1 CU
 - Large workers (>2GB memory) = 2 CU (capped on self-hosted)
@@ -356,7 +356,7 @@ You can adjust your subscription anytime via the [Customer Portal](#customer-por
 	<DocCard
 		title="Plans & pricing"
 		description="Understand Windmill's pricing plans and compute unit calculations."
-		href="/docs/misc/plans_details"
+		href="/docs/enterprise/plans_details"
 	/>
 </div>
 
@@ -366,7 +366,7 @@ A Seat is a user who is active on the platform. A regular user counts as one Sea
 
 ### Telemetry and usage tracking
 
-On self-hosted instances, Windmill does not deal with any customer data. Lightweight telemetry is collected for [license compliance](../../misc/19_enterprise_onboarding/index.mdx#billing). The telemetry endpoint is `stats.windmill.dev`.
+On self-hosted instances, Windmill does not deal with any customer data. Lightweight telemetry is collected for [license compliance](../../enterprise/2_onboarding/index.mdx#billing). The telemetry endpoint is `stats.windmill.dev`.
 
 On Enterprise Edition, telemetry cannot be fully disabled but can be reduced using the "Minimal telemetry" toggle in [Instance settings](../../advanced/18_instance_settings/index.mdx#telemetry). If you have fully air-gapped requirements, [contact us](#air-gapped-environments) to arrange an alternative. When minimal telemetry is enabled, only the following is sent:
 
@@ -421,7 +421,7 @@ For Cloud EE customers, you can view and request changes to your [worker groups 
 
 The configuration panel shows:
 
-- **Compute units usage**: Your [current usage vs. subscription limit](../7_plans_details/index.mdx#setup-and-compute-units) (e.g., "4 / 10 CU")
+- **Compute units usage**: Your [current usage vs. subscription limit](../1_plans_details/index.mdx#setup-and-compute-units) (e.g., "4 / 10 CU")
 - **Worker groups**: Your Kubernetes worker groups configuration in YAML format
 - **Last deployed**: Timestamp of the most recent deployment
 
@@ -452,7 +452,7 @@ Our [license terms](https://www.windmill.dev/terms) are available for self-hoste
 
 ## Support & communication
 
-Enterprise customers get access to dedicated support channels via Slack or Discord. Our team provides 24/7 support with a [3-hour SLA response time](../12_support_and_sla/index.mdx) and direct engineer assistance.
+Enterprise customers get access to dedicated support channels via Slack or Discord. Our team provides 24/7 support with a [3-hour SLA response time](../3_support_and_sla/index.mdx) and direct engineer assistance.
 
 If it hasn't been set up yet, you can request access to the dedicated Slack or Discord channel by contacting us at [contact@windmill.dev](mailto:contact@windmill.dev).
 
@@ -462,7 +462,7 @@ If it hasn't been set up yet, you can request access to the dedicated Slack or D
 	<DocCard
 		title="Support & SLA"
 		description="Learn about technical support, issue prioritization, and service level agreements."
-		href="/docs/misc/support_and_sla"
+		href="/docs/enterprise/support_and_sla"
 	/>
 </div>
 
