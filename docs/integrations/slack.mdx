@@ -139,7 +139,7 @@ export async function main(response_url: string, text: string) {
 		method: 'POST',
 		body: JSON.stringify({ text: `ROGER ${text}` })
 	});
-	const username = await Deno.env.get('WM_USERNAME');
+	const username = process.env['WM_USERNAME'];
 	console.log(`user = ${username}`);
 }
 ```
@@ -210,11 +210,11 @@ When handling Slack triggers, the response method differs depending on the trigg
 **For `@mention` triggers**: Use the Slack Web API with the bot token to post messages to the channel.
 
 <Tabs className="unique-tabs">
-<TabItem value="deno" label="Deno" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+<TabItem value="bun" label="Bun" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
 
 ```typescript
-import { WebClient } from 'https://deno.land/x/slack_web_api@1.0.3/mod.ts';
-import * as wmill from 'https://deno.land/x/windmill@v1.85.0/mod.ts';
+import { WebClient } from '@slack/web-api';
+import * as wmill from 'windmill-client';
 
 type Slack = {
   token: string;
@@ -248,11 +248,11 @@ export async function main(
 
 </TabItem>
 
-<TabItem value="bun" label="Bun" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+<TabItem value="deno" label="Deno" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
 
 ```typescript
-import { WebClient } from '@slack/web-api';
-import * as wmill from 'windmill-client';
+import { WebClient } from 'npm:@slack/web-api';
+import * as wmill from 'npm:windmill-client';
 
 type Slack = {
   token: string;
@@ -423,7 +423,7 @@ export async function main(response_url: string, text: string) {
 		body: JSON.stringify({ text: `ROGER ${text}` })
 	});
 	// This part:
-	const username = await Deno.env.get('WM_USERNAME');
+	const username = process.env['WM_USERNAME'];
 	console.log(`user = ${username}`);
 }
 ```
@@ -578,7 +578,7 @@ Your connection is made! Now you can trigger the Slack API from Windmill.
 For example, try [this script](https://hub.windmill.dev/scripts/slack/1284/send-message-to-channel-slack) to send a message to a channel.
 
 ```typescript
-import { WebClient } from 'https://deno.land/x/slack_web_api@1.0.0/mod.ts';
+import { WebClient } from '@slack/web-api';
 type Slack = {
 	token: string;
 };

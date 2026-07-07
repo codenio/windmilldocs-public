@@ -24,7 +24,7 @@ examples: _Zapier_ or _Make_
 On the opposite side, you could choose to go with solely code-based solutions. They give a solid foundation for building your workflows and clean up your code.
 However, these solutions are less intuitive as they are **complex to set up and operate**. Also, they do not allow sharing scripts easily or building UIs. Last, they all suffer from slow cold-start and poor latency whereas Windmill is always blazing fast.
 
-examples: _[Temporal](/compare/temporal)_, _[Airflow](/compare/airflow)_, _[Prefect](/docs/compared_to/prefect)_, _Dagster_, _[Hatchet](/docs/compared_to/peers#hatchet)_
+examples: _[Temporal](/compare/temporal)_, _[Airflow](/compare/airflow)_, _[Prefect](/docs/compared_to/prefect)_, _[Dagster](/compare/dagster)_, _[Hatchet](/docs/compared_to/peers#hatchet)_
 
 <details>
   <summary>More details</summary>
@@ -54,7 +54,7 @@ By comparison, in Windmill one would just write the canonical python or typescri
 
 <br />
 
-> [1]: Windmill is not just a workflow engine, it is also a function as a service (FaaS) infrastructure where it can run arbitrary scripts in TypeScript/Python/Bash/Go/PHP/Rust/C#. Contrary to Lambda or GCP cloud functions, we do not need the functions to be pre-packaged and deployed in advance AOT. For TypeScript, we rely on the deno runtime that leverages v8 isolates and the immutable caching capabilities of deno. For Python, we have implemented our own dependency resolver that will override the Python virtual path and create a unique virtual environment for that specific script that will respect the lockfile generated at time of saving the script/flow for reproducibility. Given that those are interpreted languages, we pay no performance penalty to interpret that code on demand. So the only limiting factor for task execution is that in the events that dependencies are not cached by the worker, they need to be installed at time of execution. With a limited number of workers, the likelihood of a cache miss is low as soon as one script/workflow is executed more than once. With a large fleet of workers, cache miss increase and hence we have implemented a global caching mechanism that relies on syncing the cache through S3. It is only available in our [Enterprise Edition](/pricing). With it in place, we run tasks and workflows with 0 overhead versus running the same scripts on bare-metal. You can even leverage hardware acceleration without any additional configuration.
+> [1]: Windmill is not just a workflow engine, it is also a function as a service (FaaS) infrastructure where it can run arbitrary scripts in TypeScript/Python/Bash/Go/PHP/Rust/C#. Contrary to Lambda or GCP cloud functions, we do not need the functions to be pre-packaged and deployed in advance AOT. For TypeScript, we rely on the Bun runtime (Deno is also supported), whose fast startup and aggressive dependency caching keep cold starts minimal. For Python, we have implemented our own dependency resolver that will override the Python virtual path and create a unique virtual environment for that specific script that will respect the lockfile generated at time of saving the script/flow for reproducibility. Given that those are interpreted languages, we pay no performance penalty to interpret that code on demand. So the only limiting factor for task execution is that in the events that dependencies are not cached by the worker, they need to be installed at time of execution. With a limited number of workers, the likelihood of a cache miss is low as soon as one script/workflow is executed more than once. With a large fleet of workers, cache miss increase and hence we have implemented a global caching mechanism that relies on syncing the cache through S3. It is only available in our [Enterprise Edition](/pricing). With it in place, we run tasks and workflows with 0 overhead versus running the same scripts on bare-metal. You can even leverage hardware acceleration without any additional configuration.
 
 </details>
 
@@ -149,6 +149,16 @@ For a detailed comparison, see our [Kestra comparison page](/docs/compared_to/ke
 		description="Compare internal-tool builders and how each handles backend logic."
 		href="/compare/retool"
 	/>
+	<DocCard
+		title="Windmill vs Dagster"
+		description="Compare data orchestration and asset-based pipelines with Windmill's approach."
+		href="/compare/dagster"
+	/>
+	<DocCard
+		title="Windmill vs dbt"
+		description="Compare SQL transformation workflows and how Windmill runs dbt-style pipelines."
+		href="/compare/dbt"
+	/>
 </div>
 
 ## What makes Windmill different today
@@ -160,23 +170,15 @@ We believe Windmill is different because:
 
 - **Comprehensive platform**: Unlike competitors that focus on single aspects (workflows, UIs, or integrations), Windmill provides a unified platform for [scripts](../script_editor/index.mdx), [workflows](../flows/1_flow_editor.mdx), [low-code apps](../apps/0_app_editor/index.mdx) and [full-code apps](../full_code_apps/index.mdx)
 - **Multi-language support**: Support for 20+ programming languages (including [TypeScript](../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx), [Python](../getting_started/0_scripts_quickstart/2_python_quickstart/index.mdx), [Go](../getting_started/0_scripts_quickstart/3_go_quickstart/index.mdx), [PHP](../getting_started/0_scripts_quickstart/index.mdx), [Bash](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx), [Rust](../getting_started/0_scripts_quickstart/index.mdx), [C#](../getting_started/0_scripts_quickstart/index.mdx), [SQL](../getting_started/0_scripts_quickstart/5_sql_quickstart/index.mdx)) with native runtime optimization
-- **AI-powered development**: Integrated [AI chat](../core_concepts/22_ai_generation/index.mdx) for both scripts and flows, with [GPT-4o support](../core_concepts/22_ai_generation/index.mdx) for code generation and assistance
+- **AI-powered development**: Integrated [AI chat](../core_concepts/22_ai_generation/index.mdx) for both scripts and flows, with support for all major AI providers (OpenAI, Anthropic, Google, Mistral and more) for code generation and assistance, plus [AI agent steps](../core_concepts/22_ai_generation/index.mdx) in flows
 - **Modern developer experience**: [VS Code extension](../cli_local_dev/1_vscode-extension/index.mdx), [CLI tools](../advanced/3_cli/index.mdx), [Git sync](../advanced/11_git_sync/index.mdx), and [local development](../advanced/4_local_development/index.mdx) capabilities
 - **Performance leadership**: Consistently outperforms competitors in [benchmarks](../misc/3_benchmarks/competitors/index.mdx) while maintaining developer-friendly abstractions
 - **Enterprise-ready**: Advanced features like [DuckLake integration](../core_concepts/11_persistent_storage/ducklake.mdx), [customer portal](../misc/7_plans_details/index.mdx#windmill-customer-portal), [autoscaling](../core_concepts/42_autoscaling/index.mdx), and comprehensive [monitoring](../core_concepts/5_monitor_past_and_future_runs/index.mdx)
 - **Open-source first**: Fully [open-source](https://github.com/windmill-labs/windmill) while providing [enterprise features](/pricing) and support
 
-### Recent improvements (2024-2025)
+Windmill keeps evolving quickly: [AI Flow Chat](../core_concepts/22_ai_generation/index.mdx#windmill-ai-for-flows) for natural language workflow creation, [data pipelines](../core_concepts/27_data_pipelines/index.mdx) with [DuckLake](../core_concepts/11_persistent_storage/ducklake.mdx) and [DuckDB](../integrations/duckdb.md) support, client SDKs in [TypeScript](../advanced/2_clients/ts_client.mdx), [Python](../advanced/2_clients/python_client.md) and [Rust](../advanced/2_clients/rust_client.mdx), and enterprise capabilities like the [customer portal](../misc/7_plans_details/index.mdx#windmill-customer-portal) and [autoscaling](../core_concepts/42_autoscaling/index.mdx).
 
-Windmill has significantly evolved over the past two years:
-
-- **AI Integration**: [AI Flow Chat](../core_concepts/22_ai_generation/index.mdx#windmill-ai-for-flows) for natural language workflow creation, [AI form filling](../core_concepts/22_ai_generation/index.mdx), and enhanced [code generation](../core_concepts/22_ai_generation/index.mdx)
-- **Data capabilities**: [DuckLake integration](../core_concepts/11_persistent_storage/ducklake.mdx) for data lake management, [DuckDB support](../integrations/duckdb.md), and improved [data pipeline orchestration](../core_concepts/27_data_pipelines//index.mdx)
-- **Developer tools**: [Rust client SDK](../advanced/2_clients/rust_client.mdx), enhanced [VS Code integration](../cli_local_dev/1_vscode-extension/index.mdx), and improved [local development](../advanced/4_local_development/index.mdx) experience
-- **Enterprise features**: [Customer portal](../misc/7_plans_details/index.mdx#windmill-customer-portal), advanced [monitoring](../core_concepts/5_monitor_past_and_future_runs/index.mdx), [autoscaling](../core_concepts/42_autoscaling/index.mdx), and comprehensive [security features](../core_concepts/16_roles_and_permissions/index.mdx)
-- **Performance**: Continued performance improvements and new [benchmarking results](../misc/3_benchmarks/competitors/index.mdx) showing leadership in the space
-
-Have a look at our [core concepts](../core_concepts/index.mdx) to see what makes us different.
+Have a look at our [core concepts](../core_concepts/index.mdx) and [changelog](/changelog) to see what makes us different.
 
 We ourselves have our own limitations. We believe we can do better in terms of product education and having a prettier UI. All the rest is ready for scale.
 

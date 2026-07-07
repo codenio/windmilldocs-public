@@ -327,26 +327,26 @@ There are two ways to create an action script:
 
 You can either create a new action script in:
 
-- [Python](../getting_started/0_scripts_quickstart/2_python_quickstart/index.mdx): Windmill provides a Python 3.11 environment.
-- [TypeScript](../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx): Windmill uses Deno as the TypeScript runtime.
+- [TypeScript](../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx): Windmill uses Bun as the default TypeScript runtime (Deno is also available).
+- [Python](../getting_started/0_scripts_quickstart/2_python_quickstart/index.mdx).
 - [Go](../getting_started/0_scripts_quickstart/3_go_quickstart/index.mdx).
-- [Bash](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx).
-- [Nu](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx).
+- [Bash](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx), [PowerShell](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx) and [Nu](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx).
+- [PHP](../getting_started/0_scripts_quickstart/8_php_quickstart/index.mdx), [Rust](../getting_started/0_scripts_quickstart/9_rust_quickstart/index.mdx), [C#](../getting_started/0_scripts_quickstart/11_csharp_quickstart/index.mdx), [Java](../getting_started/0_scripts_quickstart/13_java_quickstart/index.mdx), [Ruby](../getting_started/0_scripts_quickstart/14_ruby_quickstart/index.mdx), [R](../getting_started/0_scripts_quickstart/15_rlang_quickstart/index.mdx) and [Ansible](../getting_started/0_scripts_quickstart/10_ansible_quickstart/index.mdx).
 - Any language [running any docker container](../advanced/7_docker/index.mdx) through Windmill's bash support.
 
 There are special kinds of scripts, [SQL and query languages](../getting_started/0_scripts_quickstart/5_sql_quickstart/index.mdx):
 
-- Postgres
+- PostgreSQL
 - MySQL
 - MS SQL
 - BigQuery
 - Snowflake
+- Oracle
+- DuckDB
 
-- [Rest](../getting_started/0_scripts_quickstart/6_rest_grapqhql_quickstart/index.mdx)
-- [GrapQL](../getting_started/0_scripts_quickstart/6_rest_grapqhql_quickstart/index.mdx)
-- [Powershell](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx)
+as well as [REST](../getting_started/0_scripts_quickstart/6_rest_grapqhql_quickstart/index.mdx) and [GraphQL](../getting_started/0_scripts_quickstart/6_rest_grapqhql_quickstart/index.mdx).
 
-These are essentially TypeScript template to easily write queries to a database.
+These are essentially templates to easily write queries to a database or endpoint.
 
 ### Triggering an action script from the Hub
 

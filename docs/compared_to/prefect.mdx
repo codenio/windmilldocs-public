@@ -16,8 +16,7 @@ We highlight below the main differences between the 2 on the following axis:
 - [Workflows and code](#workflows-and-code)
 - [Triggers](#triggers)
 - [Execution runtime and coldstarts](#execution-runtime-and-coldstarts)
-  - [Benchmark #1](#benchmark-1)
-  - [Benchmark #2](#benchmark-2)
+  - [Example benchmark](#example-benchmark)
 - [Observability and monitoring](#observability-and-monitoring)
 - [Windmill AI](#windmill-ai)
 - [Pricing](#pricing)
@@ -82,7 +81,7 @@ Prefect is heavily code-based. Everything is and can only be defined in Python. 
 
 ![Prefect flow](../assets/compared_to/flow_prefect.png.webp 'Prefect flow')
 
-> [Flow](#benchmark-1) "_Given a GitHub repository, logs the number of stargazers and contributors for that repo_" on Prefect.
+> [Flow](#example-benchmark) "_Given a GitHub repository, logs the number of stargazers and contributors for that repo_" on Prefect.
 
 <br />
 
@@ -98,7 +97,7 @@ The structuring of the flow and the configurations for each step are defined fro
 
 ![Windmill flow](../assets/compared_to/flow_windmill.png.webp 'Windmill flow')
 
-> [Flow](#benchmark-1) "_Given a GitHub repository, logs the number of stargazers and contributors for that repo_" on Windmill.
+> [Flow](#example-benchmark) "_Given a GitHub repository, logs the number of stargazers and contributors for that repo_" on Windmill.
 
 <br />
 
@@ -216,13 +215,13 @@ We have conducted [benchmarks](../misc/3_benchmarks/index.mdx) to measure our pe
 	/>
 </div>
 
-For comparison, you will find below some tests between Prefect and Windmill for cold start, execution, and result of a [flow shared by Prefect](#benchmark-1), and of a [Python script](#benchmark-2).
+For comparison, you will find below a test between Prefect and Windmill for cold start, execution, and result of an [example flow shared by Prefect](#example-benchmark).
 
 Each instance is self-hosted.
 
-### Benchmark #1
+### Example benchmark
 
-Flow "Given a GitHub repository, logs the number of stargazers and contributors for that repo", <a href="https://docs.prefect.io/latest/getting-started/quickstart/#step-3-write-a-flow" rel="nofollow">shared by Prefect</a> on their quickstart (at date 09.20.23):
+Flow "Given a GitHub repository, logs the number of stargazers and contributors for that repo", <a href="https://docs.prefect.io/latest/getting-started/quickstart/#step-3-write-a-flow" rel="nofollow">shared by Prefect</a> on their quickstart (measured in September 2023):
 
 ![Prefect flow example](../assets/compared_to/prefect_flow_example.png.webp 'Prefect flow example')
 
@@ -235,25 +234,9 @@ Flow "Given a GitHub repository, logs the number of stargazers and contributors 
 	src="/videos/windmill_prefect_flow.mp4"
 />
 
-### Benchmark #2
-
-_Slowfunction_ that makes imports and loops from 11^7 down to 0. For each number i in that range:
-
-- Calculates the arctangent (math.atan(i)) of the number.
-- Calculates the tangent (math.tan(i)) of the number.
-- Multiplies the two results together and adds them to the result.
-  And records the end time once the loop finishes and then calculates the elapsed time.
-
-- Prefect: Cold start + Execution + Results = 8.09s
-- Windmill: Cold start + Execution + Results = 12.33s
-
-<video
-	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"
-	controls
-	src="/videos/windmill_prefect_slow.mp4"
-/>
-
 <br />
+
+For up-to-date numbers across engines, refer to the regularly refreshed [benchmarks](../misc/3_benchmarks/competitors/index.mdx).
 
 Trust but verify: to ensure the performance of Windmill's workers and measure their capabilities,
 we provide a benchmarking tool. This tool allows you to benchmark the execution of jobs and flows,

@@ -18,10 +18,12 @@ Here's an overview of how the code assistants work:
 
 2. **Language Servers**: For each supported programming language, Windmill employs dedicated language servers responsible for providing code assistance and language-specific functionality. The following language servers are used by Windmill for each language:
 
-   - Deno: Deno LSP
-   - Python: Ruff, Black, Pyright
+   - TypeScript (Bun & Deno): Deno LSP, in addition to Monaco's built-in TypeScript support
+   - Python: Pyright and Ruff
    - Bash: shellcheck
-   - Go: Go LSP
+   - Go: gopls
+
+   Other languages rely on Monaco's built-in syntax highlighting and completion.
 
 3. **WebSocket Communication**: The language servers communicate with the Windmill backend through websockets, enabling real-time exchange of information between the code editor and the language servers.
 

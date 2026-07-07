@@ -72,9 +72,8 @@ want an integration to be supported by Windmill directly, please submit a new
 You can reference the type of a Supabase resource in a script the following way:
 
 ```ts
-// To get the latest supported resource types,
-// check for the latest version of the Windmill Deno
-// package at https://deno.land/x/windmill/mod.ts
+// The type matches the fields of the supabase resource type,
+// see https://hub.windmill.dev/resource_types
 type Supabase = {
 	url: string;
 	key: string;

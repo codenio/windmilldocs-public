@@ -28,16 +28,15 @@ then select the JSON tab to see its specification.
 We provide an OpenAPI/Swagger definition file for the spec, it is hosted within
 the GitHub repository
 [here.](https://github.com/windmill-labs/windmill/blob/main/openflow.openapi.yaml)
-
-We will use a TypeScript equivalent of the OpenAPI definition for ease of
-readability throughout the rest of this document.
+It is the source of truth; the TypeScript equivalent below is a simplified
+version of it for ease of readability and omits some optional fields.
 
 OpenFlow is portable and its root object is defined as follows:
 
 ```typescript
 type OpenFlow = {
-	// an optional one-liner summary-line
-	summary?: string;
+	// a one-liner summary-line
+	summary: string;
 
 	// optional description
 	description?: string;
@@ -65,15 +64,24 @@ type FlowValue = {
 	// the error handler to call in case of an unrecoverable error
 	failure_module?: FlowModule;
 
+	// a special module that runs before the first step when the flow
+	// is invoked from an external trigger
+	preprocessor_module?: FlowModule;
+
 	// force this flow to be executed entirely on the same worker
 	// and share a mounted folder to pass heavy data
-	same_worker: boolean;
+	same_worker?: boolean;
+
+	// the spec also defines optional flow-level settings not detailed
+	// here: concurrency limits, caching, early stop and early return
+	// expressions, debouncing, flow env variables, chat input, notes
+	// and groups (see the OpenAPI definition)
 };
 ```
 
-A Flow is just a sequence of modules, and an optional failure module that will
-be triggered to handle a failure at any point of the Flow. Think `try/catch` in
-terms of programming languages. See an example of modules represented in a graph
+A Flow is just a sequence of modules, an optional failure module that will
+be triggered to handle a failure at any point of the Flow (think `try/catch` in
+terms of programming languages) and an optional [preprocessor](../core_concepts/43_preprocessors/index.mdx) module. See an example of modules represented in a graph
 below - this visualization is built-in on the Windmill Flow editor.
 
 ![Flow Modules](./modules_graph.png 'Flow Modules')
@@ -84,45 +92,141 @@ An OpenFlow module is defined as follows:
 
 ```typescript
 type FlowModule = {
+  // unique identifier of the step, used to reference its result
+  // via 'results.<id>' in later steps
+  id: string;
 
   // a module can be one of many kinds, see below for more details
-  value: Identity | RawScript | PathScript | ForloopFlow | BranchOne | BranchAll ;
+  value:
+    | RawScript
+    | PathScript
+    | PathFlow
+    | ForloopFlow
+    | WhileloopFlow
+    | BranchOne
+    | BranchAll
+    | Identity
+    | AiAgent;
 
   // an optional summary line
   summary?: string;
 
   // stop the flow at this step if condition is met
-  stop_after_if?: { expr: string; skip_if_stopped: boolean };
+  stop_after_if?: StopAfterIf;
 
-  // sleep for a static or dynamic number of seconds
-  sleep?: StaticTransform | JavascriptTransform
+  // for loops only: stop after all iterations if condition is met
+  stop_after_all_iters_if?: StopAfterIf;
 
-  // suspend the flow until it is resumed by receiving a certain number of events before a timeout
-  suspend?: { required_events?: integer, timeout: integer };
+  // skip this step if condition is met
+  skip_if?: { expr: string };
+
+  // sleep for a static or dynamic number of seconds after this step
+  sleep?: InputTransform;
+
+  // cache the results of this step for a number of seconds
+  cache_ttl?: number;
+
+  // custom timeout for this step, static or dynamic
+  timeout?: InputTransform;
+
+  // return a mocked value without actually executing the step
+  mock?: { enabled?: boolean; return_value?: any };
+
+  // suspend the flow until it is resumed by receiving a certain number
+  // of events before a timeout: this is how approval steps are built
+  suspend?: {
+    required_events?: number;
+    timeout?: number;
+    resume_form?: { schema?: any };
+    user_auth_required?: boolean;
+    user_groups_required?: InputTransform;
+    self_approval_disabled?: boolean;
+    hide_cancel?: boolean;
+    continue_on_disapprove_timeout?: boolean;
+  };
+
+  // continue the flow even if this step fails
+  continue_on_error?: boolean;
 
   // number of times to retry this module before passing it to the error handler
-  retry?: Retry
+  retry?: Retry;
+};
+
+type InputTransform = StaticTransform | JavascriptTransform;
+
+type StaticTransform = {
+  type: 'static';
+  value: any;
+};
+
+type JavascriptTransform = {
+  type: 'javascript';
+  expr: string;
 };
 
 type RawScript = {
-  input_transforms: Record<string, StaticTransform | JavascriptTransform>;
+  type: 'rawscript';
+  input_transforms: Record<string, InputTransform>;
   content: string;
-  language: "deno" | "python3";
+  language:
+    | 'bun'
+    | 'deno'
+    | 'python3'
+    | 'go'
+    | 'bash'
+    | 'powershell'
+    | 'nu'
+    | 'postgresql'
+    | 'mysql'
+    | 'mssql'
+    | 'bigquery'
+    | 'snowflake'
+    | 'oracledb'
+    | 'duckdb'
+    | 'graphql'
+    | 'nativets'
+    | 'php'
+    | 'rust'
+    | 'csharp'
+    | 'java'
+    | 'ruby'
+    | 'rlang'
+    | 'ansible';
   path?: string;
+  lock?: string;
+  tag?: string;
 };
 
 type PathScript = {
-  input_transforms: Record<string, StaticTransform | JavascriptTransform>;
+  type: 'script';
+  input_transforms: Record<string, InputTransform>;
+  path: string;
+  hash?: string;
+};
+
+type PathFlow = {
+  type: 'flow';
+  input_transforms: Record<string, InputTransform>;
   path: string;
 };
 
 type ForloopFlow = {
+  type: 'forloopflow';
   modules: FlowModule[];
   iterator: InputTransform;
+  skip_failures?: boolean;
+  parallel?: boolean;
+  parallelism?: InputTransform;
+};
+
+type WhileloopFlow = {
+  type: 'whileloopflow';
+  modules: FlowModule[];
   skip_failures?: boolean;
 };
 
 type BranchOne = {
+  type: 'branchone';
   default: FlowModule[];
   branches: Array<{
     summary?: string;
@@ -132,60 +236,81 @@ type BranchOne = {
 };
 
 type BranchAll = {
-  default: FlowModule[];
+  type: 'branchall';
+  parallel?: boolean;
   branches: Array<{
     summary?: string;
-    skip_failure: boolean;
+    skip_failure?: boolean;
     modules: FlowModule[];
   }>;
 };
 
-type StaticTransform = {
-  value: any;
+type Identity = {
+  type: 'identity';
 };
 
-type JavascriptTransform = {
+// AI agent step that can call its configured tools (scripts, flows,
+// MCP servers, web search) to accomplish a task, see the OpenAPI
+// definition for the full type
+type AiAgent = {
+  type: 'aiagent';
+  input_transforms: Record<string, InputTransform>;
+  tools: AgentTool[];
+};
+
+type StopAfterIf = {
   expr: string;
+  skip_if_stopped?: boolean;
+  error_message?: string;
 };
 
-type Retry {
+type Retry = {
   constant?: {
-    attempts: integer;
-    seconds: integer;
+    attempts: number;
+    seconds: number;
   };
   exponential?: {
-    attempts: integer;
-    multiplier: integer;
-    seconds: integer;
+    attempts: number;
+    multiplier: number;
+    seconds: number;
+    random_factor?: number;
   };
-}
+  retry_if?: { expr: string };
+};
 ```
 
 ### FlowModule value
 
-The `value` field of the `FlowModule` type can be one of these 6 kinds:
+The `value` field of the `FlowModule` type can be one of these 9 kinds:
 
 - `identity`: the most simple one, it passes its input as output. Useful for
   debugging.
-- `rawscript`: embed a full TypeScript/Python/Go/Bash/SQL Script inside the
+- `rawscript`: embed a full script (in any of the [supported languages](../getting_started/0_scripts_quickstart/index.mdx)) inside the
   Flow. Useful for custom logic and ad-hoc scripts.
 - `script`: a reference to a Script by its path (including a path to the Hub
   using the `hub/` prefix).
-- `forloopflow`: run a for-loop, which iterates over an iterator - a list in
-  general - that is constructed by evaluating the javascript expression in:
+- `flow`: a reference to another Flow by its path, run as a subflow.
+- `forloopflow`: run a [for-loop](../flows/12_flow_loops.md), which iterates over an iterator - a list in
+  general - that is constructed by evaluating the JavaScript expression in:
   `iterator`. The result of this module is the results of the iterations
-  collected as a list.
+  collected as a list. Iterations can run in parallel with a configurable
+  parallelism.
+- `whileloopflow`: run a [while-loop](../flows/22_while_loops.mdx) that repeats its modules until a
+  `stop_after_if` condition inside the loop is met.
 - `branchone`: run exactly one branch out of many, based on a predicate.
   Predicates are evaluated in-order and the first one that matches, gets to run.
   In case none matches, the default branch is run. The result of this module is
   the result of the branch that was run.
-- `branchall`: run many branches with all their modules. Every branch is being
-  evaluated in-order. One can decide to skip failure of a particular branch. The
+- `branchall`: run many branches with all their modules, sequentially or in
+  parallel. One can decide to skip failure of a particular branch. The
   result of this module is the results of the branches collected as a list.
+- `aiagent`: run an [AI agent](../flows/1_flow_editor.mdx) configured with a provider, a prompt and a
+  set of tools (scripts, flows, MCP servers) that it can call to accomplish its
+  task.
 
 ### Input transforms
 
-`RawScript` and `PathScript` modules contain `input_transforms`, which is a
+`RawScript`, `PathScript` and `PathFlow` modules contain `input_transforms`, which is a
 mapping between fields (i.e. input of the module) to either a static JSON value,
 or a raw JavaScript expression.
 
@@ -217,10 +342,10 @@ More details at:
 There's also the `stop_after_if` optional object:
 
 ```typescript
-type stop_after_if = {
+type StopAfterIf = {
 	expr: string;
-	skip_if_stopped: boolean;
-	suspend?: integer;
+	skip_if_stopped?: boolean;
+	error_message?: string;
 };
 ```
 
@@ -232,18 +357,21 @@ If present:
   Useful to stop a Flow
   that is meant to watch for changes if there are no changes.
 
-- `stop_after_if.skip_if_stopped`: used to flag failed runs as skippable.
+- `stop_after_if.skip_if_stopped`: used to flag stopped runs as skippable.
 
   It is
   useful in the context of Flows being triggered very often to watch for changes
   as you might want to ignore the runs that have been skipped.
 
-- `suspend` _(optional)_: a non-negative integer that determines the number of
-  events (resume messages) needed to progress to the next step in the Flow.
+- `stop_after_if.error_message`: if set, stop with an error carrying this
+  message instead of a success.
 
-  This
-  is useful for inserting user inputs during the execution of a Flow, such as
-  approving (resume) or disapproving (cancel) a Flow.
+### Suspend and resume
+
+The module-level `suspend` object determines the number of
+events (resume messages) needed to progress to the next step in the Flow. This
+is useful for inserting user inputs during the execution of a Flow, such as
+approving (resume) or disapproving (cancel) a Flow. See [Approval/Suspend steps](../flows/11_flow_approval.mdx).
 
 Resume messages are sent to
 `https://app.windmill.dev/w/<WORKSPACE>/jobs/resume/<JOB_ID>` as POST or GET
@@ -266,12 +394,15 @@ or the failure modules.
 
 ### Retries
 
-`Retry` sets the retry policy for the Flow. It is optional and is reset on every
+`Retry` sets the retry policy for a module. It is optional and is reset on every
 successful run:
 
 - `constant`: Retry `attempts` times with `seconds` delay after each try.
 - `exponential`: Applies the **exponential backoff** strategy to the retries -
-  meaning the delay will be multiplied after each unsuccessful attempt. If all
+  meaning the delay will be multiplied after each unsuccessful attempt, with an
+  optional `random_factor` jitter percentage. If all
   the retries are exhausted, the failure module - if any - is called.
+- `retry_if`: an optional JavaScript expression over the error to decide
+  whether a failure should be retried at all.
 
 Et voilà, we have completed our tour of OpenFlow.

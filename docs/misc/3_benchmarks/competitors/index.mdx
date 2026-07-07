@@ -62,7 +62,9 @@ For additional insights about benchmark methodology, refer to our [blog post](/b
 
 In this benchmark study, we compared six job orchestration engines: [Airflow](https://airflow.apache.org/), [Prefect](https://www.prefect.io/), [Temporal](https://temporal.io/), [Kestra](https://kestra.io/), [Hatchet](https://github.com/hatchet-dev/hatchet), and [Windmill](/), focusing on performance across several scenarios. The aim was to evaluate not just raw task execution time, but also deeper engine-level behaviors such as scheduling efficiency, task dispatch latency, and worker utilization.
 
-We chose to compute Fibonacci numbers as a simple task that can easily be run with the three orchestrators. Given that Airflow has a first class support for Python, we used Python for all 3 orchestrators. The function in charge of computing the Fibonacci numbers was very naive:
+This study was last run in 2025. The exact engine versions used (e.g. Windmill 1.483.1, Airflow 2.7.3, Prefect 2.14.4, Temporal 2.34.0, Kestra 0.22.3, Hatchet 0.62.0) are listed on each engine's dedicated page; results may differ with newer releases.
+
+We chose to compute Fibonacci numbers as a simple task that can easily be run with all six engines. Given that Airflow has first class support for Python, we used Python for every engine that supports it. The function in charge of computing the Fibonacci numbers was very naive:
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
@@ -152,9 +154,9 @@ The benchmarking framework was designed to expose both high-level throughput and
 
 Key metrics observed:
 
-- Execution time: the time it takes for the orchestrator to execute the task once is has been assigned to an executor
-- Assignment time: the time is takes for a task to be assigned to an executor once it has been created in the queue
-- Transition time: the time it takes for to create the following time once a task is finished
+- Execution time: the time it takes for the orchestrator to execute the task once it has been assigned to an executor
+- Assignment time: the time it takes for a task to be assigned to an executor once it has been created in the queue
+- Transition time: the time it takes to create the following task once a task is finished
 - Worker load distribution: whether tasks were evenly distributed or exhibited contention/idling.
 
 Observational expectations:

@@ -22,22 +22,20 @@ The TypeScript Windmill SDK can be found at https://app.windmill.dev/tsdocs/modu
 
 ## Installation
 
-To use the TypeScript client, you need to have Deno or Bun installed on your system. Follow the installation instructions from the official [Deno documentation](https://deno.land/manual@v1.36.1/getting_started/installation) or [Bun documentation](https://bun.sh/docs/installation).
-
-Once Deno/Bun is installed, you can import the `windmill` module directly from the Deno third-party module registry.
+Within Windmill, the client is available out of the box: import `windmill-client` in a Bun script or `npm:windmill-client` in a Deno script. For local development, install [Bun](https://bun.sh/docs/installation) or [Deno](https://docs.deno.com/runtime/getting_started/installation/) and the client is fetched from the [npm registry](https://www.npmjs.com/package/windmill-client).
 
 <Tabs className="unique-tabs">
-<TabItem value="deno" label="TypeScript (Deno)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
-
-```ts
-import * as wmill from 'npm:windmill-client@1.318.0';
-```
-
-</TabItem>
 <TabItem value="bun" label="TypeScript (Bun)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
 
 ```ts
 import * as wmill from 'windmill-client';
+```
+
+</TabItem>
+<TabItem value="deno" label="TypeScript (Deno)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```ts
+import * as wmill from 'npm:windmill-client';
 ```
 
 </TabItem>
@@ -48,10 +46,10 @@ import * as wmill from 'windmill-client';
 The TypeScript client provides several functions that you can use to interact with the Windmill platform. Here's an example of how to use the client to get a resource from Windmill:
 
 <Tabs className="unique-tabs">
-<TabItem value="deno" label="TypeScript (Deno)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+<TabItem value="bun" label="TypeScript (Bun)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
 
 ```ts
-import * as wmill from 'npm:windmill-client@1.318.0';
+import * as wmill from 'windmill-client';
 
 export async function main() {
 	let x = await wmill.getResource('u/user/name');
@@ -59,10 +57,10 @@ export async function main() {
 ```
 
 </TabItem>
-<TabItem value="bun" label="TypeScript (Bun)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+<TabItem value="deno" label="TypeScript (Deno)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
 
 ```ts
-import * as wmill from 'windmill-client@1.147.3';
+import * as wmill from 'npm:windmill-client';
 
 export async function main() {
 	let x = await wmill.getResource('u/user/name');

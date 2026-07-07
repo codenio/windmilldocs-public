@@ -1,33 +1,32 @@
 ---
-description: How do I connect MongoDB to Windmill? Query and manage MongoDB Atlas databases from scripts and flows.
+description: How do I connect MongoDB to Windmill? Query and manage MongoDB databases from scripts and flows using the official drivers.
 ---
 
 # MongoDB integration
 
 [MongoDB](https://www.mongodb.com/) is a NoSQL document-oriented database.
 
-This guide aims to show you how to create a connection from your Windmill
-instance to an external MongoDB Atlas database, then use it to make queries.
+This guide shows how to create a connection from your Windmill instance to a
+MongoDB database (self-hosted or [MongoDB Atlas][mongodb-atlas]), then use it to
+make queries with the official MongoDB drivers.
 
-:::info
+:::caution Atlas Data API deprecation
 
-[MongoDB Atlas][mongodb-atlas] is the cloud-hosted and managed version of
-MongoDB. This guide **won't cover** the self-hosted version of MongoDB and also
-assumes, that you already have an Atlas database set up.
-
-You can find more information about setting up MongoDB Atlas
-[here][mongodb-atlas-setup].
+Previous versions of this guide relied on the MongoDB Atlas Data API through the
+`mongodb_rest` resource type. MongoDB [shut down the Atlas Data API][mongo-data-api-eol]
+on September 30, 2025, so that resource type no longer works. Use the `mongodb`
+resource type with the official drivers as shown below instead.
 
 :::
 
-![Integration between MongoDB and Windmill](../assets/integrations/0-header.png.webp 'Connect a MongoDB Atlas project with Windmill')
+![Integration between MongoDB and Windmill](../assets/integrations/0-header.png.webp 'Connect a MongoDB database with Windmill')
 
 ## Create resource
 
 Windmill provides integration with many different apps and services with the use
-of [Resources][docs-resources]. Each Resource has a **Resources Type**, which
+of [Resources][docs-resources]. Each Resource has a **Resource type**, which
 controls the shape of it. To be able to connect to a MongoDB instance, we'll
-need to define a Resource with the `mongodb_rest` Resource Type first.
+need to define a Resource with the [mongodb](https://hub.windmill.dev/resource_types/22/mongodb) Resource Type.
 
 :::tip
 
@@ -37,33 +36,8 @@ You can find a list of all the officially supported Resource types on
 :::
 
 Head to the Resources page in the Windmill app, click on
-"Add resource" in the top right corner and select the `mongodb_rest` type.
-
-![Select Resource Type](../assets/integrations/1-resources.png.webp)
-
-:::caution
-
-There is a `mongodb` and a `mongodb_rest` Resource Type.
-
-- [mongodb_rest](https://hub.windmill.dev/resource_types/65/mongodb_rest) uses an API Key and Endpoint
-- [mongodb](https://hub.windmill.dev/resource_types/22/mongodb) uses a custom configuration (asking for db, tls, servers, and credentials)
-
-For the present section, we'll select **`mongodb_rest`** as this will make it easier to connect to MongoDB Atlas.
-
-:::
-
-To enable access to your database, follow the instructions in
-[this article][mongo-api] and paste your **API key** and **endpoint** in
-Windmill. When it's done, click "Save".
-
-![Paste in Resource Values](../assets/integrations/2-mongo-rt.png.webp)
-
-### Using custom configuration
-
-Integration MongoDB through the [mongodb resource type](https://hub.windmill.dev/resource_types/22/mongodb) can be made by providing the following parameters.
-
-<details>
-  <summary>Parameters below:</summary>
+"Add resource" in the top right corner and select the `mongodb` type, then
+provide the following parameters:
 
 | Property           | Type    | Description                | Default     | Required | Where to Find           | Additional Details                                  |
 | ------------------ | ------- | -------------------------- | ----------- | -------- | ----------------------- | --------------------------------------------------- |
@@ -78,107 +52,99 @@ Integration MongoDB through the [mongodb resource type](https://hub.windmill.dev
 | db (nested)        | string  | Authentication database    |             | true     | MongoDB Atlas Dashboard | The database used for authentication                |
 | mechanism (nested) | string  | Authentication mechanism   | SCRAM-SHA-1 | false    | Your own preference     | Default authentication mechanism is `"SCRAM-SHA-1"` |
 
-</details>
+On MongoDB Atlas, you can find the hostnames of your cluster from the Atlas
+dashboard under "Connect" > "Drivers": they are the hosts listed in the
+connection string.
 
 ## Create script
 
-Next, let's create a Script that will use the newly created Resource. Head on to
-the [Home][wm-app-home] page, click **New** and select **Script**. We'll be using
-TypeScript as the language.
+Next, let's create a Script that uses the newly created Resource. Head on to
+the [Home][wm-app-home] page, click **New** and select **Script**. The examples
+below query a collection and return the matching documents, with support for
+querying by `_id` (which is stored as an ObjectId, a special type in MongoDB
+that needs an explicit conversion).
 
-:::info
-
-Windmill uses Deno as the TypeScript runtime.
-
-:::
-
-Name the Script `my_mongodb_script`, give it a summary, "Query the Example
-MongoDB Dataset" for example and click "Next".
-
-![Script creation first step](../assets/integrations/3-script-creation.png.webp)
-
-Paste in the following code into the editor:
+In TypeScript (Bun), using the official [mongodb npm driver](https://www.npmjs.com/package/mongodb):
 
 ```typescript
-import { MongoClient } from 'https://deno.land/x/atlas_sdk@v1.0.3/mod.ts';
+import { MongoClient, ObjectId } from 'mongodb';
 
-type MongodbRest = {
-	endpoint: string;
-	api_key: string;
+type Mongodb = {
+	db: string;
+	tls: boolean;
+	servers: { host: string; port: number }[];
+	credential: { username: string; password: string; db: string; mechanism: string };
 };
 
 export async function main(
-	auth: MongodbRest,
-	data_source: string,
-	database: string,
+	auth: Mongodb,
 	collection: string,
 	filter: Record<string, any>
 ) {
-	const client = new MongoClient({
-		endpoint: auth.endpoint,
-		dataSource: data_source,
-		auth: { apiKey: auth.api_key }
+	const hosts = auth.servers.map((s) => `${s.host}:${s.port ?? 27017}`).join(',');
+	const client = new MongoClient(`mongodb://${hosts}`, {
+		tls: auth.tls,
+		auth: {
+			username: auth.credential.username,
+			password: auth.credential.password
+		},
+		authSource: auth.credential.db
 	});
-	const documents = client.database(database).collection(collection);
-	return await documents.find(filter);
+
+	try {
+		if ('_id' in filter) {
+			filter['_id'] = new ObjectId(filter['_id']);
+		}
+		const documents = client.db(auth.db).collection(collection);
+		return await documents.find(filter).toArray();
+	} finally {
+		await client.close();
+	}
 }
+```
+
+Or in Python, using [PyMongo](https://pypi.org/project/pymongo/):
+
+```python
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+
+mongodb = dict
+
+
+def main(auth: mongodb, collection: str, filter: dict):
+    hosts = ",".join(
+        f"{s['host']}:{s.get('port', 27017)}" for s in auth["servers"]
+    )
+    client = MongoClient(
+        f"mongodb://{hosts}",
+        tls=auth["tls"],
+        username=auth["credential"]["username"],
+        password=auth["credential"]["password"],
+        authSource=auth["credential"]["db"],
+    )
+    try:
+        if "_id" in filter:
+            filter["_id"] = ObjectId(filter["_id"])
+        documents = client[auth["db"]][collection]
+        return [{**doc, "_id": str(doc["_id"])} for doc in documents.find(filter)]
+    finally:
+        client.close()
 ```
 
 In case you are using the [sample dataset][mongo-sample-data] of MongoDB Atlas,
-you'll have a `sample_restaurants` database filled with restarurants. To make a
+you'll have a `sample_restaurants` database filled with restaurants. To make a
 query for a specific restaurant name, the arguments of the Script would look
-like the followings (**casing matters**):
+like the following (**casing matters**):
 
 - **auth** - select the Resource we created in the previous step
-  (`my_mongodb_rest`)
-- **data_source** - `Cluster0`
-- **database** - `sample_restaurants`
+  (`my_mongodb`)
 - **collection** - `restaurants`
-- **filter** - `{ "name": "Nordic Delicacies" }`
+- **filter** - `{ "name": "Nordic Delicacies" }` (or by ID:
+  `{ "_id": "5eb3d668b31de5d588f4293b" }`)
 
 After filling the inputs, try running the Script by clicking "Test" or pressing
-`Ctrl` + `Enter`. You should see exactly one restaurant returned in the bottom
-right corner.
-
-![Run the Script](../assets/integrations/4-script-test.png.webp)
-
-If you tried querying by the `_id` field, you might have noticed that it didn't
-return anything. That's because it is stored as an ObjectID, which is a special
-type in MongoDB. To query by ID, you'll need to convert the filter value to an
-ObjectID first. Replace your code with the following to make it able to query by
-ID:
-
-```typescript
-import { MongoClient, ObjectId } from 'https://deno.land/x/atlas_sdk@v1.0.3/mod.ts';
-
-type MongodbRest = {
-	endpoint: string;
-	api_key: string;
-};
-
-export async function main(
-	auth: MongodbRest,
-	data_source: string,
-	database: string,
-	collection: string,
-	filter: Record<string, any>
-) {
-	const client = new MongoClient({
-		endpoint: auth.endpoint,
-		dataSource: data_source,
-		auth: { apiKey: auth.api_key }
-	});
-	const documents = client.database(database).collection(collection);
-	if ('_id' in filter) {
-		filter['_id'] = new ObjectId(filter['_id']);
-	}
-	return await documents.find(filter);
-}
-```
-
-Now try running the Script again with the same arguments, **except for the
-filter**, which should be `{ "_id": "5eb3d668b31de5d588f4293b" }`. You should
-see the same restaurant named "Nordic Delicacies" returned.
+`Ctrl` + `Enter`. You should see exactly one restaurant returned.
 
 :::tip
 
@@ -202,6 +168,5 @@ standalone.
 [docs-flows]: /docs/getting_started/flows_quickstart
 [docs-apps]: /docs/getting_started/apps_quickstart
 [mongodb-atlas]: https://www.mongodb.com/atlas/database
-[mongodb-atlas-setup]: https://www.mongodb.com/basics/mongodb-atlas-tutorial
-[mongo-api]: https://www.mongodb.com/docs/atlas/api/data-api/
+[mongo-data-api-eol]: https://www.mongodb.com/docs/atlas/app-services/data-api/data-api-deprecation/
 [mongo-sample-data]: https://www.mongodb.com/docs/atlas/sample-data/

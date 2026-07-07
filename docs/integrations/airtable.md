@@ -19,11 +19,11 @@ There are two resources associated with Airtable. Both are required to use Airta
 />
 <br/>
 
-You'll need to land on Airtable's <a href="https://airtable.com/create/tokens" rel="nofollow">Developer hub</a> from where click on "API key" and paste it on Windmill.
+Airtable authenticates with personal access tokens (legacy API keys were removed in February 2024). Create a token on Airtable's <a href="https://airtable.com/create/tokens" rel="nofollow">Builder hub</a>, grant it the scopes you need (e.g. `data.records:read`, `data.records:write`) and access to the bases you want to use, then paste it on Windmill as the `apiKey` field of the resource.
 
-| Property | Type   | Description      | Default           | Required | Where to find                             |
-| -------- | ------ | ---------------- | ----------------- | -------- | ----------------------------------------- |
-| apiKey   | string | Airtable API key | keyXXXXXXXXXXXXXX | true     | Airtable Account > API > Generate API Key |
+| Property | Type   | Description                    | Default           | Required | Where to find                                        |
+| -------- | ------ | ------------------------------ | ----------------- | -------- | ---------------------------------------------------- |
+| apiKey   | string | Airtable personal access token | patXXXXXXXXXXXXXX | true     | airtable.com/create/tokens > Create token            |
 
 ## Airtable table
 

@@ -110,7 +110,7 @@ Login: `https://<YOUR_INSTANCE>/user/login`
 Redirect URI: `https://<YOUR_INSTANCE>/user/login_callback/gitlab`
 Login: `https://<YOUR_INSTANCE>/user/login`
 
-GitLab's Single Sign-On integration is supported by Windmill. Detailed steps for setting up GitLab as an OAuth SSO provider will be provided in the upcoming documentation but the entry for the oauth.json is as following:
+Create an OAuth application in GitLab (User settings or Group settings > Applications) with the redirect URI above and the `read_user` and `openid` scopes.
 
 [Instance settings](../../advanced/18_instance_settings/index.mdx#authoauth) 'SSO OAuth' - - 'SSO' - Toggle "gitlab" and set client id, org and client secret.
 
@@ -429,13 +429,13 @@ Deploying and approving an app to your organization can take a while. In the wor
 
 ### Bitbucket
 
-- Go to [Bitbucket's App Creation page](https://bitbucket.org/account/settings/app-passwords/).
-- Click "Create App Password".
+- In Bitbucket Cloud, go to your workspace: **Settings** > **Apps and features** > **OAuth consumers** (`https://bitbucket.org/<your_workspace>/workspace/settings/api`).
+- Click "Add consumer".
 - Enter the following:
-  - Label: Windmill
-  - Redirect URI: `https://<YOUR_INSTANCE>/oauth/callback/bitbucket`
-  - Select appropriate scopes.
-- Copy the **Client ID** and **Client Secret** from the application details.
+  - Name: Windmill
+  - Callback URL: `https://<YOUR_INSTANCE>/oauth/callback/bitbucket`
+  - Select appropriate permissions.
+- Copy the **Key** (client id) and **Secret** (client secret) from the consumer details.
 - [Instance settings](../../advanced/18_instance_settings/index.mdx) -> Resources -> Add OAuth "bitbucket" and set the client id and client secret.
 
 ### Google Sheets

@@ -1,18 +1,18 @@
 ---
 canonical_url: /docs/core_concepts/ai_generation
-description: How do I generate Windmill flows from prompts using AI?
+description: How do I build and edit Windmill flows from natural language prompts with AI Flow Chat?
 ---
 
 import DocCard from '@site/src/components/DocCard';
 
-# AI-generated flows
+# AI Flow Chat
 
-Generate flows from prompts.
+The [flow editor](./1_flow_editor.mdx) includes AI Flow Chat, an integrated AI chat panel that lets you create and modify flows using natural language. Describe what you want to achieve and the AI builds the flow step by step: it adds scripts, [loops](./12_flow_loops.md) and [branches](./13_flow_branches.md), searches your workspace and [Windmill Hub](https://hub.windmill.dev/) for relevant scripts or generates new ones, and connects steps by filling in inputs based on context.
 
 <iframe
 	style={{ aspectRatio: '16/9' }}
-	src="https://www.youtube.com/embed/4HTIKOAyVIg"
-	title="YouTube video player"
+	src="https://www.youtube.com/embed/L7JPHDtbSNM"
+	title="AI Flow Chat"
 	frameBorder="0"
 	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
 	allowFullScreen
@@ -21,12 +21,19 @@ Generate flows from prompts.
 
 <br />
 
+AI Flow Chat is about building flows in the editor. To turn a deployed flow itself into a chat interface for end-users, see [Flow as chat](./26_flow_as_chat.mdx) instead.
+
 All details at [Windmill AI](../core_concepts/22_ai_generation/index.mdx):
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Windmill AI"
-		description="Have AI complete code on Windmill."
+		description="Have AI complete code and build flows on Windmill."
 		href="/docs/core_concepts/ai_generation"
+	/>
+	<DocCard
+		title="Flow as chat"
+		description="Turn a flow into a chat assistant that end-users interact with."
+		href="/docs/flows/flow_as_chat"
 	/>
 </div>

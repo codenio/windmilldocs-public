@@ -11,11 +11,19 @@ import TabItem from '@theme/TabItem';
 In Windmill, Scripts are the basis of all major features (they are the steps of [flows](../getting_started/6_flows_quickstart/index.mdx), [linked to apps components](../apps/3_app-runnable-panel.mdx), used as [backend runnables](../full_code_apps/2_backend_runnables/index.mdx) in full-code apps, or can be [run as standalone](../getting_started/8_triggers/index.mdx)).
 
 A Script can be written in:
-[TypeScript (Deno & Bun)](../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx),
+[TypeScript (Bun & Deno)](../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx),
 [Python](../getting_started/0_scripts_quickstart/2_python_quickstart/index.mdx),
 [Go](../getting_started/0_scripts_quickstart/3_go_quickstart/index.mdx),
-[Bash](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx) or
-[SQL](../getting_started/0_scripts_quickstart/5_sql_quickstart/index.mdx). Its
+[Bash](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx), [PowerShell](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx), [Nu](../getting_started/0_scripts_quickstart/4_bash_quickstart/index.mdx),
+[SQL](../getting_started/0_scripts_quickstart/5_sql_quickstart/index.mdx) (PostgreSQL, MySQL, MS SQL, BigQuery, Snowflake, Oracle, DuckDB),
+[REST & GraphQL](../getting_started/0_scripts_quickstart/6_rest_grapqhql_quickstart/index.mdx),
+[PHP](../getting_started/0_scripts_quickstart/8_php_quickstart/index.mdx),
+[Rust](../getting_started/0_scripts_quickstart/9_rust_quickstart/index.mdx),
+[C#](../getting_started/0_scripts_quickstart/11_csharp_quickstart/index.mdx),
+[Java](../getting_started/0_scripts_quickstart/13_java_quickstart/index.mdx),
+[Ruby](../getting_started/0_scripts_quickstart/14_ruby_quickstart/index.mdx),
+[Ansible](../getting_started/0_scripts_quickstart/10_ansible_quickstart/index.mdx) or
+[R](../getting_started/0_scripts_quickstart/15_rlang_quickstart/index.mdx). Any other language can run through [Docker](../getting_started/0_scripts_quickstart/7_docker_quickstart/index.mdx). Its
 two most important components are the input [JSON Schema](../core_concepts/13_json_schema_and_parsing/index.mdx)
 specification and the [code content](../code_editor/index.mdx).
 
@@ -31,8 +39,8 @@ specification and the [code content](../code_editor/index.mdx).
 
 <br/>
 
-Python and Go Scripts also have an
-auto-generated [lockfile](../advanced/6_imports/index.mdx) that ensure that executions of the same Script always
+Scripts in languages with dependencies (TypeScript, Python, Go, PHP, Rust, C#, Java, Ruby and more) also have an
+auto-generated [lockfile](../advanced/6_imports/index.mdx) that ensures that executions of the same Script always
 use the exact same set of versioned dependencies. To fit Windmill's execution model, the code must always have a
 main function, which is its entrypoint when executed as an individual serverless
 endpoint or a [Flow](../flows/1_flow_editor.mdx) module and typed parameters used to infer the script's inputs and [auto-generated UI](../core_concepts/6_auto_generated_uis/index.mdx):
