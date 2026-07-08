@@ -25,6 +25,8 @@ The assistant is now available on every screen: in the [script editor](/docs/scr
 
 > All of the modes are evidenced in the video above.
 
+{/* truncate */}
+
 ## A mode for every task
 
 To make the assistant more effective, we've introduced three specialized modes: [Navigation](#navigation-mode), [Script](#script-mode), and [Flow](#flow-mode). These modes help ensure more relevant responses and better user experiences, tailored to the task at hand.

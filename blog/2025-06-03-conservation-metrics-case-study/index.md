@@ -21,6 +21,8 @@ This testimonial is based on conversations with [Rudo Kemper](https://www.linked
 
 ![Windmill Conservation Metrics](./blog_split_conservationmetrics.png)
 
+{/* truncate */}
+
 ## What before Windmill?
 
 [Conservation Metrics](https://conservationmetrics.com/) works with indigenous communities worldwide to provide tools and systems for environmental monitoring and protection. As part of our [Guardian Connector](https://guardianconnector.net) toolkit, our team needed a workflow orchestrator that could handle data processing from various sources, particularly for centralizing data from many different field data collection applications used by communities, and monitoring illegal activities in protected territories.
