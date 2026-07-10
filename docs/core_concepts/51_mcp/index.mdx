@@ -98,6 +98,20 @@ Once created, your MCP URL will look like this:
 
 > This token is used to authenticate MCP clients and generate your personal MCP endpoint URL. Save this URL securely. Treat it like an API key—anyone with access can trigger actions in your workspace.
 
+### Multi-workspace tokens
+
+When creating a token, select **All workspaces** in the workspace dropdown to generate a single token that works across every workspace you can access, instead of one token per workspace. This avoids registering a separate MCP server entry in your client for each workspace.
+
+A multi-workspace token has no bound workspace and uses the gateway URL directly:
+
+```
+<base_url>/api/mcp/gateway?token=<your-token>
+```
+
+With a multi-workspace token, the MCP server exposes an extra `list_workspaces` tool that returns the workspaces the token can access. Workspace-scoped tools (like `listScripts` or `runScriptByPath`) then require an explicit `workspace_id` argument, which the LLM picks from the `list_workspaces` result. Per-workspace scripts and flows are not enumerated across all workspaces, so run them by path with `runScriptByPath`/`runFlowByPath` and the target `workspace_id`.
+
+Access is always gated by workspace membership: the token only reaches workspaces you are a member of, and requests to any other workspace are denied.
+
 ---
 
 ### Connect your LLM to Windmill
