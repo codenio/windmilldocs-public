@@ -119,6 +119,14 @@ You will find a helper to convert days, hours, minutes, and seconds to seconds.
 
 This setting is only available on [Enterprise Edition](/pricing).
 
+### Per-workspace retention overrides
+
+Override the retention period for specific workspaces, independently of the instance-wide [retention period](#retention-period-in-secs). A workspace override can be longer or shorter than the global value, and `0` means keep jobs forever for that workspace. Workspaces without an override follow the instance-wide setting.
+
+The overrides are stored as a JSON map of `workspace_id` to seconds in the `retention_period_secs_overrides` global setting, next to `retention_period_secs`. Configure them in the instance settings UI under the "Jobs" tab, right below the retention period field, by adding one row per workspace. Up to 10 workspaces can be overridden.
+
+This is a superadmin-controlled instance setting (not a workspace admin setting) since retention is an operator and cost concern. It is only available on [Enterprise Edition](/pricing).
+
 ### Audit log retention (days)
 
 How long to keep audit log entries in the database. Default: 365 days (EE), 14 days (CE). Audit logs are internally partitioned by day for performance - expired partitions are dropped automatically rather than deleted row by row.
