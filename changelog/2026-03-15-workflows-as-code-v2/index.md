@@ -19,27 +19,3 @@ features:
   ]
 docs: /docs/core_concepts/workflows_as_code
 ---
-
-Workflows as code v2 is a complete rewrite of the WAC engine. Workflows now use a checkpoint/replay model where the parent job fully suspends between tasks, releasing its worker slot entirely. This eliminates the deadlock issues of v1 and means a single worker pool can handle unlimited workflow parallelism.
-
-## What changed from v1
-
-In v1, workflows ran as a single long-lived process that dispatched HTTP calls to the Windmill API. The parent process stayed alive for the entire duration, holding a worker slot.
-
-In v2, the parent workflow runs only during the brief moments between checkpoints. When it hits a `task()`, the parent saves its state, exits, and creates child jobs. The worker slot is freed. When all children complete, the parent is automatically re-queued, replays completed steps from the checkpoint, and continues.
-
-This means `sleep(86400)` (24 hours) uses zero worker time. `waitForApproval()` with a week-long timeout uses zero worker time. 100 parallel tasks need only worker slots for the tasks themselves, not for the orchestrator.
-
-## Script modules
-
-Scripts can now have companion module files stored in `__mod/` folders. This lets you split task logic into separate files while keeping them part of the same script. Each module has its own lockfile, and the CLI only regenerates locks for modules that changed.
-
-```
-f/my_folder/
-├── my_workflow.ts
-└── my_workflow__mod/
-    ├── extract.ts
-    └── transform.ts
-```
-
-Modules are referenced via `taskScript('./extract.ts')` in the workflow code and run as separate child jobs with their own dependencies.
