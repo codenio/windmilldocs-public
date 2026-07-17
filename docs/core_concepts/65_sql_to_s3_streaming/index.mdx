@@ -47,7 +47,21 @@ The decoder picks a path from the object key's extension:
 
 ### Size limits
 
-The whole payload is bound as a single SQL parameter, so it sits in the worker's memory once and on the database driver's buffer once. The path is tested up to roughly 500 MB; beyond that you should keep the data in S3 and read it through the database engine's own loader (`COPY FROM`, `BULK INSERT`, BigQuery load job, Snowflake `PUT`/`COPY`, DuckDB `read_parquet('s3://...')`).
+Despite the name of this page, an `(s3object)` argument is **not** streamed: the file is downloaded and decoded in full, then bound as a *single* SQL parameter. It sits in the worker's memory once and in the database driver's buffer once, so plan for worker memory several times the payload size.
+
+What matters is the size of the **decoded JSON**, not the size of the file in S3. Parquet is compressed and columnar, so it inflates substantially on decode: a 15 MB Parquet file of 3 million short rows decodes to roughly 156 MB of JSON.
+
+Two separate ceilings apply.
+
+**The download has 20 seconds to complete.** The worker fetches the object over an HTTP client with a 20 second total request timeout, so an input that cannot transfer in that window fails with a timeout error regardless of its size on disk. How many MB that allows depends entirely on your network.
+
+**Each dialect caps how large a single parameter may be**, and that ceiling is the database's, not Windmill's:
+
+- **PostgreSQL** rejects a `jsonb` value whose array elements exceed 256 MB in total, with `total size of jsonb array elements exceeds the maximum of 268435455 bytes`. Past roughly 1 GB the connection is dropped outright (`connection closed`). In practice this means Parquet inputs of more than a few tens of MB will not go through `jsonb_to_recordset`.
+- **MySQL** is bounded by `max_allowed_packet`, which is far smaller than these limits on a default server.
+- **BigQuery** and **Snowflake** bound the size of a query request and its bind variables.
+
+These are hard limits: no amount of worker memory or timeout will get a large file through this path. For anything beyond a modest payload, keep the data in S3 and read it with the database engine's own loader (`COPY FROM`, `BULK INSERT`, BigQuery load job, Snowflake `PUT`/`COPY`), or use [DuckDB](#duckdb), which reads Parquet from S3 natively and is the recommended option for large-file transformation pipelines.
 
 ### DuckDB
 
