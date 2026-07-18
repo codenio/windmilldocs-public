@@ -178,13 +178,24 @@ To make custom tags available from the UI, go to the dedicated "Workers" tab on 
 
 #### Restrict tags to specific workspaces
 
-It is possible to restrict some tags to specific workspace using the following syntax:
+It is possible to restrict some tags to specific workspaces using the following syntax:
 
 ```
 gpu(workspace+workspace2)
 ```
 
-Only 'workspace' and 'workspace2' will be able to use the `gpu` tags.
+Only `workspace` and `workspace2` will be able to use the `gpu` tag. The exclusion form does the opposite: `gpu(^workspace)` lets every workspace except `workspace` use the tag.
+
+By default a scope entry matches only the workspace it names, so a [workspace fork](../../advanced/20_workspace_forks/index.mdx) does not inherit its parent's scoped tag. Append `*` to a workspace id to extend that entry to the workspace's forks, transitively:
+
+```
+linux-common-dev(linux*)          linux and all its forks
+linux-common-dev(linux*+shared)   linux and its forks, plus exactly `shared`
+sensitive(^prod*)                 everyone except prod and its forks
+sensitive(^prod)                  everyone except prod itself (forks still allowed)
+```
+
+The marker is opt-in per entry, so existing tag strings keep their exact meaning: a fork inherits a scoped tag only where you explicitly opt in with `*`. This is useful when the tag names a shared dev worker group; leave it off when a worker group is restricted precisely because a fork's code has not been reviewed yet. Assignable tags are configured in the instance settings, which requires superadmin privileges.
 
 Jobs within a same job queue can be given a [priority](../20_jobs/index.mdx#high-priority-jobs) between 1 and 100. Jobs with a higher priority value will be given precedence over jobs with a lower priority value in the job queue.
 
