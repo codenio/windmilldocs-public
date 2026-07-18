@@ -104,6 +104,22 @@ Forks can be created by any user of the workspace. Roles and access will be the 
 
 On [Windmill Cloud](https://app.windmill.dev/), creating a fork additionally requires the workspace to be on a paid plan and to have fork capacity left under the [per-seat cap](#forks-on-windmill-cloud).
 
+#### Managing members of a fork you created
+
+The creator of a fork can manage developers on it without being an admin of it. From the fork's workspace settings, under `Members`, they can:
+
+- add a developer or admin of the parent workspace to the fork, as a developer;
+- remove any non-admin member of the fork.
+
+Because a fork is a full copy of its parent - variables and secrets included - this right is deliberately narrow. As a fork creator, you cannot:
+
+- add anyone who is not already a developer or admin of the parent workspace (the picker only lists eligible parent members, so operators of the parent do not appear);
+- grant the admin or operator role, or change the role of an existing member;
+- invite someone by email;
+- remove an admin of the fork.
+
+Anything outside these bounds - and every other workspace setting - still requires a workspace admin. If the fork's creator is an admin, the usual full [workspace settings](../../core_concepts/16_roles_and_permissions/index.mdx) apply instead.
+
 ## Git sync integration
 
 When workspace forks are used with [git sync](../11_git_sync/index.mdx), Windmill will automatically create a git branch on the same repository as
