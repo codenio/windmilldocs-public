@@ -248,6 +248,27 @@ NSJAIL behavior is controlled by configuration files for each language. You can 
 
 These configurations control resource limits, mount points, network isolation, and other security settings. The configs are embedded into the Windmill binary at compile time.
 
+### NSJAIL address space limit
+
+NSJAIL caps the virtual address space of a jailed job at `rlimit_as` MiB. For Python and Ansible jobs this defaults to 4096 MiB (4 GiB). This is a cap on virtual address _reservation_, not physical memory: JIT runtimes such as Bun (JavaScriptCore) and the JVM reserve large virtual ranges up front, so a subprocess spawned from a jailed Python or Ansible job can crash against this cap even when its actual memory use is modest.
+
+Two per-worker-group environment variables let you raise or lift the cap:
+
+- `NSJAIL_PY_RLIMIT_AS_MB` - Python jobs
+- `NSJAIL_ANSIBLE_RLIMIT_AS_MB` - Ansible jobs
+
+Each accepts a numeric value in MiB, or `unlimited`, `none`, `inf` or `0` to uncap the address space entirely. Both are read once at worker startup.
+
+```bash
+# Raise the Python address space cap to 16 GiB
+NSJAIL_PY_RLIMIT_AS_MB=16384
+
+# Or uncap it entirely
+NSJAIL_PY_RLIMIT_AS_MB=unlimited
+```
+
+Since these are set per [worker group](../../core_concepts/9_worker_groups/index.mdx), you can lift the cap only on a dedicated pool that runs these workloads. Only the address space limit is affected: the other resource limits (CPU, file size, open files) and the mount, PID and user namespace isolation that provide the actual security boundary are unchanged.
+
 **Without NSJAIL (default):**
 
 - Jobs have full filesystem access under the worker's user permissions
