@@ -149,6 +149,22 @@ The REST button simply prefills a Bun script with a `//native` header.
 Fetches can also be done through a regular TypeScript in Windmill (without the `//native` header), but opting for dedicated Rest scripts
 benefits from a highly efficient runtime.
 
+#### Available web-platform globals
+
+Native scripts run in an efficient in-process runtime that only allows `fetch` and the JavaScript standard library. On top of the standard lib, that runtime exposes the standard web-platform globals, matching the [Bun](../1_typescript_quickstart/index.mdx) runner's surface, so code relying on them behaves the same whether it runs as a native or Bun script:
+
+- Text encoding: `TextEncoder`, `TextDecoder`, `TextEncoderStream`, `TextDecoderStream`
+- Streams: `ReadableStream`, `WritableStream`, `TransformStream` (with their reader/controller types and the `ByteLengthQueuingStrategy` / `CountQueuingStrategy` queuing strategies)
+- Events: `Event`, `EventTarget`, `CustomEvent`, `MessageEvent`, `CloseEvent`, `ErrorEvent`, `reportError`
+- Messaging: `MessageChannel`, `MessagePort`
+- Compression: `CompressionStream`, `DecompressionStream`
+- Files and cloning: `File`, `structuredClone`
+- URL matching: `URLPattern`
+- Timing: `performance` (including `performance.now()` and `performance.timeOrigin`)
+- `DOMException`
+
+So expressions like `res.body instanceof ReadableStream` or `new TextEncoder().encode(...)` now work in native scripts just as they do in Bun.
+
 Replace the `<jsonplaceholder>` URL with the API endpoint of your choice and customize the headers object according to your fetch requirements.
 
 REST scripts benefit from the [auto-generated UI](../../../core_concepts/6_auto_generated_uis/index.mdx) capabilities of any Windmill script.
