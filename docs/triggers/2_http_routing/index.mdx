@@ -323,6 +323,8 @@ HTTP routes can also serve:
 
 Windmill will host them under your custom path, using `index.html` as a fallback if necessary.
 
+To return binary content (a PDF, image, or archive) directly from a script or flow instead of from S3, base64-encode the bytes and set `wm_content_transfer_encoding` to `"base64"` on the response. See [Binary responses](../../core_concepts/4_webhooks/index.mdx#binary-responses).
+
 ---
 
 ## Best practices
