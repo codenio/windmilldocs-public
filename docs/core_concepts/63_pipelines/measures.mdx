@@ -1,0 +1,106 @@
+---
+description: How do I declare metrics on a DuckLake table in Windmill? Use -- measure and -- dimension to catalog canonical aggregations read by the editor and agents.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Measures and dimensions (DuckDB)
+
+On the DuckDB script that [materializes](./materialization.mdx) a [DuckLake](../11_persistent_storage/ducklake.mdx) table, you can declare what that table's canonical aggregations and slicers are, next to the `-- materialize` line:
+
+```sql
+-- pipeline
+-- materialize ducklake://sales/orders
+-- measure revenue = sum(amount) where not is_refund
+-- measure order_count = count(*)
+-- dimension region = region
+-- dimension month = date_trunc('month', ordered_at)
+SELECT ...
+```
+
+A measure is an aggregation; a dimension is a slicer any measure can be grouped by. They are declared once, on the producing table, so that "revenue means `sum(amount)` excluding refunds" lives with the table rather than being re-derived - and re-guessed - in every query that needs it.
+
+These declarations are catalogued at deploy and read back by two consumers: the script editor's Metrics drawer, and AI agents via [MCP](../51_mcp/index.mdx). That is the whole feature - it records definitions and hands them to whoever is writing the query. It does not rewrite, compile or execute anything.
+
+:::caution Alpha
+Measures and dimensions are part of the [pipelines](./index.mdx) alpha. The syntax and behavior may change in future releases. They apply only to materialized DuckLake tables produced by a DuckDB script.
+:::
+
+## Syntax
+
+Both annotations live in the leading comment header, alongside the other [pipeline annotations](./index.mdx#annotation-reference):
+
+| Annotation | Meaning |
+| --- | --- |
+| `-- measure <name> = <aggregate> [where <predicate>]` | A table-scoped aggregation (`sum(amount)`, `count(*)`) |
+| `-- dimension <name> = <expression>` | A table-scoped slicing expression (`region`, `date_trunc('month', ordered_at)`) |
+
+- `<name>` is a single identifier. The first `=` separates it from the body (SQL comparison operators live in the body, so splitting on the first `=` is unambiguous).
+- On a measure, a whitespace-bounded ` where ` splits the aggregate from an optional row predicate. The predicate is kept separate from the aggregate rather than folded into it, because a reader renders it as `<aggregate> FILTER (WHERE <predicate>)`. That is what lets two measures with different predicates sit under one `GROUP BY`; a shared `WHERE` cannot express that.
+- `<aggregate>`, `<predicate>` and the dimension `<expression>` are your own SQL over the table's columns, stored verbatim.
+- Both are accumulating and deduped by name (the first declaration of a name wins). A malformed line is dropped fail-safe, like the rest of the annotation family.
+
+Declarations attach to the table the script materializes, so a script with no ducklake `-- materialize` target contributes nothing - there is no table to hang them on.
+
+## The Metrics drawer
+
+Every DuckDB script's editor bar has a Metrics button (and an entry in the compact Helpers menu below the width threshold). Opening it browses the workspace's declared catalog and preselects a table the open script appears to reference.
+
+Tables that declare metrics are listed with their measure and dimension counts, so you can switch between them. Selecting measures and dimensions composes a plain `SELECT` client-side: dimensions become the `GROUP BY`/`ORDER BY`, each measure renders as its aggregate (with a `FILTER (WHERE …)` when it carries a predicate). A name filter appears once a table declares more than a handful of metrics, and a table filter once there are many tables, so large catalogs stay browsable.
+
+The composed query is always complete and runnable - it attaches the lake itself under the conventional `dl` alias. Three things to do with it:
+
+- Copy it.
+- Run it in an embedded SQL REPL against the lake, to check a metric against real data before it goes anywhere.
+- Append it to the script. Insertion adapts: if the script already attaches that lake, the snippet reuses that alias and omits the `ATTACH` (repeating one would fail). The snippet is appended rather than inserted at the cursor, since it is a whole statement block that must follow any `ATTACH`.
+
+The output is ordinary editable SQL with no link back to the catalog - change it freely after inserting.
+
+{/* TODO: screenshot of the Metrics drawer — a table selected in the left list (with measure/dimension counts), a measure and a dimension checked, and the composed SELECT with a Copy button below. */}
+
+## Agents
+
+The catalog is also exposed as an [MCP](../51_mcp/index.mdx) tool, so an AI agent can ask what a table or a folder declares and use the declared aggregate and filter instead of inventing its own. This is the main point of declaring metrics: an informed writer - human or agent - uses the canonical definition rather than guessing at it.
+
+## What this deliberately does not do
+
+Measures and dimensions inform; they do not constrain. Three boundaries are intentional:
+
+- It does not enforce anything. Nothing stops a person or an agent from ignoring a declared measure and writing `sum(amount)` without the refund filter. The bet is that most wrong numbers come from not knowing the rule, not from defying it.
+- It is not a semantic layer. Declarations are single-table: there is no join planner and no fan-out-safe aggregation across grains. To combine tables, materialize a mart with a pipeline step and declare measures on that.
+- What you deploy is what runs. Nothing rewrites or executes your SQL at query time - the drawer and agents compose new SQL from the declarations, they never substitute anything into the script that materializes the table.
+
+## Deploy validation
+
+Because a reader executes the stored expression text, deploy hard-rejects declarations that could be unsafe or silently wrong:
+
+- an unsafe lake or table path,
+- a measure or dimension body that is not a single SQL expression (both would be a stored SQL injection into whoever runs the composed query),
+- a filtered measure whose body is not a single aggregate call - `sum(a) / count(b) where …` would apply the `FILTER` to only part of the expression and silently produce the wrong number.
+
+Everything else is advisory. Missing-column and non-aggregate-measure warnings come from the schema-contract check the editor runs on save, so a name that does not match the producer's captured schema is flagged in the editor but does not block deploy. A CLI or direct-API deploy skips those warnings, and a declaration whose SQL is otherwise wrong is only discovered when someone runs it.
+
+## Related
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Materialization"
+		description="Managed DuckLake writes: the // materialize grammar, SCD2 history, versioning, schema contracts, column lineage and data tests."
+		href="/docs/core_concepts/pipelines/materialization"
+	/>
+	<DocCard
+		title="Pipelines"
+		description="Wire DuckDB scripts together by asset lineage, with managed DuckLake materialization, partitions, data tests and macros."
+		href="/docs/core_concepts/pipelines"
+	/>
+	<DocCard
+		title="DuckLake"
+		description="Managed, versioned data tables backed by your own object storage, queried with DuckDB."
+		href="/docs/core_concepts/persistent_storage/ducklake"
+	/>
+	<DocCard
+		title="Macro libraries"
+		description="Share engine-native DuckDB macros across every DuckDB script in the workspace."
+		href="/docs/core_concepts/pipelines/macros"
+	/>
+</div>

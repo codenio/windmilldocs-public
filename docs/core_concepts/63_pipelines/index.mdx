@@ -28,6 +28,7 @@ Any language works through the same annotations - a `// pipeline` Python, TypeSc
 - [Schema capture and contracts](./materialization.mdx#schema-contracts) - each run captures the table's schema, and consumer scripts are checked against it at save time, with warnings after deploy, live editor squiggles and schema-aware column autocomplete.
 - [One-click backfill](./materialization.mdx#partition-status-and-backfill) over a range of [partitions](./partitioning.mdx) from the pipeline graph.
 - [Macro libraries](./macros.mdx) - shared, engine-native DuckDB macros callable from every script in the workspace.
+- [Measures and dimensions](./measures.mdx) - declare a table's canonical aggregations next to it, catalogued so the editor and agents compose the right SQL instead of guessing.
 
 Materialization, column lineage, data tests and macros are DuckDB-specific; from Python or TypeScript you get the same managed DuckLake write through the `wmill.ducklake` helpers.
 
@@ -451,6 +452,10 @@ Managed DuckLake writes - the `// materialize` grammar and strategies, SCD2 hist
 
 Reusable DuckDB macros shared across the workspace are covered on the dedicated [Macro libraries](./macros.mdx) page.
 
+## Measures and dimensions (DuckDB)
+
+Declaring a materialized DuckLake table's canonical aggregations (`-- measure`) and slicers (`-- dimension`) so the editor and agents compose the right SQL is covered on the dedicated [Measures and dimensions](./measures.mdx) page.
+
 ## Joining inputs: any vs all
 
 When a script declares several `// on` inputs, `// trigger` controls how they combine:
@@ -640,6 +645,8 @@ The full command reference (all options for `show`, `run`, `dev` and `docs`) is 
 | `// use <lib_path>` | script | macro library script path | - | Force-inject a macro library (definitions + setup), for calls hidden in dynamic SQL (accumulate) |
 | `// column <out> <- <asset-uri>.<col>[, …]` | lineage | comma-separated source columns | inferred from SQL | Column-to-column lineage; inferred from SQL for DuckDB, override/declare for other languages. Metadata only (accumulate) |
 | `// data_test <kind> …` | test | `unique`, `not_null`, `accepted_values`, `relationships`, `<script_path>` | - | Test the materialized slice; fail the run on violation. Managed `// materialize` only (accumulate) |
+| `// measure <name> = <agg> [where <pred>]` | metric | aggregate SQL + optional predicate | - | Declare a table's [canonical aggregation](./measures.mdx); catalogued at deploy, informational (dedupe by name) |
+| `// dimension <name> = <expr>` | metric | slicing SQL expression | - | Declare a [slicer](./measures.mdx) any measure can be grouped by; catalogued at deploy, informational (dedupe by name) |
 | `// trigger any` | join | `any` \| `all` | `any` | OR: any input fires the script |
 | `// trigger all` | join | `any` \| `all` | `any` | AND barrier: fire once per partition when all partition-bearing inputs present |
 | `// debounce <duration>` | script | `<n>[s\|m\|h\|d]` | none (fan-out) | Default debounce window for the script's asset inputs |
@@ -651,7 +658,7 @@ The `{partition}` token is used inside asset paths (in `// on` and in the paths 
 
 ## Community vs Enterprise
 
-Every pipeline concept works on the Community Edition: the annotations, the asset [cascade](#triggering-a-pipeline), [materialization](./materialization.mdx) with all strategies, [data tests](./materialization.mdx#data-tests), [column lineage](./materialization.mdx#column-level-lineage), [macros](./macros.mdx), [partitions](./partitioning.mdx), freshness badges and [local development](#local-development). A few *operational* capabilities are [Enterprise Edition](/pricing) only, and each one degrades to a safe Community behavior rather than disappearing:
+Every pipeline concept works on the Community Edition: the annotations, the asset [cascade](#triggering-a-pipeline), [materialization](./materialization.mdx) with all strategies, [data tests](./materialization.mdx#data-tests), [column lineage](./materialization.mdx#column-level-lineage), [macros](./macros.mdx), [measures and dimensions](./measures.mdx), [partitions](./partitioning.mdx), freshness badges and [local development](#local-development). A few *operational* capabilities are [Enterprise Edition](/pricing) only, and each one degrades to a safe Community behavior rather than disappearing:
 
 | Capability | Community Edition | Enterprise Edition |
 | --- | --- | --- |
