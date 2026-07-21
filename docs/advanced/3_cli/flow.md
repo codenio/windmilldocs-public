@@ -77,6 +77,7 @@ wmill flow run <remote_path> [options]
 | -------------- | ---------- | ----------------------------------------------------------------------------- |
 | `-d, --data`   | `data`     | Inputs specified as a JSON string or a file using @filename or stdin using @- . Resources and variables must be passed using "$res:..." or "$var:..." For example `wmill flow run u/henri/message_to_slack -d '{"slack":"$res:u/henri/henri_slack_perso","channel":"general","text":"hello dear team"}'` |
 | `-s, --silent` |            | Do not output anything other then the final output. Useful for scripting.      |
+| `--tag`        | `tag`      | Override the [worker tag](../../core_concepts/9_worker_groups/index.mdx#set-tags-to-assign-specific-queues) the run is dispatched to, instead of the flow's default tag. Useful to route a run to specific workers (for example dev workers instead of prod). |
 
 ![CLI arguments](../../assets/cli/cli_arguments.png "CLI arguments")
 

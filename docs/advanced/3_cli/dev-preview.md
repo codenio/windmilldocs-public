@@ -74,12 +74,16 @@ wmill script preview <path> [options]
 | ------------------ | ----------------------------------------------------------------- |
 | `-d, --data <data>`| Inputs as a JSON string, `@filename`, or `@-` for stdin.          |
 | `-s, --silent`     | Only output the final result (no logs, useful for scripting).     |
+| `--tag <tag>`      | Override the [worker tag](../../core_concepts/9_worker_groups/index.mdx#set-tags-to-assign-specific-queues) the preview is dispatched to, instead of the script's default tag. Useful to test changes on specific workers (for example dev workers) before deploying. |
 
 ### Examples
 
 ```bash
 # Regular script
 wmill script preview u/admin/my_script.ts --data '{"x": 5}'
+
+# Route the preview to dev workers instead of the script's default tag
+wmill script preview u/admin/my_script.ts --data '{"x": 5}' --tag dev
 
 # Codebase script (bundled before preview)
 wmill script preview f/codebase_test/my_script.ts --data '{"x": 7}'
@@ -98,12 +102,15 @@ wmill flow preview <path> [options]
 
 ### Options
 
-Same `-d, --data` and `-s, --silent` options as `script preview`.
+Same `-d, --data`, `-s, --silent`, and `--tag` options as `script preview`. `--tag` overrides the [worker tag](../../core_concepts/9_worker_groups/index.mdx#set-tags-to-assign-specific-queues) the preview is dispatched to (and is threaded through to individual steps when combined with `--step`).
 
 ### Example
 
 ```bash
 wmill flow preview f/my_flows/etl__flow --data '{"date":"2026-01-01"}'
+
+# Route the preview to dev workers instead of the flow's default tag
+wmill flow preview f/my_flows/etl__flow --data '{"date":"2026-01-01"}' --tag dev
 ```
 
 Use `wmill dev` when you want a live UI that round-trips edits back to disk; use `wmill flow preview` when you want a one-shot run with a specific payload.
