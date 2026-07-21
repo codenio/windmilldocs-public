@@ -23,9 +23,22 @@ A dev workspace is a special kind of fork. Compared to an ordinary fork:
 - **Persistent**: it is the team's standing editable environment, not a short-lived branch you create, merge, and delete.
 - **No `wm-fork-` prefix**: a dev workspace keeps a plain, git-branch-safe workspace ID that you choose, instead of the auto-generated `wm-fork-` ID. An ordinary fork is still prefixed.
 - **One per workspace**: a workspace has at most one active dev workspace, and dev workspaces do not nest (you cannot create a dev of a dev).
-- **Identified as dev**: dev workspaces show a "dev" badge, sort ahead of ordinary forks in the workspace menu, auto-expand under their prod workspace, and are labelled "Dev workspace of \<prod\>".
+- **Identified as dev**: dev workspaces show a badge (`dev`, or `stg` for a workspace [labelled `staging`](#dev-and-staging-labels)), sort ahead of ordinary forks in the workspace menu, auto-expand under their prod workspace, and are labelled "Dev workspace of \<prod\>" (or "Staging workspace of \<prod\>").
 
 Like ordinary forks, promotion stays manual through the [Compare & Deploy](#promoting-changes-to-prod) flow. Auto-sync from dev to prod is not available.
+
+## Dev and staging labels
+
+A dev workspace carries a display label that is either `dev` (the default) or `staging`. Choose it when you [create](#creating-a-dev-workspace) or [attach](#pairing-an-existing-workspace-as-dev) the dev workspace; it is fixed afterwards. The **Dev workspace** settings tab shows the current label, but does not let you change it. The label controls:
+
+| Label | Badge | Identity wording | Git sync branch |
+|-------|-------|------------------|-----------------|
+| `dev` (default) | `dev` | Dev workspace of \<prod\> | `dev` |
+| `staging` | `stg` | Staging workspace of \<prod\> | `staging` |
+
+Nothing else changes: the paired-fork behaviour (locking, promotion, and Compare & Deploy) is identical for both labels. Use `staging` when your team treats the paired environment as staging rather than dev.
+
+When [git sync](../11_git_sync/index.mdx) is configured, a dev workspace deploys to the branch matching its label (`dev` or `staging`) instead of a `wm-fork/...` branch.
 
 ## Creating a dev workspace
 
@@ -34,11 +47,12 @@ Create a dev workspace from the fork creation form (workspace menu → **Fork cu
 In the fork form:
 
 1. Enable the **Persistent dev workspace** toggle ("Dev workspace"). This creates the fork as a standing dev workspace with no `wm-fork-` prefix.
-2. Set the **Workspace ID** (shown under the fork name). It must be git-branch-safe.
-3. Optionally configure the **Protect \<root\>** options to lock the prod workspace (see [Locking the prod workspace](#locking-the-prod-workspace)):
+2. Optionally switch the [label](#dev-and-staging-labels) from `dev` to `staging` with the label link, which previews the resulting badge.
+3. Set the **Workspace ID** (shown under the fork name). It must be git-branch-safe.
+4. Optionally configure the **Protect \<root\>** options to lock the prod workspace (see [Locking the prod workspace](#locking-the-prod-workspace)):
    - **Block direct edits (deploy via the dev workspace)**
    - **Prevent forking**
-4. Optionally enable **Copy members** to copy the source workspace's members (and their roles, including service-account type) into the dev workspace, so the whole team can work in it. This is only offered when creating a dev workspace, not when attaching an existing one.
+5. Optionally enable **Copy members** to copy the source workspace's members (and their roles, including service-account type) into the dev workspace, so the whole team can work in it. This is only offered when creating a dev workspace, not when attaching an existing one.
 
 {/* TODO: screenshot of the fork creation form with the "Persistent dev workspace" toggle, "Protect <root>" sub-card, Workspace ID field, and "Copy members" toggle. */}
 
@@ -50,8 +64,9 @@ If you already have a workspace you want to use as the dev environment, attach i
 
 1. On the prod workspace, open **Workspace settings** → **Dev workspace**.
 2. Under **Attach an existing workspace as dev**, select a workspace. You can attach a standalone workspace or an existing fork of this same workspace (a fork parented to a different workspace cannot be attached).
-3. Optionally enable the lock toggles (**Block direct edits in this workspace** and **Prevent forking this workspace**).
-4. Click **Attach dev workspace**.
+3. Optionally set the [label](#dev-and-staging-labels) to `dev` or `staging`.
+4. Optionally enable the lock toggles (**Block direct edits in this workspace** and **Prevent forking this workspace**).
+5. Click **Attach dev workspace**.
 
 Attaching requires being an admin of both the prod workspace and the workspace being attached (or a superadmin). A workspace that already has its own dev workspace cannot be attached.
 
