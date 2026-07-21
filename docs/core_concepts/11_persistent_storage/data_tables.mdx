@@ -80,7 +80,7 @@ SELECT * FROM friend WHERE id = $user_id;
 </TabItem>
 </Tabs>
 
-We recommend to only have one or a few data tables per workspace, and to use schemas to organize your data.
+In workspace settings, we recommend configuring a single primary data table (and at most a few secondary ones), and using schemas to organize your data. This is not about the number of SQL tables inside a data table, which is unlimited. There is no hard limit either way.
 
 ![Data Table schemas](./datatable_images/datatable_schemas.png 'Data Table schemas')
 
@@ -133,7 +133,7 @@ Data tables support Postgres schemas to organize tables into logical groupings w
 
 - Create, rename and drop schemas from the workspace settings Data Tables UI.
 - Reference tables with the explicit `schema.table` syntax, or switch the default search path from the client by appending `:myschema` after the data table name (`wmill.datatable('named_datatable:myschema')` or `wmill.datatable(':myschema')` for the default data table).
-- Use schemas as an organizational boundary without needing multiple data tables — we recommend keeping the number of data tables per workspace small and using schemas for separation.
+- Use schemas as an organizational boundary without needing multiple configured data tables: we recommend one primary data table (and at most a few secondary ones) per workspace, with schemas for separation.
 
 ### Type-checked queries
 
