@@ -278,6 +278,8 @@ Token used to authenticate requests from the IdP.
 
 XML metadata url OR content for the SAML IdP.
 
+By default, metadata URLs that resolve to private or internal network addresses are blocked to protect against SSRF. For self-hosted deployments with an internal IdP, set the `ALLOW_PRIVATE_SAML_METADATA_URLS=true` environment variable to allow them. See [private or internal IdP metadata URLs](../../advanced/28_saml_and_scim/index.mdx#private-or-internal-idp-metadata-urls).
+
 ## Registries
 
 Add private registries for [UV](https://pypi.org/), [Bun](https://bun.sh/), [npm](https://www.npmjs.com/), [Nuget](https://www.nuget.org/), [PowerShell](https://learn.microsoft.com/en-us/azure/devops/artifacts/tutorials/private-powershell-library), [Maven/Java](../../getting_started/0_scripts_quickstart/13_java_quickstart/index.mdx#private-maven-registries), and [Cargo/Rust](../../getting_started/0_scripts_quickstart/9_rust_quickstart/index.mdx).

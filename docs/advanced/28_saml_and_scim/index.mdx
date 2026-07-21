@@ -26,6 +26,14 @@ You can control the entity ID using the `SAML_AUDIENCE` environment variable. Th
 
 :::
 
+### Private or internal IdP metadata URLs
+
+By default, Windmill blocks SAML metadata URLs that resolve to private or internal network addresses to protect against [server-side request forgery (SSRF)](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery). If your identity provider is only reachable on a private IP with no public DNS, the server rejects the metadata URL at load time and fails to start.
+
+To allow private metadata URLs, set the `ALLOW_PRIVATE_SAML_METADATA_URLS=true` environment variable on the server. Only enable it when the metadata URL points to an identity provider you trust.
+
+Alternatively, if you cannot expose the IdP metadata over a URL, paste the XML content directly in the field instead of a URL. Content passed inline is not subject to the SSRF check.
+
 ### Okta
 
 Configure Okta with the following settings (and replace cf.wimill.xyz with your domain):
