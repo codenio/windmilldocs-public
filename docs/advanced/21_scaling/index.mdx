@@ -204,11 +204,13 @@ The autoscaling algorithm checks every 30 seconds and considers:
 
 Workers come in different sizes based on memory limits. The right size depends on your job requirements:
 
-| Worker size | Memory | Compute units |
+| Worker size | Memory | Compute units* |
 | --- | --- | --- |
 | Small | 1GB | 0.5 CU |
 | Standard | 2GB | 1 CU |
 | Large | >2GB | 2 CU (self-hosted capped at 2 CU regardless of actual memory) |
+
+\* This memory-based rule does not apply to [native workers](../../core_concepts/9_worker_groups/index.mdx#native-worker-group), which always count as 1 CU regardless of their memory limit.
 
 ### Choosing the right memory limit
 
