@@ -20,6 +20,7 @@ Critical alerts are generated under the following conditions:
 - Number of running workers in a group falls below a specified threshold (has to be configured in the [worker group](../9_worker_groups/index.mdx) config).
 - Number of [jobs waiting in queue](../9_worker_groups/index.mdx#queue-metric-alerts) is above a threshold for more than a specified amount of time.
 - API token is about to expire (within 7 days) or has expired (requires ["Alert on token expiry"](../../advanced/18_instance_settings/index.mdx#alert-on-token-expiry) to be enabled in instance settings).
+- A disk used by a server or a worker is running low on space (see [Low disk alerts](#low-disk-alerts)).
 
 ## Token expiration notifications
 
@@ -30,6 +31,20 @@ Windmill monitors API tokens and sends notifications when they are about to expi
 - Session and ephemeral tokens are excluded from expiration notifications.
 
 The tokens table in user settings also shows color-coded expiration badges for tokens expiring within 30 days, and a warning banner for tokens expiring within 7 days.
+
+## Low disk alerts
+
+Servers and workers monitor the filesystems they depend on: the root mount, and the mounts holding the dependency cache and the job logs directories. When the available space on one of them drops below 1 GB, a critical alert is sent to admins. Set `MIN_FREE_DISK_SPACE_MB` to change that threshold. A recovery alert is sent once space is available again.
+
+The alert reports the available space, the total size of the filesystem, and the largest entries Windmill found under its own directories on that mount, so you can tell what is filling the disk without connecting to the host:
+
+```
+Disk mounted on `/tmp` is low, 812 MiB of 100 GiB available. (server)
+
+Largest entries under the Windmill directories: /tmp/windmill/cache/python (14.2 GB), /tmp/windmill/cache/deno (3.1 GB), /tmp/windmill/logs/job.log (220 MB).
+```
+
+The breakdown lists the 5 largest top-level entries of the cache and logs directories, sized recursively. Entries that belong to something other than Windmill are not listed, so a mount that is full for unrelated reasons can still show a small breakdown.
 
 ## Critical alert channels
 
