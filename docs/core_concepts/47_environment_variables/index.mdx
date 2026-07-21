@@ -49,6 +49,7 @@ You can use them in a Script by clicking on "+Context Var":
 | HOME                      | None                   | The home directory to use for Go and Bash, usually inherited                                                                                                                                      | Worker                |
 | DATABASE_CONNECTIONS      | 50 (Server)/3 (Worker) | The max number of connections in the database connection pool                                                                                                                                      | All                   |
 | SUPERADMIN_SECRET         | None                   | A token that would let the caller act as a virtual superadmin superadmin@windmill.dev                                                                                                              | Server                |
+| NO_AUTH                   | false                  | When set to `true` or `1`, bypasses all authentication and treats every request as the `admin@windmill.dev` superadmin. Only for self-hosted instances behind a trusted authenticating gateway. Force-disabled on cloud-hosted instances. See [Authentication bypass](#authentication-bypass-no_auth). | Server                |
 | TIMEOUT_WAIT_RESULT       | 20                     | The number of seconds to wait before timeout on the 'run_wait_result' endpoint                                                                                                                     | Worker                |
 | QUEUE_LIMIT_WAIT_RESULT   | None                   | The number of max jobs in the queue before rejecting immediately the request in 'run_wait_result' endpoint. Takes precedence on the query arg. If none is specified, there are no limit.           | Worker                |
 | DENO_AUTH_TOKENS          | None                   | Custom DENO_AUTH_TOKENS to pass to worker to allow the use of private modules                                                                                                                      | Worker                |
@@ -68,6 +69,22 @@ You can use them in a Script by clicking on "+Context Var":
 | WINDMILL_DIR | /tmp/windmill | The base directory Windmill uses for temporary job files. Defaults to `/tmp/windmill`. | Worker |
 | LIMIT_WINDOWS_TO_1CU | false | When set to `true`, caps Windows workers to 1 vCPU and 2 GB memory for both the worker and child processes. | Worker |
 | RSCRIPT_PATH | /usr/bin/Rscript | The path to the Rscript binary for R language support. Only available in `windmill-full` Docker images. | Worker |
+
+## Authentication bypass (NO_AUTH)
+
+Setting `NO_AUTH=true` (or `NO_AUTH=1`) on the server bypasses all authentication: every request is resolved as the `admin@windmill.dev` superadmin and no login is ever required. It is meant for self-hosted deployments that front Windmill with their own authenticating gateway (a reverse proxy, SSO gateway, etc.), so the gateway handles authentication instead of Windmill.
+
+This is the runtime equivalent of the compile-time `no_auth` feature, but it works on the standard `ce`/`ee` binaries - you just set the environment variable instead of building a dedicated binary.
+
+When enabled, the server prints a warning banner at startup to make the bypass obvious in your logs.
+
+:::warning Security implications
+`NO_AUTH` disables authentication entirely and grants full superadmin access to anyone who can reach the instance. Only enable it on a private network behind a gateway that authenticates requests before they reach Windmill. Never expose a `NO_AUTH` instance directly to the public internet.
+
+For safety, `NO_AUTH` is automatically ignored on cloud-hosted instances (`CLOUD_HOSTED`), which always enforce real authentication.
+:::
+
+If you instead want per-user identities and permissions from an external identity provider, use [external auth with JWT](../../advanced/16_external_auth_with_jwt/index.mdx) rather than bypassing authentication.
 
 ## Contextual variables
 
