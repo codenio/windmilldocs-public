@@ -61,6 +61,12 @@ The AI chat also includes an API mode that allows you to perform basic operation
 
 These API endpoints are also available through the [Model Context Protocol (MCP)](../51_mcp/index.mdx), enabling seamless integration with MCP-compatible tools and clients for automated workflow management.
 
+### Reasoning models
+
+Reasoning-capable [models](#models) can have their reasoning effort set per model from the chat's model settings menu, across providers such as Anthropic, OpenAI, Gemini, DeepSeek and Mistral. When a model streams its reasoning, the chat shows it in an expandable "Thinking" block above the reply.
+
+OpenAI only returns reasoning summaries to organizations that have completed [organization verification](https://help.openai.com/en/articles/10910291-api-organization-verification). Without it, the model still reasons and answers normally, but its thinking stays hidden. To show it, verify your organization in the OpenAI platform settings, then reload the page.
+
 ## Windmill AI for scripts
 
 ### AI Chat
