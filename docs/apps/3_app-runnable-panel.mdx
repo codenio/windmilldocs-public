@@ -608,6 +608,14 @@ A viewer of the app will execute the runnables of the app on behalf of the publi
 
 To understand how to handle resources in apps, see [Static resource select only / Resources from users allowed](#static-resource-select-only--resources-from-users-allowed).
 
+### S3 file access in deployed apps
+
+The [S3 / object storage](../core_concepts/38_object_storage_in_windmill/index.mdx) files an app renders - rich results, table and image/PDF previews, CSV exports, the [download button](./4_app_configuration_settings/download_button.mdx), and file metadata - are read on behalf of the app's author, respecting the app's policy, just like its scripts, flows and queries. This holds for any viewer of a deployed app, whether anonymous or logged in: a logged-in viewer who lacks direct S3 permissions on a folder still sees the files the app displays.
+
+These reads are bounded by a provenance check: only files the app statically references or produces at runtime can be read this way, so a viewer cannot reuse the author's permissions to read arbitrary S3 keys.
+
+Raw S3 API access (outside of what the app displays, for example calling the S3 helpers directly) still runs with the viewer's own permissions. To enforce every S3 read against each logged-in viewer's own permissions instead of the author's, deploy the app in viewer execution mode, where all runnables and file reads run as the viewer.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Roles and permissions"
