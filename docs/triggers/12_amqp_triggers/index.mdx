@@ -1,0 +1,131 @@
+---
+description: How do I trigger scripts and flows from AMQP (RabbitMQ) messages in Windmill?
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# AMQP triggers
+
+Windmill can connect to [RabbitMQ](https://www.rabbitmq.com/) (or any AMQP 0-9-1 broker) and trigger runnables (scripts, flows) when a message is consumed from a queue.
+Listening is done from the servers, so it doesn't take up any workers.
+
+AMQP triggers are disabled on the multi-tenant cloud; they are available on self-hosted instances (including the Community Edition).
+
+## AMQP resource configuration
+
+Before creating an AMQP trigger, you need to set up an AMQP [resource](../../core_concepts/3_resources_and_types/index.mdx). Head to the Resources page, click "Add resource" and select `amqp`.
+
+The resource has the following fields:
+
+| Property | Description | Required |
+|----------|-------------|----------|
+| host | Broker hostname (without the `amqp://` prefix) | Yes |
+| port | Broker port. Defaults to `5672` (`amqp`) or `5671` when TLS is enabled (`amqps`) | No |
+| username | Username used to authenticate with the broker | No |
+| password | Password used to authenticate with the broker | No |
+| vhost | Virtual host to connect to. Defaults to the broker's default vhost (`/`) | No |
+| tls | Connect over TLS (`amqps`) instead of plaintext (`amqp`) | No |
+
+## How to use
+
+Create a new trigger on the AMQP triggers page and add an AMQP resource.
+
+### Queue
+
+Set the **Queue name** the trigger should consume messages from. This is the only required setting.
+
+The following settings are available under the **Advanced** section of the AMQP trigger editor.
+
+### Exchange binding
+
+By default the trigger consumes directly from the named queue. Enable **Bind the queue to an exchange** to declare the queue and bind it to an exchange, so messages published to that exchange are routed to it.
+
+- **Exchange name**: the exchange to bind the queue to.
+- **Routing keys**: one or more routing keys used to bind the queue to the exchange. When no routing key is provided, the queue is bound with an empty routing key (fanout exchanges ignore the routing key anyway).
+
+### Declare queue
+
+**Declare queue** (enabled by default) declares the queue as durable before consuming. When disabled, the queue is declared passively, i.e. it must already exist on the broker, otherwise the trigger fails to start.
+
+### Prefetch count
+
+**Prefetch count** sets the maximum number of unacknowledged messages the broker delivers to the consumer at once (AMQP QoS). It must be at least `1` (RabbitMQ treats `0` as unlimited, which would give the consumer an unbounded buffer). When left unset, the broker default is used.
+
+### Runnable configuration
+
+Once the AMQP resource and settings are set, select the runnable that should be triggered by this trigger.
+The received base64 encoded payload will be passed to the runnable as a string argument called `payload`.
+
+Here's an example script:
+
+```TypeScript
+export async function main(payload: string) {
+  // do something with the message
+}
+```
+
+And if you use a [preprocessor](../../core_concepts/43_preprocessors/index.mdx), the script could look like this:
+
+<Tabs>
+<TabItem value="TypeScript (Bun)">
+```TypeScript
+export async function preprocessor(
+  event: {
+    kind: "amqp";
+    trigger_path: string;
+    payload: string; // base64 encoded payload
+    exchange: string; // the exchange the message was published to
+    routing_key: string; // the routing key the message was published with
+    queue_name: string; // the queue the message was consumed from
+    redelivered: boolean; // whether the broker previously delivered this message
+    delivery_tag: number;
+  }
+) {
+  if (event.kind !== "amqp") {
+    throw new Error(`Expected an amqp event`);
+  }
+
+  // assuming the message is a JSON object
+  const msg = JSON.parse(atob(event.payload));
+
+  // define args for the main function
+  return {
+    message_content: msg.content,
+    routing_key: event.routing_key
+  };
+}
+
+export async function main(message_content: string, routing_key: string) {
+  // do something with the message content and routing key
+}
+```
+</TabItem>
+<TabItem value="Python">
+```Python
+import base64
+import json
+
+def preprocessor(event: dict):
+    if event["kind"] != "amqp":
+        raise Exception("Expected an amqp event")
+
+    # assuming the message is a JSON object
+    msg = json.loads(base64.b64decode(event["payload"]))
+
+    # define args for the main function
+    return {
+        "message_content": msg["content"],
+        "routing_key": event["routing_key"],
+    }
+
+def main(message_content: str, routing_key: str):
+    # do something with the message content and routing key
+    pass
+```
+</TabItem>
+</Tabs>
+
+## Error handling
+
+AMQP triggers support local error handlers that override workspace error handlers for specific triggers. See the [error handling documentation](../../core_concepts/10_error_handling/index.mdx#trigger-error-handlers) for configuration details and examples.
