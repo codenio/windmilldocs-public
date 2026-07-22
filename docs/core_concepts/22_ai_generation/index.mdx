@@ -55,17 +55,21 @@ In the global AI chat and AI sessions, you can attach images to your messages by
 
 The selected [model](#models) must support image input. If it doesn't, Windmill either blocks the attachment upfront or, for models it can't verify, drops the images from the conversation if the provider rejects them (your text is kept and you're notified so you can switch to a vision-capable model).
 
-### API mode
+### API endpoint catalog
 
-The AI chat also includes an API mode that allows you to perform basic operations on your Windmill workspace directly through conversation. You can interact with the following endpoints:
+The AI chat can search and call Windmill's REST API endpoints directly, so it can perform operations on your workspace that no dedicated tool already covers, such as reading a run's result or arguments, checking queue and worker state, or running a deployed item. It uses three tools:
 
-- **jobs**: Monitor, cancel, and retrieve information about running and completed jobs
-- **scripts**: List, create, edit, and manage your scripts
-- **flows**: Work with your flows and their configurations
-- **resources**: Manage workspace resources and connections
-- **variables**: Handle workspace and user variables
-- **schedules**: Create and modify scheduled jobs
-- **workers**: Check worker status and manage worker groups
+- **`search_api_endpoints`**: discovers endpoints by keyword. It returns the matching endpoint names along with their parameter names and usage instructions, so the AI learns what is available without loading every endpoint schema up front. If nothing matches, it returns the list of endpoint categories to guide the next search.
+- **`call_api_get`**: calls a read-only `GET` endpoint by name. Because it only reads data, it runs without asking for confirmation.
+- **`call_api_endpoint`**: calls a mutating endpoint (create, update, run, etc.). These calls always ask you to confirm before they run, so nothing changes your workspace without your approval.
+
+The workspace is filled in automatically, and full endpoint schemas are surfaced on demand: parameter names appear in search results, and if a call fails validation (for example a missing path parameter or a `4xx` response) the endpoint's full parameter schema is returned so the AI can correct itself in the next call.
+
+Some endpoints are intentionally excluded from the catalog tools and redirect the AI to a dedicated tool instead:
+
+- **Authoring operations** (creating or editing scripts, flows, apps, schedules and resources) go through the draft tools, which preserve the draft lifecycle and conflict detection.
+- **Deletions** go through `delete_workspace_item`, which handles draft and fork cleanup.
+- **Variable reads are blocked** for security, since variable values must never reach the model (variables can hold decrypted secrets).
 
 These API endpoints are also available through the [Model Context Protocol (MCP)](../51_mcp/index.mdx), enabling seamless integration with MCP-compatible tools and clients for automated workflow management.
 
