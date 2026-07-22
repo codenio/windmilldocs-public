@@ -57,6 +57,20 @@ As a [Windmill workspace admin](../core_concepts/16_roles_and_permissions/index.
 You will only be able to use the installation token for [Git sync](../advanced/11_git_sync/index.mdx).
 :::
 
+### GitHub App permissions
+
+Beyond repository contents (read and write), which powers the push direction of Git sync, the GitHub App requests the following permissions to handle the Git to Windmill direction in-app:
+
+| Permission (read and write) | What it enables |
+| --------------------------- | --------------- |
+| Repository webhooks | Register a webhook per synced repository so commits deploy to your Windmill workspace instantly ([automatic sync from Git](../advanced/11_git_sync/index.mdx#automatic-sync-from-git)) |
+| Pull requests | Open pull requests for branches Windmill pushes (promotion `wm_deploy/**` and fork `wm-fork/**` branches, see [in-app pull request creation](../advanced/11_git_sync/index.mdx#in-app-pull-request-creation)) and maintain a deploy-preview comment on your pull requests |
+| Checks | Post a "Windmill diff" check on pull requests showing what merging would deploy, and a [deploy status check](../advanced/11_git_sync/index.mdx#deploy-status-check) on synced commits |
+
+All of these features are opt-in from the workspace Git sync settings. If your organization has not approved the permissions yet, every feature degrades gracefully: automatic sync falls back to polling and upgrades to webhooks automatically once the webhooks permission is granted, and a failed pull request creation is surfaced on the repository card.
+
+For [self-managed GitHub Apps](#self-managed-github-app), grant the same permissions in your app settings (Settings → Developer settings → GitHub Apps → Permissions & events) and accept the permission update on the installation. Windmill creates the webhooks per repository itself, so the app-level "Subscribe to events" list needs no changes.
+
 ### Importing / Exporting to/from other windmill instance
 
 A GitHub app can only be installed to a GitHub organization once. Hence to associate an installation to multiple windmill instances you need to export the associated JWT token on the source instance using the "Export" button and paste the JWT in the destination instance to import the installation.

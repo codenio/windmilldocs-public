@@ -1,5 +1,5 @@
 ---
-description: How do I sync Windmill with Git? Set up bi-directional sync with automatic commits on deploy and CI/CD integration.
+description: How do I sync Windmill with Git? Set up bi-directional sync with automatic commits on deploy and automatic deploys of new commits via webhooks or polling.
 ---
 
 import DocCard from '@site/src/components/DocCard';
@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
 
 # Git sync
 
-Git sync lets Windmill workspaces be tracked by git. Each time an item is deployed, Windmill will create and push a commit to the specified repository. It is also possible, and recommended, to setup CI/CD actions that will deploy items on windmill when a new commit is detected, enabling bi-directional synchronization.
+Git sync lets Windmill workspaces be tracked by git. Each time an item is deployed, Windmill will create and push a commit to the specified repository. The reverse direction works too: Windmill can [automatically deploy new commits from the repository into the workspace](#automatic-sync-from-git), through webhooks or polling, making the synchronization bi-directional without any CI/CD pipeline. Alternatively, you can set up [CI/CD actions](#setup---cicd-from-git-repository) that push changes to Windmill when a new commit is detected.
 
 :::tip Git sync is stage 3 of the collaboration guide
 
@@ -147,9 +147,75 @@ In Git sync settings of your Windmill instance, define a new repository with URL
 https://AZURE_DEVOPS_TOKEN(<path_to_the_azure_resource>)@dev.azure.com/<organization>/<project>/_git/<repository>
 ```
 
+## Automatic sync from Git
+
+Windmill can deploy new commits from the tracked branch directly into the workspace, without any GitHub Action or CI/CD pipeline. This feature is [Enterprise Edition](/pricing) only.
+
+The repository card in the Git sync settings is split into the two sync directions: "Push to Git on deploy (Windmill → Git)" and "Pull from Git (Git → Windmill)". To enable automatic sync from Git, turn on the "Automatically deploy changes from Git" toggle in the pull section of the repository.
+
+<!-- Placeholder: screenshot of the repository card in Git sync settings showing the "Pull from Git (Git → Windmill)" section with the "Automatically deploy changes from Git" and "Automatically sync forks with git branches" toggles and the last sync status line -->
+
+How changes are detected depends on how the repository is connected:
+
+- Repositories connected through the [GitHub App](../../integrations/git_repository.mdx#github-app) (managed or [self-managed](../../integrations/git_repository.mdx#self-managed-github-app)) sync instantly via a webhook, with polling kept on as a safety net.
+- Token-based repositories are checked by polling only, about every minute. New sync connections default the toggle on only for app-backed repositories; polling is opt-in for token repositories.
+
+Once enabled, the repository card shows the current delivery mode and the last sync status (last synced commit, or the error if the last pull failed). Pull jobs also appear in the [runs page](../../core_concepts/5_monitor_past_and_future_runs/index.mdx) under the "Sync" filter, like the deployment jobs of the push direction.
+
+### Webhooks
+
+When automatic sync is enabled on a repository connected through the GitHub App, Windmill registers a webhook on the repository. Pushes to the tracked branch are then delivered to your instance and deployed within seconds. Deliveries are signature-verified, and disabling the toggle deletes the webhook.
+
+This requires the GitHub App installation to have the webhooks permission. If your organization has not approved it yet, Windmill falls back to polling (the card shows a "Falling back to polling" warning) and upgrades to webhook delivery automatically once the permission is granted. See [GitHub App permissions](../../integrations/git_repository.mdx#github-app-permissions) for the full list of permissions and what each enables.
+
+Self-managed GitHub Apps for GitHub Enterprise Server use the same per-repository webhook path: grant the same permissions on your app and Windmill registers the webhook against your GHES host. Your Windmill base URL only needs to be reachable from the GHES host, not from the public internet, so this also works on private networks.
+
+If your instance is not reachable from GitHub at all, webhook registration fails and the repository stays on polling. Nothing breaks; latency is the only difference.
+
+### Polling
+
+Windmill periodically checks whether the tracked branch has new commits and deploys them when it does. Token-based repositories are checked about every minute; while a webhook is live, polling relaxes to about every 10 minutes and only acts as a safety net for missed deliveries.
+
+### Loop prevention
+
+Commits made by Windmill itself are prefixed with `[WM]` and are skipped by the automatic sync, so a deploy that commits to the repository does not trigger a pull of its own commit.
+
+If you previously configured a [GitHub Action](#github-actions) that pushes changes to Windmill on merge, remove it (or keep automatic sync disabled): running both makes them fight over deploys.
+
+### Automatic fork sync
+
+When "Automatically deploy changes from Git" is enabled, the "Automatically sync forks with git branches" toggle (on by default) extends automatic sync to [workspace forks](../20_workspace_forks/index.mdx): when a fork's `wm-fork/**` branch changes in the repository (for example after merging the tracked branch into it), Windmill deploys those commits into the matching fork workspace. This replaces the `push-on-merge-to-forks` GitHub Action.
+
+It is configured once on the parent workspace's repository and applies to every fork of that workspace, current and future, with zero fork-side setup. Fork workspaces cannot configure automatic sync themselves: their repository card shows a read-only line indicating that sync is managed in the parent workspace, along with the fork's branch name and last pull status.
+
+## Pull requests and checks
+
+For repositories connected through the [GitHub App](../../integrations/git_repository.mdx#github-app), Windmill can also open pull requests itself and post checks on your pull requests, replacing the `gh pr create` GitHub Actions. Both run from the deploy job itself (outbound calls to GitHub), so they work even when your instance is not reachable from GitHub.
+
+### In-app pull request creation
+
+Two per-repository toggles control pull request creation:
+
+- "Open a pull request for each deploy branch", on [Git Promotion](../9_deploy_gh_gl/index.mdx) repositories: after a deploy pushes its `wm_deploy/**` branch, Windmill opens (or reopens) a pull request to the target branch. Defaults on for newly configured app-backed promotion repositories.
+- "Open a pull request when an item is deployed in a fork", on the parent workspace's sync repository: after an item deployed in a [workspace fork](../20_workspace_forks/index.mdx) is pushed to the fork's `wm-fork/**` branch, Windmill opens a pull request to the tracked branch of the shared repository. Opt-in, [Enterprise Edition](/pricing) only.
+
+If a pull request already exists for the branch, Windmill reuses it, so the documented `open-pr-on-commit` / `open-pr-on-fork-commit` GitHub Actions can stay installed if you want custom titles or CI, without duplicate pull requests. If a pull request could not be opened (for example because the app installation has not approved the pull requests permission yet), the error is surfaced on the repository card.
+
+For token-based repositories, these toggles are not available; use the [GitHub Actions](#github-actions) workflows instead.
+
+### Pull request diff checks
+
+With automatic sync enabled on an app-backed repository, a pull request targeting the tracked branch gets a "Windmill diff" check run on its head commit: Windmill performs a dry-run pull of the pull request head and reports what merging would deploy to the workspace (in sync, N changes, or the failure). Windmill also maintains a single managed comment on the pull request with the workspace, sync status, commit and a collapsible change list, updated in place on each new push to the pull request.
+
+<!-- Placeholder: screenshot of a GitHub pull request showing the "Windmill diff" check run and the managed Windmill comment with the collapsible change list -->
+
+### Deploy status check
+
+When a commit on the tracked branch is deployed by automatic sync, Windmill posts a "Windmill" check run on that commit that flips from "Deploying…" to "Deployed N changes", with a link back to the Windmill run. When several workspaces sync the same repository, each check is titled with its target workspace.
+
 ## Setup - CI/CD from git repository
 
-To allow for bidirectional sync, CI/CD can be configured to sync back changes to Windmill anytime a commit is made.
+As an alternative to [automatic sync from Git](#automatic-sync-from-git), CI/CD can be configured to sync back changes to Windmill anytime a commit is made. This is the way to go for git hosting platforms other than GitHub, or when you prefer running the sync from your own CI. Keep either the CI/CD action or automatic sync enabled, not both, so they don't fight over deploys.
 
 ### Github Actions
 
@@ -347,6 +413,8 @@ Git sync automatically creates corresponding git branches for [workspace forks](
 
 This enables parallel development workflows where multiple developers can work on separate workspace forks, each with its own git branch, and merge changes back to the parent workspace either through the UI or via pull requests.
 
+For repositories connected through the GitHub App, both fork directions can be fully managed by Windmill: [automatic fork sync](#automatic-fork-sync) deploys external changes on a fork's branch into the fork workspace, and the ["Open a pull request when an item is deployed in a fork" toggle](#in-app-pull-request-creation) opens the pull request back to the tracked branch.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Workspace forks"
@@ -402,7 +470,7 @@ Once git sync is set up, the git repository becomes the entry point for [local d
 - Your IDE of choice, with the [Windmill CLI](../3_cli/index.mdx) (`wmill sync pull` / `wmill sync push`) or the [VS Code extension](../../cli_local_dev/1_vscode-extension/index.mdx).
 - [Agentic coding tools](../../misc/9_guides/local_dev_with_ai/index.mdx) such as Claude Code, Cursor, or any MCP-compatible client. `wmill init` generates an `AGENTS.md` and skill files that give these agents the context they need to write Windmill-native scripts and flows.
 
-Changes committed and pushed to git are replayed back into the workspace by the CI/CD workflow, closing the loop.
+Changes committed and pushed to git are replayed back into the workspace by [automatic sync from Git](#automatic-sync-from-git) (or the CI/CD workflow), closing the loop.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard

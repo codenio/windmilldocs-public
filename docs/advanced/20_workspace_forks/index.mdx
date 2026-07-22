@@ -50,7 +50,7 @@ Key features:
 - On self-hosted Windmill, forks work on any edition. On Community Edition, forks count toward the global 3-workspace limit; [Enterprise Edition](/pricing) removes that cap.
 - On [Windmill Cloud](https://app.windmill.dev/), forking is available for workspaces on a paid (Team or Enterprise) plan only. See [Forks on Windmill Cloud](#forks-on-windmill-cloud) below.
 - [Git sync](../11_git_sync/index.mdx) configured (optional, required only for git-based workflows)
-- [CI/CD actions ](../9_deploy_gh_gl/index.mdx#github-actions-setup) to merge back from the git remote to Windmill (only required for git sync workflows)
+- For git sync workflows, a way to sync changes back from the git remote to Windmill: either [automatic fork sync](../11_git_sync/index.mdx#automatic-fork-sync) (recommended, no CI needed) or the [CI/CD actions](../9_deploy_gh_gl/index.mdx#github-actions-setup)
 
 ### Forks on Windmill Cloud
 
@@ -123,10 +123,14 @@ Anything outside these bounds - and every other workspace setting - still requir
 ## Git sync integration
 
 When workspace forks are used with [git sync](../11_git_sync/index.mdx), Windmill will automatically create a git branch on the same repository as
-the parent workspace, and keep track of changes there. External changes to the branch are then synced back to the forked workspace if the appropriate
-CI/CD actions are setup. Once the changes are ready, a PR can be opened to sync back changes to the original workspace.
+the parent workspace, and keep track of changes there. External changes to the branch are then synced back to the forked workspace. Once the changes are ready, a PR can be opened to sync back changes to the original workspace.
 
-Workspace forks can be used with git sync for full version control integration. If using git sync, make sure to have it properly setup and in particular the [CI/CD actions](../9_deploy_gh_gl/index.mdx#github-actions-setup) specific to forks should be set. Make sure to not forget the `push-on-merge-to-forks.yaml` action.
+There are two ways to sync external branch changes back into fork workspaces:
+
+- [Automatic fork sync](../11_git_sync/index.mdx#automatic-fork-sync) (recommended): enable "Automatically sync forks with git branches" on the parent workspace's repository in the Git sync settings. Windmill then deploys changes on each fork's `wm-fork/**` branch into the matching fork workspace, with no CI setup and no per-fork configuration. Fork workspaces show a read-only "managed in the parent workspace" line on their repository card. [Enterprise Edition](/pricing) only.
+- [CI/CD actions](../9_deploy_gh_gl/index.mdx#github-actions-setup): set up the fork-specific actions, in particular the `push-on-merge-to-forks.yaml` action.
+
+Similarly, the pull request that merges a fork's changes back into the tracked branch can be opened by Windmill itself when an item is deployed in the fork ("Open a pull request when an item is deployed in a fork" on the parent's repository, see [In-app pull request creation](../11_git_sync/index.mdx#in-app-pull-request-creation)), or by the `open-pr-on-fork-commit` GitHub Action.
 
 ### Fork and branch naming
 
