@@ -26,6 +26,20 @@ This parameter is optional. Concurrency keys are global, you can have them be wo
 
 Jobs can be filtered from the [Runs menu](../5_monitor_past_and_future_runs/index.mdx) using the Concurrency Key.
 
+## Maximum queued jobs per concurrency key on cloud
+
+Jobs sharing a concurrency key drain at most "max number of executions" per time window, however idle the workers are. If a caller pushes jobs faster than that, the backlog behind the key grows without bound.
+
+On [Windmill Cloud](/pricing), at most 10000 jobs can wait behind a single concurrency key. Pushing past that fails with a `QuotaExceeded` error naming the key, the current depth and the cap:
+
+```
+Too many jobs queued behind concurrency key 'my_key': at least 10000 jobs are already waiting and the limit is 10000.
+```
+
+To recover: cancel the backlog from the [Runs menu](../5_monitor_past_and_future_runs/index.mdx), slow down the caller, or raise the concurrency limit so the key drains faster. The cap is per key rather than per workspace, so a runaway key does not block the rest of the workspace.
+
+Self-hosted instances have no such cap.
+
 ## Concurrency limit in Script & Flows
 
 ### Concurrency limit of a script
