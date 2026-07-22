@@ -132,3 +132,35 @@ function MyApp() {
 ```
 
 Replace YOUR_WORKSPACE and YOUR_APP_PATH with the corresponding values.
+
+#### Customizing the UI
+
+The `FlowBuilder` and `ScriptBuilder` components accept a `customUi` prop to show, hide or lock parts of the editor so it matches your product. Options are nested by area (for example `topBar`, `settingsTabs`, `editorBar`). All options default to `true` (shown/editable) when not specified, so omitting `customUi` renders the full editor.
+
+For example, to control the top bar of the flow builder:
+
+```jsx
+import { FlowBuilder } from 'windmill-react-sdk';
+
+function MyFlowBuilder() {
+	return (
+		<FlowBuilder
+			customUi={{
+				topBar: {
+					path: true, // show the path header
+					editablePath: false, // lock path editing in the header and in the flow settings
+					editableSummary: true // allow editing the flow summary
+				}
+			}}
+		/>
+	);
+}
+```
+
+The `topBar` path options behave as follows:
+
+- `path`: show or hide the path header at the top of the editor.
+- `editablePath`: enable or disable path editing. When set to `false`, both the header path field and the Path field in the flow settings are hidden.
+- `editableSummary`: enable or disable editing of the flow summary.
+
+The same `topBar` options are available on the `ScriptBuilder` component.
