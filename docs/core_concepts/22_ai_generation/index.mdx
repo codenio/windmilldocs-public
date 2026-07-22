@@ -47,6 +47,14 @@ This navigation mode makes Windmill more accessible by providing contextual help
 
 When the AI includes a [Mermaid](https://mermaid.js.org/) diagram in its response, the chat renders it directly in the conversation. Rendered diagrams have a copy button in their top-right corner to copy the raw Mermaid source, just like regular code blocks.
 
+### Image attachments
+
+In the global AI chat and AI sessions, you can attach images to your messages by dragging and dropping them into the chat, pasting from the clipboard, or using the file picker. This is useful to share a screenshot of a visual bug, a design mockup, or a diagram for the AI to work from. You can send up to 8 images per message (20MB and 40 megapixels each), with or without accompanying text. Click any image thumbnail to view it at full resolution.
+
+<!-- PLACEHOLDER: Screenshot of the AI chat input with an image attached as a thumbnail chip above the input field, similar to the pr-image-attach screenshot from windmill PR #10130 -->
+
+The selected [model](#models) must support image input. If it doesn't, Windmill either blocks the attachment upfront or, for models it can't verify, drops the images from the conversation if the provider rejects them (your text is kept and you're notified so you can switch to a vision-capable model).
+
 ### API mode
 
 The AI chat also includes an API mode that allows you to perform basic operations on your Windmill workspace directly through conversation. You can interact with the following endpoints:
@@ -221,6 +229,14 @@ The [full-code app builder](../../full_code_apps/index.mdx) includes an integrat
 Just describe what you want to achieve, and the AI will build the app for you, step by step.
 
 ![Full-code app builder](../../full_code_apps/new_app_setup.png 'Full-code app builder')
+
+### App preview screenshots
+
+In AI sessions, when a [full-code app](../../full_code_apps/index.mdx) preview is open, the agent can capture it with a `take_screenshot` tool to see the rendered UI. It uses this when you raise how the app looks, for example a visual bug or a design change, rather than after every edit.
+
+This tool only works on Google Chrome (and other Chromium-based browsers), and requires a model that supports [image input](#image-attachments). On other browsers the agent will instead ask you to take a screenshot yourself and drop it into the chat.
+
+<!-- PLACEHOLDER: Screenshot of the take_screenshot tool card in an AI session chat, showing the captured app preview thumbnail next to the live raw app preview, similar to the pr-screenshot-tool screenshot from windmill PR #10130 -->
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
