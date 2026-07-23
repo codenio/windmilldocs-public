@@ -342,7 +342,7 @@ jobs:
         id: workspace
         run: |
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          WORKSPACE=$(echo "$BRANCH_NAME" | sed 's|wm-fork/|wm-fork-|' | sed 's|/|-|g')
+          WORKSPACE=$(echo "$BRANCH_NAME" | sed 's|wm-fork/.*/|wm-fork-|')
           echo "workspace=$WORKSPACE" >> $GITHUB_OUTPUT
 
       # We check the commit to make sure it doesn't start with [WM] which commits coming from Windmill Git Sync do.\
