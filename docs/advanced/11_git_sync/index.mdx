@@ -368,9 +368,67 @@ jobs:
 </TabItem>
 </Tabs>
 
+### GitLab CI
+
+The sync-back mechanism is git-provider-agnostic: it is just `wmill sync push` run from CI. The following `.gitlab-ci.yml` mirrors the `push-on-merge` and `push-on-merge-to-forks` GitHub Actions above.
+
+Set `WMILL_TOKEN` and `WMILL_URL` as [masked CI/CD variables](https://docs.gitlab.com/ee/ci/variables/#define-a-cicd-variable-in-the-ui) under Settings > CI/CD > Variables (create the token as a [user token](../../core_concepts/4_webhooks/index.mdx#user-token) in Windmill). Set `WMILL_WORKSPACE` to your prod workspace name.
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - sync
+
+variables:
+  WMILL_CLI_VERSION: "1.682.0"
+  # WMILL_URL and WMILL_TOKEN are set as masked CI/CD variables in
+  # Settings > CI/CD > Variables. WMILL_WORKSPACE (prod) can live there too.
+
+.sync_base:
+  stage: sync
+  image: node:20
+  before_script:
+    - npm install -g windmill-cli@${WMILL_CLI_VERSION}
+
+# main -> prod workspace
+push-on-merge:
+  extends: .sync_base
+  variables:
+    WMILL_WORKSPACE: "gitlab-sync-example-prod"
+  rules:
+    # Skip commits Windmill itself pushed (prefixed with [WM]) to avoid
+    # overwriting a deploy that immediately follows.
+    - if: '$CI_COMMIT_MESSAGE =~ /^\[WM\]/'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    # push pulls first to detect conflicts and only pushes actual changes
+    - >
+      wmill sync push --yes --skip-variables --skip-secrets --skip-resources
+      --workspace "$WMILL_WORKSPACE" --token "$WMILL_TOKEN" --base-url "$WMILL_URL"
+
+# wm-fork/** -> matching fork workspace (wm-fork-<name>)
+push-on-merge-to-forks:
+  extends: .sync_base
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /^\[WM\]/'
+      when: never
+    - if: '$CI_COMMIT_BRANCH =~ /^wm-fork\//'
+  script:
+    # wm-fork/<originalBranch>/<name> -> wm-fork-<name>
+    - WMILL_WORKSPACE=$(echo "$CI_COMMIT_BRANCH" | sed 's|wm-fork/.*/|wm-fork-|')
+    - >
+      wmill sync push --yes --skip-variables --skip-secrets --skip-resources
+      --workspace "$WMILL_WORKSPACE" --token "$WMILL_TOKEN" --base-url "$WMILL_URL"
+```
+
+The `push-on-merge-to-forks` job powers [workspace forks](../20_workspace_forks/index.mdx): pushes to `wm-fork/**` branches are deployed into the matching fork workspace. Fork workspace IDs and branch names follow the `wm-fork-<name>` / `wm-fork/<originalBranch>/<name>` convention.
+
+To open a merge request when Windmill commits a fork branch (the equivalent of `open-pr-on-fork-commit`), either enable [in-app pull request creation](#in-app-pull-request-creation) on the parent workspace's repository, or add a job that calls the [GitLab merge requests API](https://docs.gitlab.com/ee/api/merge_requests.html#create-mr) (or `glab mr create`) on `wm-fork/**` branch pushes.
+
 ### Other Git hosting platforms
 
-If you are using a different git hosting platform, such as GitLab or Codeberg, you just need to setup similar actions in your CI/CD. There are currently no detailed instructions for other platforms so you will need to use the provided GitHub ones and adpapt it to your needs.
+If you are using another git hosting platform, such as Codeberg, you just need to set up similar actions in your CI/CD. There are currently no detailed instructions for other platforms so you will need to adapt the GitHub or GitLab examples above to your needs.
 
 ## Filters
 
