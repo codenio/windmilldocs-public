@@ -80,11 +80,20 @@ Developers can execute and view scripts, flows, and apps within a workspace. Dev
 
 ### Operator
 
-Operators have limited access within a workspace. They can only execute and view scripts, flows, and apps that they have visibility on, and only those that are within their allowed path or [folders](../8_groups_and_folders/index.mdx). Operators do not have the ability to create or modify entities.
-The recommended way to share scripts and flows with operators is through [auto-generated apps](../6_auto_generated_uis/index.mdx).
-With the second option being of sharing the script and [variables](../2_variables_and_secrets/index.mdx) it depends on (but operators won't be able to load variable directly from the UI/API, only use them within the scripts they have access to).
+Operators have limited access within a workspace. They can execute and view scripts, flows, and apps that they have visibility on, and only those that are within their allowed path or [folders](../8_groups_and_folders/index.mdx).
 
-From the workspace settings, you can configure the operator visibility settings for your workspace. In particular, you can allow/disallow operators to view:
+What the Operator role restricts is **authoring and running code**. An operator cannot:
+
+- create, edit, archive or delete [scripts](../../getting_started/0_scripts_quickstart/index.mdx), [flows](../../getting_started/6_flows_quickstart/index.mdx) and [apps](../../getting_started/7_apps_quickstart/index.mdx);
+- run previews (any code that is not an already-deployed script or flow) or dependency jobs;
+- [deploy to another workspace](../12_staging_prod/index.md): the deploy UI is closed to operators, and creating the script, flow or app on the target side is refused anyway.
+
+Everything else follows the regular [permission model](#permissions-and-access-control). The Operator role is not, by itself, read-only. Within the paths and [folders](../8_groups_and_folders/index.mdx) they have been granted write access to, an operator can create and edit [variables](../2_variables_and_secrets/index.mdx), [resources](../3_resources_and_types/index.mdx), [schedules](../1_scheduling/index.mdx), [triggers](../../triggers/index.mdx), folders and [groups](../8_groups_and_folders/index.mdx#groups), exactly like any other member. If you need an operator to be strictly read-only, grant them read-only access to the folders and paths they need, and do not rely on the role for it.
+
+The recommended way to share scripts and flows with operators is through [auto-generated apps](../6_auto_generated_uis/index.mdx).
+The second option is to share the script and the [variables](../2_variables_and_secrets/index.mdx) it depends on. An operator with read access to a variable can read its value, secrets included, through the API. The UI hides the "Load secret value" button for operators, but that is a UI convenience, not a permission boundary. Grant folder access accordingly.
+
+From the workspace settings, you can configure the operator visibility settings for your workspace. These control which pages an operator sees; they do not change what an operator is allowed to write, and they are all enabled by default. You can allow/disallow operators to view:
 
 - [Runs](../5_monitor_past_and_future_runs/index.mdx)
 - [Schedules](../1_scheduling/index.mdx)
