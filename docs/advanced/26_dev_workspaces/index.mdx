@@ -125,9 +125,11 @@ When a workspace-specific item exists on only one side, the **Workspace-specific
 
 ## AI chat sessions
 
-The AI chat session "Run in" picker shows the "dev" badge on dev workspaces. A new session defaults to the workspace you are currently in, and steers to the dev workspace only when you are in a prod workspace you cannot deploy to (read from the prod workspace's own protection rules, with admin bypass recognized).
+[AI sessions](../../core_concepts/69_ai_sessions/index.mdx) are aware of dev workspaces. The session "Acting on" picker shows the "dev" badge on dev workspaces. A new session defaults to the workspace you are currently in, and steers to the dev workspace only when you are in a prod workspace you cannot deploy to (read from the prod workspace's own protection rules, with admin bypass recognized).
 
 The "Create new fork" entry defaults to **Fork from \<dev\>**; an admin-only **Fork from \<root\>** entry appears when you can fork the root workspace. Options you cannot use are hidden, and persistent dev workspaces are never offered for deletion.
+
+The session's system prompt also tells the AI when it operates in a dev workspace rather than an ephemeral fork or the live workspace, so it presents deploys as landing in dev, pending promotion to prod - see [AI sessions](../../core_concepts/69_ai_sessions/index.mdx#sessions-workspaces-and-forks).
 
 ## Lifecycle and limitations
 

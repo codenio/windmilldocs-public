@@ -57,7 +57,7 @@ Configure which [data tables](../4_data_tables/index.mdx) your app can access:
 
 Click the preview button to test your app in the browser. The preview runs your bundled frontend code and connects to Windmill's backend for runnable execution.
 
-When editing a full-code app in an AI session, the agent can capture this preview with its [`take_screenshot` tool](../../core_concepts/22_ai_generation/index.mdx#app-preview-screenshots) (Google Chrome only) to see the rendered UI, and you can drag screenshots directly into the chat as [image attachments](../../core_concepts/22_ai_generation/index.mdx#image-attachments).
+In an [AI session](../../core_concepts/69_ai_sessions/index.mdx#debugging-full-code-apps), the AI can read the preview's rendered DOM, console logs and job runs to debug the app, and you can click elements in the preview to attach them to your chat message. The AI can also capture the preview with its [`take_screenshot` tool](../../core_concepts/22_ai_generation/index.mdx#app-preview-screenshots) (Google Chrome only), and you can drag screenshots into the chat as [image attachments](../../core_concepts/22_ai_generation/index.mdx#image-attachments).
 
 ## When to use the UI editor vs CLI
 

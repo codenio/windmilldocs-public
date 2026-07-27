@@ -168,6 +168,16 @@ To merge a fork:
 	src="/videos/merge-ui-demo.mp4"
 />
 
+#### Preselecting items via URL
+
+The review page (Compare & Deploy, at `/forks/compare` in the workspace) selects all changed items by default. To link to a review of specific items only, add an `?items=` URL parameter with comma-separated `kind:path` entries:
+
+```text
+/forks/compare?items=script:f/marketing/sync,trigger_schedule:u/alice/daily
+```
+
+Kinds follow the draft item kinds: `script`, `flow`, `app`, `raw_app`, `resource`, `variable`, and `trigger_*` variants such as `trigger_schedule` or `trigger_http`. An optional `?mode=draft|fork` parameter forces the drafts or fork comparison view; when omitted, the page picks automatically. This makes the selection linkable from external tools; the [AI chat](../../core_concepts/22_ai_generation/index.mdx#windmill-ai-chat) uses it to open the page with only its own edits preselected.
+
 #### Items behind and conflicts
 
 If it is detected that some of the differences come in fact from the original workspace, these changes will be shown as 'behind'. Before deploying, all behind changes must be updated into the fork and properly tested. When an items has changes that are both ahead and behind, it will be marked as a conflict and will be warned to the user. The user must then review the diff and decide how to edit the item to resolve the conflicting changes. Until deployed or updated however, the item will still be marked as a conflict. For more granular conflict detection and better tracked resolution, you can choose to merge the workspaces through a git workflow instead.

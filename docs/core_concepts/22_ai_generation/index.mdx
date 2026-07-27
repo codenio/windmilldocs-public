@@ -1,12 +1,12 @@
 ---
-description: How do I use AI in Windmill? Generate and edit scripts, flows and apps with OpenAI, Anthropic, Mistral, DeepSeek, Gemini and more.
+description: How do I use the AI chat and copilots in Windmill? In-editor AI assistance for scripts, flows and apps, plus model providers and AI settings.
 ---
 
 import DocCard from '@site/src/components/DocCard';
 
-# Windmill AI
+# AI chat & copilots
 
-Windmill provides ways to have AI help you in your coding experience.
+Windmill provides AI assistance across the platform. [AI sessions](../69_ai_sessions/index.mdx) (beta) are the primary, full-page way to build with AI; this page covers the rest: the AI chat, the in-editor copilots for scripts, flows and apps, and the model providers and settings they all share.
 
 :::info OpenAI integration
 
@@ -20,7 +20,7 @@ To enable Windmill AI, go to the "Windmill AI" tab in the workspace settings and
 
 ## Windmill AI Chat
 
-The AI Chat in Windmill also includes a powerful navigation mode that serves as your personal assistant for understanding and using the platform. This mode goes beyond code generation to provide comprehensive help with Windmill itself.
+The AI chat runs in one of several modes. The global mode is the one [AI sessions](../69_ai_sessions/index.mdx) use, and it can do everything the earlier modes could: answer questions about Windmill, navigate the app, operate on your workspace through the API and build workspace items, all from one conversation. The earlier navigation and API modes are legacy: they remain available in the legacy side-panel chat during the AI sessions beta, and every capability they offered is included in the global mode.
 
 <iframe
 	style={{ aspectRatio: '16/9' }}
@@ -34,26 +34,56 @@ The AI Chat in Windmill also includes a powerful navigation mode that serves as 
 
 <br/>
 
-The navigation mode can assist you with:
+The chat can assist you with:
 
 - **Answer questions about Windmill**: Get explanations about features, concepts, and best practices for using the platform effectively.
 - **Navigate the app**: The AI can guide you through the Windmill interface, helping you locate specific features, settings, and tools you need.
+- **Review and deploy changes**: Once the AI has edited items, ask it to review the changes and it opens the [Compare & Deploy](../../advanced/20_workspace_forks/index.mdx#merge-workspaces-from-the-ui-merge-ui) page with exactly those items preselected, ready to deploy.
 - **Provide documentation links**: When you need more detailed information, the AI will direct you to relevant sections of this documentation for deeper learning.
 - **Fetch API information**: The AI can retrieve and explain relevant API details to help you understand what data and options are available for your use case. 
 - **Fill script and flow inputs**: Speed up your workflow by letting the AI automatically populate form fields for scripts and flows based on context and your requirements.
 - **Custom form filling instructions**: You can provide specific instructions to the AI on how to fill out forms in script and flow settings, making it adapt to your particular workflow needs.
+- **Inspect database schemas**: Ask about the tables and columns of a database [resource](../3_resources_and_types/index.mdx) (PostgreSQL, MySQL, MS SQL Server, Snowflake or BigQuery) by referencing its resource path. The AI fetches the schema with a `get_db_schema` tool, and calls it automatically before writing SQL queries against a database resource instead of guessing your schema. This tool is also available in [AI sessions](../69_ai_sessions/index.mdx).
 
-This navigation mode makes Windmill more accessible by providing contextual help exactly when and where you need it, whether you're learning the platform or looking for quick assistance during development.
+This makes Windmill more accessible by providing contextual help exactly when and where you need it, whether you're learning the platform or looking for quick assistance during development.
 
 When the AI includes a [Mermaid](https://mermaid.js.org/) diagram in its response, the chat renders it directly in the conversation. Rendered diagrams have a copy button in their top-right corner to copy the raw Mermaid source, just like regular code blocks.
 
+When writing scripts or raw apps from the chat, the AI can search the npm registry for packages with a `search_npm_packages` tool. It fetches each package's documentation and TypeScript type definitions, so you can ask it to find and use an npm package even without a script editor or app open, and it will link the package docs in its answer.
+
+For building whole projects with the AI chat, [AI sessions](../69_ai_sessions/index.mdx) (in beta) provide a full-page environment where each chat is tied to a workspace or fork, with a live preview panel, a diff and deploy flow, background jobs and artifacts. AI sessions are enabled by default during the beta and replace this side panel chat; a banner under the session chat lets you switch back to the side panel as the legacy chat, and a matching banner in the legacy chat reactivates sessions. Operators keep the legacy chat and do not have access to sessions.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="AI sessions"
+		description="Run parallel AI chats scoped to a workspace or fork, watch changes in a live preview, review diffs and deploy."
+		href="/docs/core_concepts/ai_sessions"
+	/>
+</div>
+
+### Attaching files
+
+You can attach images and text files to a chat message using the attach button, drag and drop, or paste. Attachments appear as chips in the input box, are sent with the next message, and are cleared after sending.
+
+Text files are limited to 8 per message and 1 MB per file. Their content is not inlined into the prompt: the message carries a reference (file name and size), and the AI reads the content on demand through its file tools (`read_file`, `search_files`). This keeps the conversation history small since file content is never resent on later turns, regardless of file size.
+
+Folders attached to the chat work differently: they are session-wide assets that stay available for the whole conversation and appear in the footer next to the mode picker, rather than being tied to a single message. As a rule, the input box shows what ships with your next message (text, images, files, `@` context), while the footer holds session-wide context.
+
+![The chat composer with an image thumbnail attached in the input box and a linked folder chip in the footer](./chat_attachments.png 'Chat attachments')
+
 ### Image attachments
 
-In the global AI chat and AI sessions, you can attach images to your messages by dragging and dropping them into the chat, pasting from the clipboard, or using the file picker. This is useful to share a screenshot of a visual bug, a design mockup, or a diagram for the AI to work from. You can send up to 8 images per message (20MB and 40 megapixels each), with or without accompanying text. Click any image thumbnail to view it at full resolution.
-
-<!-- PLACEHOLDER: Screenshot of the AI chat input with an image attached as a thumbnail chip above the input field, similar to the pr-image-attach screenshot from windmill PR #10130 -->
+Images are useful to share a screenshot of a visual bug, a design mockup, or a diagram for the AI to work from. You can send up to 8 images per message (20MB and 40 megapixels each), with or without accompanying text. Click any image thumbnail to view it at full resolution.
 
 The selected [model](#models) must support image input. If it doesn't, Windmill either blocks the attachment upfront or, for models it can't verify, drops the images from the conversation if the provider rejects them (your text is kept and you're notified so you can switch to a vision-capable model).
+
+### Web search
+
+With an OpenAI or Anthropic provider, the AI chat can use the provider's native web search tool to look up current information. It is enabled by default and can be turned off per provider with the "Enable native web search" toggle in the "Windmill AI" tab of the workspace settings. Web search is available in all chat modes.
+
+When the AI searches the web, the tool card in the chat shows the search query as it is typed, then expands with the list of consulted sources (favicon, page title and link) as each search completes, while the model continues its answer. Sources are kept with the conversation history.
+
+![The expanded web search tool card, showing the search query and the list of consulted sources](./web_search_sources.png 'Web search sources')
 
 ### API endpoint catalog
 
@@ -92,6 +122,7 @@ Key features:
 - When the AI suggests code changes, you can apply or discard specific parts of the suggestion, rather than having to accept or reject the entire block.
 - You can provide additional context to guide the AI's suggestions, such as database schemas, deployed script diffs, runtime errors, and workspace scripts or flows. Access the context menu by clicking the context button or typing `@` directly in the chat input.
 - The AI has access to a `search_workspace` tool to find relevant scripts and flows in your workspace, and a `get_runnable_details` tool to inspect their schema and content. These tools are available across navigator, script, flow, and app chat modes.
+- For TypeScript scripts, a `search_npm_packages` tool lets the AI search the npm registry and fetch package documentation and type definitions, so generated code uses real, up-to-date package APIs. This tool is also available in the [global chat](#windmill-ai-chat).
 - The panel includes built-in shortcuts for common tasks like fixing bugs or optimizing code.
 
 <video

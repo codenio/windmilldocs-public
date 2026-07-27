@@ -1,0 +1,171 @@
+---
+title: AI sessions (beta)
+description: How do I use AI sessions in Windmill? Run parallel AI chats scoped to a workspace or fork, watch changes in a live preview, review diffs and deploy.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# AI sessions (beta)
+
+AI sessions are full-page environments for building with the [Windmill AI chat](../22_ai_generation/index.mdx). Each session ties an AI chat to a workspace or [workspace fork](../../advanced/20_workspace_forks/index.mdx) and pairs it with a live preview panel: the AI creates and edits scripts, flows and [full-code apps](../../full_code_apps/index.mdx) as [drafts](../0_draft_and_deploy/index.mdx), you watch the result take shape next to the conversation, then review the diff and deploy when you are satisfied.
+
+You can run many sessions in parallel, each in its own workspace or fork, and switch between them from the sessions sidebar.
+
+AI sessions are in beta and enabled by default, replacing the [AI chat side panel](../22_ai_generation/index.mdx#windmill-ai-chat) as the default chat experience. A banner under the session chat lets you give feedback or switch back to the legacy side panel chat; the choice is stored in your browser, and both the legacy chat and the sessions page then offer to reactivate sessions at any time. [Operators](../16_roles_and_permissions/index.mdx#operator) are not part of the beta and keep the legacy chat.
+
+<iframe
+	style={{ aspectRatio: '16/9' }}
+	src="https://www.youtube.com/embed/yjNHwHBkbyE"
+	title="AI sessions"
+	frameBorder="0"
+	allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+	allowFullScreen
+	className="border-2 rounded-lg object-cover w-full dark:border-gray-800"
+></iframe>
+
+## Starting a session
+
+Switch to the sessions view from the toggle at the top of the left navigation, then click the new session button. A session starts as a draft: you can pick where it will run, open preview tabs and type a prompt before anything is created. Drafts persist in your browser, so you can prepare several sessions in parallel and come back to them later.
+
+Before the first message, the "Acting on" picker lets you choose where the session operates:
+
+- The workspace you are currently in (the default).
+- Another workspace of the same family.
+- A new fork of the workspace. The fork is only created when you send your first message, so abandoning a draft session never leaves an empty fork behind.
+
+If you are in a production workspace that is locked against direct deployment, new sessions steer to its [dev workspace](../../advanced/26_dev_workspaces/index.mdx) instead, since a session could not edit anything in the locked workspace. Once the first message is sent, the session's workspace is committed and cannot change.
+
+You can also start a session from the item you are working on: script, flow and full-code app editors have an "Open in AI session" button that creates a session with that item already open in the preview panel.
+
+![The "Acting on" picker on a draft session, with the current workspace and the "Create new fork" option](./workspace_picker.png '"Acting on" workspace picker')
+
+## Sessions sidebar
+
+The sidebar lists your sessions grouped by workspace family, meaning a root workspace together with its forks. It only shows sessions from the family of the workspace you are in; a filter lets you widen the list to all workspaces. Sessions display an unread badge when the AI finished a turn you have not seen, and a draft cue when a session holds typed but unsent text.
+
+Sessions running on a fork are marked with a fork icon. From the sidebar you can rename, archive or delete a session.
+
+## Working with the AI
+
+The session chat is the [Windmill AI chat](../22_ai_generation/index.mdx#windmill-ai-chat) in its global mode, operating on the session's workspace. It can:
+
+- Create and edit scripts, flows and full-code apps. Changes are saved as your own drafts in the session's workspace, never deployed directly.
+- Test what it builds by running scripts, flow previews and individual steps as [background jobs](#background-jobs).
+- Open workspace pages for you in the preview panel: runs, schedules, variables, resources, assets, audit logs, triggers or workspace settings, with filters already applied (for example, the runs page filtered to a specific script). Pages the AI can open follow your permissions.
+- Answer questions about your workspace and about Windmill itself, with the same capabilities as the AI chat elsewhere (web search, Mermaid diagrams, API operations).
+- Write longer documents as [artifacts](#artifacts) instead of burying them in the conversation.
+
+[Data pipelines](../63_pipelines/index.mdx) are in alpha and cannot be built from a session chat yet: ask for one and the chat says so. The full-page pipeline editor and its own chat are unaffected.
+
+Sessions are the in-app counterpart to the [Model Context Protocol (MCP)](../51_mcp/index.mdx): both let an AI operate your workspace, sessions from within Windmill with a live preview and deploy flow, MCP from an external AI client such as your IDE or desktop assistant.
+
+### Attachments
+
+You can attach images and text files to a message by dragging, pasting or picking files: useful to share a design, an error screenshot, a log file or a whiteboard photo. Images require a model with vision support and are downscaled client-side; up to 8 images can be attached per message. Text files (up to 8 per message, 1 MB each) are read by the AI on demand rather than inlined, so they never bloat the conversation history; see [attaching files](../22_ai_generation/index.mdx#attaching-files). A message can also consist of attachments alone, with no text. You can also link workspace files and folders to the conversation so the AI keeps them in context for the whole session.
+
+### Slash commands
+
+Typing `/` in the chat input opens the command picker, with built-in actions and workspace AI skills grouped under Actions and Skills; hover a row to see a command's full description.
+
+- `/compact` summarizes the conversation in place to free context while keeping the important facts, using the same summarization as automatic compaction.
+- `/clear` saves the conversation to history and starts a fresh chat in the same session.
+- AI skills defined in your workspace appear as additional commands.
+
+## Preview panel
+
+The right-hand panel is a tabbed view of the session's workspace. Two kinds of tabs exist:
+
+- Editable items (scripts, flows, full-code apps) open as live editors: the same editors as the rest of Windmill, mounted in the panel and scoped to the session's workspace. When the AI edits an item, the open editor updates live, and you can edit alongside the AI; your manual edits land in the same draft.
+- Workspace pages (home, runs, schedules, variables, resources, settings and more) open as regular pages. After a chat turn, only the pages affected by what the AI actually touched are refreshed: creating a schedule reloads an open schedules tab but leaves your resources tab alone.
+
+The active tab shows a breadcrumb that doubles as a router: click a segment to jump to another page or item of the session's workspace without leaving the session. Tabs can be reordered by dragging, and the panel can be resized, collapsed or expanded to full screen. Clicking a job in a runs page opens its run detail in a new tab.
+
+When the AI creates, edits or previews an item, the tool call in the chat shows a Preview chip with the item's icon: click it to open the item's live preview in the panel, or focus its tab if it is already open.
+
+![A tool call that saved an app draft, with its Preview chip on the right](./tool_preview_chip.png 'Tool-call Preview chip')
+
+### Debugging full-code apps
+
+When a full-code app preview is open, the AI can inspect the running app to debug it: it reads the app's console logs and backend job runs, and can query the rendered DOM live with its `search_dom` and `read_dom` tools (by CSS selector, or the whole page body without one) to verify that an edit rendered, diagnose a blank page or answer questions about what is on screen. On Chromium-based browsers it can also take a screenshot of the preview to see the result of its own changes.
+
+You can point the AI at specific elements with the preview inspector: click elements in the preview to attach them to your next message as selector chips. Chips and preview highlights stay in sync, several elements can be selected at once, and chips are cleared once the message is sent.
+
+![An AI session with a full-code app preview open, an element selected via the inspector with its highlight in the preview and the matching selector chip in the chat input](./app_debugging_inspector.png 'Debugging an app preview with the inspector')
+
+## Reviewing and deploying changes
+
+Everything the AI changes goes through [draft and deploy](../0_draft_and_deploy/index.mdx): edits are drafts in the session's workspace, visible only to you until deployed.
+
+The edits bar above the chat input tracks the items changed by this chat, with a badge per state: pending draft or deployed. It only counts this conversation's changes, not every unsaved draft in the workspace. Clicking it opens the diff drawer: a file tree with a unified diff per item, where full-code apps unwrap into per-file diffs. From there you can:
+
+- Deploy an item into the session's workspace (permission-gated).
+- Discard a draft, behind a confirmation.
+- Jump to the [compare page](../../advanced/20_workspace_forks/index.mdx#preselecting-items-via-url) to review and promote a fork's changes to its parent workspace, with the chat's changed items preselected.
+
+If someone deployed a newer version of an item after your draft began, the drawer warns you that deploying would revert their changes.
+
+![The edits bar above the chat input, listing the items edited this session with their draft status](./edits_bar.png 'Edits bar')
+
+![The diff drawer with a file tree and a unified diff, with Discard draft and Deploy actions](./diff_drawer.png 'Unified diff drawer')
+
+## Background jobs
+
+Jobs the AI starts (script tests, flow previews, SQL) do not block the conversation. A job that takes longer than a short inline wait detaches and keeps running in the background while the chat continues; when it finishes, the result is reported back to the AI.
+
+The jobs tray next to the edits bar shows every job of the session with its live status. From the tray you can cancel a running job, open it in the preview panel, or approve a job that is suspended waiting for approval: the real resume/reject form opens in place. Background jobs survive a page reload and resume polling to completion.
+
+![The jobs tray popover with a running job, a job waiting for approval and completed jobs](./jobs_tray.png 'Background jobs tray')
+
+## Artifacts
+
+For output that deserves a document rather than a chat reply, such as a plan, a design write-up or a spec, the AI creates artifacts: markdown documents attached to the session. Artifacts open in the preview panel with a rendered view, a view-source toggle and copy and download actions. The artifacts token above the chat input lists them, with per-row open, download and delete.
+
+Artifacts are stored with the session and deleted with it.
+
+![An artifact rendered in the preview panel, with the artifacts token above the chat input](./artifact_viewer.png 'Artifact rendered in the preview panel')
+
+## Sessions, workspaces and forks
+
+A session can be archived or deleted at any time, from the sidebar or the session itself. Archiving is reversible: an archived session keeps its conversation and can be unarchived later. When the session runs on a fork created for it, archiving or deleting it also offers to archive or delete the fork along with it; persistent [dev workspaces](../../advanced/26_dev_workspaces/index.mdx) are never offered for deletion.
+
+The lifecycle also works the other way, since a session belongs to the workspace it runs in: if the session's fork or workspace is deleted (including from another device), the session is automatically deleted with it; archiving the workspace archives its sessions, and unarchiving it restores the sessions that were archived with it.
+
+The AI knows where it operates: its system prompt states whether the session runs in an ephemeral fork, a dev workspace or the live workspace, so it presents changes made in a fork as pending promotion rather than live, and deploys in a dev workspace as landing in dev.
+
+Forks make sessions safe to experiment with: the AI works on an isolated copy, and its changes only reach the parent workspace through the compare page. On Community Edition an instance is limited to 3 workspaces, which caps how many forks you can create; [Enterprise Edition](/pricing) lifts this limit.
+
+:::tip One fork per session
+Creating a new fork for each session is a good default. Every conversation gets its own isolated copy to experiment in, and promoting its changes goes through the same [Compare & Deploy review](../../advanced/20_workspace_forks/index.mdx#merge-workspaces-from-the-ui-merge-ui) as the [dev to prod workflow](../../advanced/26_dev_workspaces/index.mdx), so nothing reaches the parent workspace without a review you already know.
+:::
+
+Sessions are stored locally in your browser, per user. They are not synced across devices or browsers: the conversation, draft sessions, artifacts and attached images stay on the machine where you created them. The drafts the AI creates, however, are regular workspace drafts stored server-side.
+
+## Related documentation
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="AI chat & copilots"
+		description="AI chat, in-editor copilots and model settings across Windmill."
+		href="/docs/core_concepts/ai_generation"
+	/>
+	<DocCard
+		title="Draft and deploy"
+		description="Iterate on drafts and deploy them when ready."
+		href="/docs/core_concepts/draft_and_deploy"
+	/>
+	<DocCard
+		title="Workspace forks"
+		description="Create independent copies of a workspace for parallel development."
+		href="/docs/advanced/workspace_forks"
+	/>
+	<DocCard
+		title="Dev workspaces"
+		description="Pair a persistent dev workspace with a lockable prod workspace."
+		href="/docs/advanced/dev_workspaces"
+	/>
+	<DocCard
+		title="Model Context Protocol (MCP)"
+		description="Drive your Windmill workspace from an external AI client instead of the built-in sessions."
+		href="/docs/core_concepts/mcp"
+	/>
+</div>
