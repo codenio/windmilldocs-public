@@ -93,10 +93,24 @@ This feature is [Enterprise Edition](/pricing) only and is configured at the ins
 
 To set up a self-managed GitHub App:
 
-1. Register a new GitHub App on your GitHub instance (github.com or your GHES instance)
-2. In Windmill [Instance Settings](../advanced/18_instance_settings/index.mdx#github-enterprise-app), go to **Advanced > GitHub Enterprise App** and enable "Self-managed GitHub App (for GHES or custom GitHub App)"
-3. Fill in the app details: Base URL (e.g. `https://github.com` or your GHES URL), App ID, App Slug, Client ID, and Private Key (PEM)
-4. Install the GitHub App to your organization on your GitHub instance
+1. Register a new GitHub App on your GitHub instance, under **Settings → Developer settings → GitHub Apps → New GitHub App**, with the following configuration:
+   - **GitHub App name**: e.g. `windmill-sync` (this becomes the app slug)
+   - **Homepage URL**: your Windmill instance URL
+   - **Setup URL** (under "Post installation"): `<your-windmill-instance-url>/gh_success`, and check **Redirect on update**
+   - **Callback URL**: `<your-windmill-instance-url>/gh_success`
+   - **Webhook**: uncheck **Active** (not needed)
+   - **Repository permissions**: **Contents**: Read & write, **Metadata**: Read-only (see [GitHub App permissions](#github-app-permissions) for the additional permissions that enable webhooks, pull requests and checks)
+   - **Where can this GitHub App be installed?**: Any account (or restrict to your organization)
+2. On the app page after creation, note the **App ID**, the **Client ID** and the app slug (the last segment of the app settings URL, `<your-github-host>/settings/apps/<app-slug>`, or `<your-github-host>/organizations/<org>/settings/apps/<app-slug>` for an organization-owned app; GitHub normalizes the app name to lowercase with hyphens), and click **Generate a private key** to download the `.pem` file
+3. In Windmill [Instance Settings](../advanced/18_instance_settings/index.mdx#github-enterprise-app), go to **Advanced > GitHub Enterprise App** and enable "Self-managed GitHub App (for GHES or custom GitHub App)"
+4. Fill in the app details: Base URL (e.g. `https://github.com` or your GHES URL), App ID, App Slug, Client ID, and Private Key (PEM)
+5. Install the GitHub App to your organization on your GitHub instance, either from the workspace Git sync settings in Windmill or directly on GitHub
+
+:::warning Setup URL is required for installing from Windmill
+The **Setup URL** is what makes GitHub redirect back to your Windmill instance after the app is installed, carrying the installation details that link it to the workspace. If it is not set, installing the app from the workspace Git sync settings silently does nothing on the Windmill side.
+
+If the app was installed without a Setup URL (or directly on GitHub), a superadmin can still link the installation to workspaces manually: in instance settings under **Advanced → GitHub Enterprise App → Workspace assignments**, click **Refresh** to discover the app's installations and assign them to workspaces.
+:::
 
 Once configured, the self-managed GitHub App can be used for [Git sync](../advanced/11_git_sync/index.mdx) authentication in the same way as the managed GitHub App. Host-based installation filtering ensures tokens are scoped to the correct GitHub instance, preventing token leakage across instances.
 
