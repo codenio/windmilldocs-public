@@ -6,7 +6,7 @@ import DocCard from '@site/src/components/DocCard';
 
 # Windows workers
 
-Windows workers enable you to run Windmill scripts and flows directly on Windows machines without requiring Docker or WSL, supporting Python, Bun, PowerShell, C#, and Nu executors for native Windows execution.
+Windows workers enable you to run Windmill scripts and flows directly on Windows machines without requiring Docker or WSL, supporting Python, Bun, PowerShell, C#, Nu, Java, Ruby, and R executors for native Windows execution.
 
 Windows Native Workers are a [Self-Hosted Enterprise](/pricing) feature. In terms of [billing](/pricing), they count as 1 Compute Unit, unless you are using them for compute on a large machine, in which case they count as 2 Compute Units.
 
@@ -164,16 +164,34 @@ You can also check other installation methods in uv`s [official documentation](h
 
 ### R executor
 
-1. **Install R**: Download and install R from the [official CRAN website](https://cran.r-project.org/bin/windows/base/). During installation, ensure R is added to the system PATH.
+1. **Install R**: Download and install R from the [official CRAN website](https://cran.r-project.org/bin/windows/base/). During installation, ensure R is added to the system PATH. The worker invokes `Rscript.exe` through PATH on Windows.
    - Start PowerShell and verify you have a working R installation:
      ```powershell
      Rscript --version
      ```
 
-2. **Install Pak and Renv**:
+2. **Locate the R installation**:
+   - Find where `Rscript.exe` is installed by running:
+     ```powershell
+     where.exe Rscript.exe
+     ```
+     Example output:
+     ```plaintext
+     C:\Program Files\R\R-4.6.1\bin\Rscript.exe
+     ```
+
+3. **Set environment variables**:
+   - Add the following environment variables (replace the placeholders with your specific values):
+     ```powershell
+     # Replace these variables with your specific configuration
+     $env:RSCRIPT_PATH="C:\Program Files\R\R-4.6.1\bin\Rscript.exe"
+     ```
+     Without `RSCRIPT_PATH`, R jobs fail with "Rscript binary not found" even when `Rscript.exe` is on PATH.
+
+4. **Install renv**: Windmill uses [renv](https://rstudio.github.io/renv/) to resolve and install R package dependencies, so it must be available to the worker's R installation:
    - Run:
      ```powershell
-     Rscript -e "install.packages(c('pak', 'renv'), lib=Sys.getenv('R_LIBS_USER'), repos='https://cloud.r-project.org')"
+     Rscript -e "install.packages('renv', repos='https://cloud.r-project.org')"
      ```
 
 
