@@ -288,6 +288,8 @@ By default, nsjail requires `privileged: true` because it creates user namespace
 
 ```yaml
 securityContext:
+  runAsUser: 0
+  runAsNonRoot: false
   allowPrivilegeEscalation: true
   capabilities:
     drop: [ALL]
@@ -302,6 +304,8 @@ securityContext:
 ```
 
 Using `capabilities: add: [ALL]` also works if your security policy allows it.
+
+**`runAsUser: 0` is required.** The nsjail binary ships without file capabilities (no `setcap`), so the capabilities above are only granted automatically to a root process. Under a non-root UID they never become effective and nsjail fails with `Operation not permitted`.
 
 **Security tradeoff:**
 
