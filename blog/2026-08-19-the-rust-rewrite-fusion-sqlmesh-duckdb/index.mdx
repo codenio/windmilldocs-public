@@ -1,0 +1,177 @@
+---
+slug: the-rust-rewrite-fusion-sqlmesh-duckdb
+draft: true
+authors: [rubenfiszel]
+tags: ['dbt', 'Data pipelines', 'DuckDB', 'Orchestration']
+description: 'Why was dbt rewritten in Rust? Not for speed. Understanding SQL statically is what makes state-aware builds possible, and it is quietly moving the scheduling decision out of the orchestrator and into the transform engine.'
+title: 'The Rust rewrite was never about speed'
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+{/* Thumbnail placeholder: a SQL SELECT statement on the left dissolving into an
+    AST tree in the middle, and on the right a row of table nodes where only two
+    are highlighted as "needs rebuild". Muted blues on dark, Windmill blog cover style. */}
+
+# The Rust rewrite was never about speed
+
+Fourth post in the [data pipelines series](/blog/how-dbt-works-and-its-orchestrators). Previously: [how orchestrators wrap dbt](/blog/how-dbt-works-and-its-orchestrators), [why four tools disagree about what a table is](/blog/asset-graphs-and-lineage-across-tools), and [incremental models as three decisions in one config](/blog/incremental-partitions-and-backfills).
+
+The dbt rewrite has been discussed almost entirely in terms of speed: Rust instead of Python, parse times up to 30x faster on large projects. That is real, and it is the least interesting thing about it.
+
+The interesting thing is that dbt now understands SQL. Not renders it, not passes it through, understands it: parses to an AST, resolves column references across models, infers types, reports errors before anything reaches the warehouse. Once an engine can do that, it can answer a question it previously could not, which is "what actually changed, and therefore what actually needs to be rebuilt". That question is the one that decides what runs, and until now it lived in the orchestrator, or more honestly, nowhere.
+
+SQLMesh got there first, from a standing start, with the same insight and a different architecture. dbt got there via a rewrite. Both are now owned by Fivetran. And the layer they converged on is the layer being monetized.
+
+{/* truncate */}
+
+## From templating to compiling
+
+It is worth being blunt about what dbt 1.x is, architecturally, because the contrast is the whole story.
+
+dbt 1.x is a Jinja templating engine with a dependency graph. `{{ ref('stg_orders') }}` is a macro call that returns a string. The model body is text with holes in it. dbt fills the holes, concatenates the result into a larger string with some DDL around it, and sends that string to the warehouse. At no point does dbt know that your model has a column called `total`, or that `total` is a `numeric`, or that you misspelled `amuont` in a join.
+
+The warehouse is the only participant that ever parses your SQL. Which means every SQL error is a run-time error, surfaced after a network round trip, potentially on model 43 of 200, after 20 minutes of successful builds.
+
+Fusion, now [dbt Core v2.0](https://docs.getdbt.com/blog/dbt-core-v2-is-here), replaces that with a compiler front end: a multi-dialect SQL parser with type inference, running locally. The user-visible consequences are the ones dbt leads with, and they are good ones: autocomplete, hover types, inline errors as you type, CTE preview, and the ability to trace a column's definition across models. Errors move left, from the warehouse to the editor.
+
+The consequence that matters for this series is different. The engine now holds a semantic model of your project, and a semantic model is what you need to decide whether a change matters.
+
+## The licensing arc, briefly
+
+Worth recording, because it moved fast and the details get muddled.
+
+[dbt Fusion launched on 28 May 2025](https://github.com/dbt-labs/dbt-fusion): Rust, a new CLI, adapters being rewritten starting with Snowflake, and a hybrid license. Elastic License 2.0 for most of the tree, Apache 2.0 for a handful of crates (`dbt-adapter`, `dbt-jinja`, `dbt-xdbc`, `dbt-auth`, `dbt-agate`). ELv2 forbids offering the software to third parties as a hosted or managed service, which put every platform that runs other people's dbt in an awkward position.
+
+On 1 June 2026, that resolved: [dbt Core v2.0 shipped in alpha](https://github.com/dbt-labs/dbt-core/blob/main/docs/roadmap/2026-06-announcing-v2.md), the Fusion engine was folded into it under Apache 2.0, and the `dbt-fusion` repository was archived. One engine, one license, with premium capabilities (the enhanced binary, the linter, column-level lineage) unlocked by a login rather than carved out of the source tree. Along with it: Parquet artifacts as an alternative to the JSON ones, and an adapter story rebuilt on ADBC and Arrow, which is what removes the per-adapter Python virtualenv.
+
+The same day, [Fivetran and dbt Labs completed their merger](https://www.fivetran.com/press/fivetran-dbt-labs-complete-merger-to-create-the-data-infrastructure-for-trusted-ai-agents). Fivetran had acquired Tobiko Data, and therefore SQLMesh and SQLGlot, in September 2025. So the two engines this post compares are now the same company's.
+
+One practical note if you are considering the jump. A valid dbt 1.x project frequently fails to *parse* on 2.x until its deprecations are resolved. We verified this while building our dbt runtime: things like `MissingArgumentsPropertyInGenericTestDeprecation`, and `loaded_at_field` / `freshness` having moved under `config:`. dbt ships `dbt-autofix` for exactly this and the engines interoperate side by side, so it is a normal migration. It is just not a no-op, which is why our runtime still defaults to `dbt-core-1x`. Adapter coverage on 2.x is also narrower than 1.x: running `dbt debug` against Postgres on 2.0.0-alpha.5 reports the supported set as Snowflake, BigQuery, Databricks, Redshift, DuckDB, Salesforce and ClickHouse, with anything else behind `DBT_ALLOW_EXPERIMENTAL_ADAPTERS=true`.
+
+## What SQL comprehension actually buys: state
+
+Here is the capability chain, and each link genuinely requires the previous one:
+
+1. Parse SQL to an AST, per dialect.
+2. Therefore know which columns each model reads and produces, at compile time.
+3. Therefore compute a fingerprint of a model that is stable under formatting and refactoring, and that changes only when behaviour changes.
+4. Therefore classify a change as affecting downstream models or not.
+5. Therefore build only what actually needs building.
+
+Step 5 is the prize. Steps 1 through 4 are why nobody could do it before.
+
+### SQLMesh: virtual data environments
+
+[SQLMesh](https://www.tobikodata.com/blog/virtual-data-environments) implements this with a split that is worth understanding even if you never use it, because it is the cleanest expression of the idea.
+
+There are two layers. The physical layer holds real tables, one per model *snapshot*, named after that snapshot's fingerprint. The virtual layer is views, and views are what downstream consumers and humans query. A model's current version is whichever physical table its view points at.
+
+A fingerprint combines the model's own data hash (query, storage format, partitioning), the data hashes of its upstream models, and metadata hashes. Crucially, the query is canonicalized by SQLGlot's optimizer before hashing, so reformatting a model, renaming a CTE, or reordering a select list does not produce a new fingerprint. Only a change in meaning does.
+
+From that, three things follow that are hard to get otherwise:
+
+A development environment costs nothing to create. It points its views at the same physical tables production is using. Only the models you actually changed get new snapshots and new tables. You are not copying a warehouse to test a one-line change.
+
+Changes are classified semantically as breaking (downstream models are affected) or non-breaking (only this model is), so the rebuild set is derived rather than guessed at with `+` selectors.
+
+Deployment is a view swap. The physical tables were built during the plan, so promoting to production is an atomic pointer change, near-instant, with no recomputation. Contrast the dbt shape, where dev and prod are separate schemas built by separate runs, and promoting means rebuilding in prod and hoping it matches what you saw in dev.
+
+The workflow is explicitly Terraform-shaped: `plan` shows you exactly what will be built and what it will cost before you spend the compute, then `apply`.
+
+### dbt: state-aware orchestration, now dbt State
+
+dbt's version of step 5 shipped as state-aware orchestration and was [rebranded as dbt State on 1 June 2026](https://docs.getdbt.com/docs/deploy/dbt-state-about). The mechanism is a real-time fingerprint of both model code and data state: when a job runs, it checks whether new records have arrived upstream and whether code has changed, and builds only the models whose answer is yes. Models with no upstream change are reused rather than rebuilt.
+
+There is one config in it worth knowing about by name, because it is the knob that makes the idea practical rather than twitchy: `lag_tolerance` controls how much time must pass since the last upstream data change before a node becomes eligible for a rebuild. Without something like it, a trickle of upstream rows rebuilds your whole marts layer continuously.
+
+dbt State works with dbt Core, with Fusion, with the dbt platform, and with external orchestrators. It is also a paid platform feature, with billing beginning 1 September 2026 and trials extended until then for existing users.
+
+I want to be careful not to editorialise this into something it is not. It is completely reasonable to open-source an engine and charge for a managed state layer. But it is worth noticing what the split is: the engine that runs SQL is Apache 2.0, and the component that decides *whether to run it* is the commercial one. That component is a scheduler. If you are already running an orchestrator, you now have three scheduling authorities in the stack, and the newest one is the one you pay for.
+
+## What this does to the orchestrator
+
+[Post one](/blog/how-dbt-works-and-its-orchestrators) argued that dbt is already an orchestrator, and that the real question is which of the two schedulers owns which job. The answer at the time was reasonably clean: dbt owns ordering and parallelism within the project, the orchestrator owns triggering, credentials, observability, cross-tool lineage and recovery.
+
+State-awareness moves the line again, and further. Deciding whether a model needs to run at all is not a transform concern by any traditional reading; it is the definition of scheduling. And it has moved into the transform engine, because the transform engine is the only component that can compute the fingerprint that makes the decision correct.
+
+I think this is the right place for it, and I think it is worth being explicit about what it leaves the orchestrator:
+
+- Triggering, on time or on events, from outside the warehouse.
+- Credentials, secrets, network boundaries, worker placement.
+- Everything that is not SQL: ingestion, reverse ETL, notifications, the Python model, the API call, the file drop.
+- Cross-tool lineage, which is the [identity problem from post two](/blog/asset-graphs-and-lineage-across-tools) and cannot be solved inside any single transform engine.
+- Observability of runs, and recovery when they fail.
+
+That is a perfectly good job description. It is just a smaller one than "orchestrate your transformations", and an orchestrator whose pitch is "we render your dbt project as per-model tasks" is competing precisely on the half that is shrinking.
+
+## The other half of the story: the substrate
+
+There is a second reason dbt had to build so much machinery, and it has nothing to do with Python.
+
+dbt had to build a materialization engine, compiling to `create table as`, incremental `merge`, `delete+insert`, snapshot SCD2 logic, per dialect, because the warehouse gives it exactly one primitive: raw SQL over a mutable table. Every capability beyond "replace the contents" had to be constructed in SQL, per adapter. That is where the cross-warehouse merge complexity from [post three](/blog/incremental-partitions-and-backfills) comes from, and it is a permanent tax rather than a one-off cost.
+
+Now consider a substrate that offers more than a mutable table. [DuckLake](https://ducklake.select/) puts catalog metadata in a transactional SQL database and data in Parquet files on object storage. Its own FAQ positions it as comparable to Delta Lake with Unity Catalog, or Iceberg with Lakekeeper or Polaris, with the distinguishing choice being metadata in a database rather than in files. That choice buys straightforward compaction, mitigation of the small-files problem via inlining into the catalog before serialization, and concurrent multi-writer access that vanilla DuckDB does not have.
+
+For a transformation framework, what matters is the four things it provides at the storage layer:
+
+| Capability | Who provides it |
+| --- | --- |
+| ACID multi-statement transactions | the substrate |
+| A snapshot per commit, with time travel | the substrate |
+| Physical partitioning and pruning | the substrate |
+| Schema evolution tracked in the catalog | the substrate |
+
+Those are four of the things dbt's materialization engine exists to provide. If the storage layer has them, the materialization layer stops being a compiler and becomes a thin write-strategy wrapper plus snapshot capture.
+
+The clearest example is reproducibility. dbt models are always "whatever is in the warehouse now": dbt does not record which version of a table a given run produced, so "what did this table look like during the run that failed" is not a question the tool can answer. On a snapshotting substrate it costs one integer per run. In Windmill's pipelines, every managed materialization records the DuckLake snapshot id it produced alongside the row count, and reading a past state is a clause:
+
+```sql
+FROM lake.orders_daily AT (VERSION => 42)
+```
+
+which the asset's History tab will hand you, next to the list of snapshots and a preview of each.
+
+The honest boundary: this only holds where you control the substrate. If your data lives in Snowflake or BigQuery, you get whatever time travel and cloning they offer, the materialization engine has to be built in SQL, and dbt's approach is the correct one. This is an argument about lakehouse-shaped stacks, not a claim that warehouses are wrong.
+
+## Three engines, one architecture
+
+Strip the branding and the current generation of transform tooling converges on the same pipeline:
+
+1. Parse SQL to an AST, dialect-aware.
+2. Derive the dependency graph, ideally down to columns.
+3. Fingerprint each node over its canonicalized meaning plus its upstream fingerprints.
+4. Compare against recorded state: what is built, from what code, over what data intervals.
+5. Build the minimum difference.
+6. Record what was built.
+
+Fusion and SQLMesh differ mostly in where state lives and who operates it. SQLMesh keeps it in its own state store and expresses it as environments and plans. dbt keeps it in the platform and expresses it as fingerprints and `lag_tolerance`. A DuckLake-shaped stack gets step 6 from the storage layer for free and has to build less of steps 3 to 5 as a result.
+
+The reason this matters for anyone building or choosing an orchestrator is simple: steps 1 to 6 are not orchestration, they are compilation, and they are moving into the engines. Whatever is left over is what your orchestrator should actually be good at.
+
+## Where we landed
+
+Two answers, for two different situations, which is the honest shape of it.
+
+For teams with an existing dbt project, we run it. Our [dbt runtime](https://github.com/windmill-labs/windmill/pull/10326) supports all three engines: `dbt-core-1x` (a per-adapter venv built and cached on first use), `dbt-core-2x` (bundled, one adapter-agnostic Rust binary), and Fusion (fetched from dbt Labs at run time, never bundled, which is what keeps us out of the redistribution question entirely). The shipped default is 1.x for the parse-compatibility reason above. Flipping the default is a config change, not a port, and it happens when a real project verifies end to end on 2.x.
+
+For teams building new, we took the substrate route rather than the compiler route: DuckDB for transformation and DuckLake for storage, so managed materialization is a write-strategy wrapper (replace, keyed merge, append, SCD2 history) plus snapshot capture, and versioning is a property of every write rather than a feature.
+
+And the gap, stated plainly: we do not do fingerprint-based state. Column lineage is inferred from the DuckDB SQL AST, so step 2 is there, but "what changed and therefore what needs rebuilding" is answered from partition state, not from model fingerprints. Partition state is the better fit for event-shaped pipelines and it is genuinely worse than SQLMesh's answer for the "I refactored a CTE, what needs rebuilding" case. That is a scope decision, not an oversight, and it is the kind of thing that should be in a blog post rather than discovered in month three.
+
+## Next
+
+The last post in the series is on [data tests, contracts and write-audit-publish](/blog/data-tests-contracts-and-write-audit-publish): test severity semantics, what schema contracts do and do not catch, and what it takes to never publish a bad slice rather than to notice one afterwards.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="DuckLake"
+		description="Managed lakehouse tables in Windmill, with snapshots and time travel."
+		href="/docs/core_concepts/persistent_storage/ducklake"
+	/>
+	<DocCard
+		title="Materialization"
+		description="Managed writes, strategies, versioning and time-travel over DuckLake."
+		href="/docs/core_concepts/pipelines/materialization"
+	/>
+</div>

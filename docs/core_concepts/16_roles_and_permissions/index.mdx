@@ -109,13 +109,21 @@ Regarding to [Pricing](/pricing), operators are counted as half of a regular sea
 
 ### Service accounts
 
-Service accounts are workspace-scoped automation identities that cannot log in directly. They are always [operators](#operator) and are intended for CI/CD pipelines, scheduled jobs, or API integrations that need workspace-scoped permissions without a real user login.
+Service accounts are workspace-scoped automation identities that cannot log in directly (no password, no SSO). They act through [tokens](../59_user_tokens/index.mdx) and are intended for CI/CD pipelines, scheduled jobs, or API integrations that need workspace-scoped permissions without a real user login.
 
-Service accounts are an [Enterprise](/pricing) feature. Create them from workspace settings under user management by toggling the "Service Account" option. Only a username is required (no email).
+Service accounts are an [Enterprise](/pricing) feature. Create them from workspace settings under user management: in "Add new user", pick **Service Account** as the role. Only a username is required — the email is derived automatically, so there is nothing to invite or verify.
+
+A service account is **not** necessarily an [operator](#operator). You pick its role at creation time:
+
+- **Operator** (default): read/run only. Cannot be used for CLI sync or to author scripts, flows and apps.
+- **Developer**: can author and edit scripts, flows and apps within its path. This is the role to use for CLI sync tokens.
+- **Admin**: full workspace admin. Grant only when the service account needs to manage workspace settings.
+
+When you pick Developer, you can also add the service account to the **`wm_deployers`** group. This is recommended when the account is used as a `wmill sync push` / CI deploy identity, since members of `wm_deployers` can [deploy on behalf of](../12_staging_prod/index.md#run-on-behalf-of) other users in the target workspace.
 
 Admins can **impersonate** a service account to act as that identity and verify its permissions.
 
-Service accounts do not consume a license [Seat](#users).
+Service accounts count toward [seats](#users) with the same weighting as regular members: an operator service account counts as half a seat, a developer or admin service account as a full seat.
 
 ### Anonymous app viewers
 

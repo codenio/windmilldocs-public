@@ -1,0 +1,238 @@
+---
+slug: data-tests-contracts-and-write-audit-publish
+draft: true
+authors: [rubenfiszel]
+tags: ['dbt', 'Data pipelines', 'DuckDB', 'Orchestration']
+description: 'Your dbt tests run after the model is already committed, so bad data is live while the test is deciding. A look at test severity, why most contract constraints are not enforced, and what write-audit-publish actually requires.'
+title: 'Your data tests run after you publish the bad data'
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+{/* Thumbnail placeholder: a timeline with three marks, "COMMIT", "TEST RUNS",
+    "TEST FAILS", and the gap between the first two shaded red and labelled
+    "bad data is live". Muted blues on dark with one red accent,
+    Windmill blog cover style. */}
+
+# Your data tests run after you publish the bad data
+
+Last post in the [data pipelines series](/blog/how-dbt-works-and-its-orchestrators). Previously: [how orchestrators wrap dbt](/blog/how-dbt-works-and-its-orchestrators), [what a table is](/blog/asset-graphs-and-lineage-across-tools), [incremental as three decisions](/blog/incremental-partitions-and-backfills), and [what the Rust rewrite is actually for](/blog/the-rust-rewrite-fusion-sqlmesh-duckdb).
+
+There is a sentence in dbt's documentation about the difference between tests and contracts that is worth reading slowly: contracts define a dataset's shape and are checked at build time, preventing the model from building on violation; tests validate a dataset's content and run after the model builds.
+
+Run after the model builds. That is the entire subject of this post.
+
+For a `table` materialization, "builds" means the `create table as` committed. Which means that between the moment your model is published and the moment its test comes back, a table with known-bad data is live in your warehouse, readable by every BI tool pointed at it. If the test fails, dbt fails the run and skips the downstream models. It does not un-publish the table. The bad data stays there, visible, until a human intervenes.
+
+Blocking downstream models is not the same thing as protecting readers, and the gap between those two is where most data incidents actually happen.
+
+{/* truncate */}
+
+## Four questions, and the mechanisms that answer them
+
+It helps to separate these up front, because the vocabulary overlaps badly and people argue past each other as a result.
+
+| Question | Mechanism | When it runs |
+| --- | --- | --- |
+| Is my transformation logic correct? | unit tests | in CI, against fixtures, no warehouse state |
+| Is the output the right shape? | contracts | at compile, before the write |
+| Is the output's content correct? | data tests | after the write, or inside the transaction |
+| Will my change break a downstream consumer? | schema contracts, column lineage | at save or deploy |
+
+dbt has all four. They arrived at different times, they are configured in different places, and only the third one is what most teams mean when they say "we have tests".
+
+## Data tests, and the severity config nobody uses
+
+A dbt data test is a `select` that passes when it returns zero rows. That is the whole model, and it is a good one: the four generic tests (`unique`, `not_null`, `accepted_values`, `relationships`) are just parameterised versions of it, a singular test is one you write yourself, and a custom generic test is a macro that emits one.
+
+dbt 1.8 renamed the YAML key from `tests:` to `data_tests:`, to disambiguate from the unit tests introduced in the same release. The old key still works.
+
+The part worth actually knowing is [severity](https://docs.getdbt.com/reference/resource-configs/severity), because it has three configs and the interaction between them is not obvious:
+
+- `severity`: `error` or `warn`. Default `error`.
+- `error_if`: a threshold expression. Default `!=0`.
+- `warn_if`: a threshold expression. Default `!=0`.
+
+Evaluation order, which is the bit that trips people up: if `severity` is `error`, dbt checks `error_if` first, and if that is not met it falls through to `warn_if`, and if that is not met the test passes. If `severity` is `warn`, `error_if` is skipped entirely.
+
+Thresholds are SQL comparisons over the failure count: `> 5`, `= 0`, `between 5 and 10`. Which means you can write this:
+
+```yaml
+models:
+  - name: large_table
+    columns:
+      - name: slightly_unreliable_column
+        data_tests:
+          - unique:
+              config:
+                severity: error
+                error_if: ">1000"
+                warn_if: ">10"
+```
+
+Warn at ten duplicates, fail the run at a thousand. That is what you actually want on a large table with a known low rate of upstream junk, and in my experience almost nobody configures it, so instead the test is either set to `error` and pages someone at 3am for eleven rows, or set to `warn` and ignored forever. The binary version of this config is the reason "we turned off that test" is such a common sentence.
+
+Two more worth knowing: `--warn-error` promotes every dbt warning to an error, which is the right setting for CI and the wrong one for production. And `store_failures` persists each test's failing rows as a table in the warehouse, which turns "the test failed" into "here are the 47 rows", and is the single highest-value config in this section.
+
+## Contracts, and the word "enforced"
+
+[Model contracts](https://docs.getdbt.com/docs/collaborate/govern/model-contracts) are the shape check. You declare every column and its `data_type`, optionally with constraints, and set `enforced: true`:
+
+```yaml
+models:
+  - name: dim_customers
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: customer_id
+        data_type: int
+        constraints:
+          - type: not_null
+      - name: customer_name
+        data_type: string
+```
+
+There are two enforcement points and they are different. First a compile-time preflight: dbt checks that the model's query will return columns matching the contract, order-agnostic, and fails the build if not. That is genuinely before the write, which makes it the only mechanism in this post that prevents a bad table rather than detecting one.
+
+Second, the column names, types and constraints go into the DDL that dbt submits, and the platform enforces them while building the model.
+
+That second half is where the word "enforced" earns some scrutiny. Constraint support splits three ways, and dbt's own docs table is worth internalising:
+
+| Constraint | Postgres | Snowflake / Redshift | BigQuery | Databricks / Spark |
+| --- | --- | --- | --- | --- |
+| `not_null` | enforced | enforced | enforced | enforced |
+| `primary_key` | enforced | definable, not enforced | definable, not enforced | definable, not enforced |
+| `foreign_key` | enforced | definable, not enforced | definable, not enforced | definable, not enforced |
+| `unique` | enforced | definable, not enforced | not definable | not definable |
+| `check` | enforced | not definable | not definable | enforced |
+
+So on Snowflake, Redshift and BigQuery, declaring `primary_key` on a contracted model produces metadata. It documents intent, it shows up in the catalog, and it does not stop a duplicate. If you want uniqueness actually guaranteed on those platforms, you need a `unique` data test, which brings you right back to a check that runs after the write.
+
+This is not dbt's fault, it is the warehouses'. Analytical platforms dropped constraint enforcement deliberately, because enforcing uniqueness on ingest is expensive at their scale. But it means the two mechanisms have inverted properties from what their names suggest: the thing called a contract mostly cannot enforce content, and the thing that can check content runs too late to prevent publication.
+
+Other limits worth knowing before you plan around contracts: every column must be declared, not a subset. No Python models, no `materialized_view`, no `ephemeral`, no custom materializations. Incremental models need `on_schema_change` set to `append_new_columns` or `fail`, so `sync_all_columns` and contracts are mutually exclusive. And views support column names and types only, no constraints.
+
+## Unit tests, which are the ones people skip
+
+dbt 1.8 added a proper unit testing framework: you supply mock inputs and an expected output, dbt runs the model's logic against the fixtures and compares. No warehouse state involved.
+
+This is the mechanism that catches "the `case` statement in this model has been wrong for two months for one branch of input", which is a category of bug that data tests structurally cannot find, because a wrong-but-plausible value is not a null, not a duplicate, and not outside the accepted set.
+
+They are meant for development and CI rather than production runs, which is exactly right, and it is also why they get skipped: they are the only mechanism here that does not run automatically as a side effect of your normal pipeline.
+
+## The timing problem
+
+Back to the sentence at the top.
+
+`dbt build` interleaves models and tests: a model's tests run immediately after that model, and a test failing with `error` severity blocks that model's children while the rest of the graph continues. That is good design, and partial failure being the normal case is why the run result needs to be legible per node.
+
+But look at the sequence for a single model:
+
+1. `create or replace table analytics.dim_customers as (...)` commits.
+2. Readers of `analytics.dim_customers` now see the new data. All of them.
+3. dbt runs `select ... from analytics.dim_customers where customer_id is null`.
+4. The test returns 812 rows. The run fails. Downstream models are skipped.
+5. `analytics.dim_customers`, with its 812 null customer ids, is still there.
+
+Between steps 1 and 4 you have published data you were in the middle of deciding was invalid. After step 5 you have published data you have decided is invalid, and the only thing standing between it and a dashboard is that nobody has refreshed yet. The blast radius of a failed test is not "the pipeline stopped", it is "the pipeline stopped, and the bad table is live".
+
+The workarounds are all versions of "do not point consumers at the table dbt writes": build into a staging schema and swap, use views over a versioned table, ship a blue/green deployment. All of them work. All of them are you building a staging area because the substrate does not have one.
+
+## Write-audit-publish
+
+The pattern that fixes this is old and has an unfashionable name: write, audit, publish. Write the new data somewhere isolated, audit it there, publish only if it passes.
+
+The reason it went from "a thing careful teams do by hand" to "a thing the storage layer does" is table formats with branching.
+
+In [Apache Iceberg](https://iceberg.apache.org/), WAP was originally driven by the `wap.id` table property; since Iceberg 1.2.0 the idiomatic form is branches. You write to an isolated branch that production readers cannot see, run your data quality checks against that branch, and if they pass you merge it into main. Because the branch shares data files with main, it is zero-copy: there is no duplicate write. Because the merge is a metadata operation, publishing is atomic and effectively instant. And readers see a consistent snapshot the entire time, before, during and after. Spark has the most mature support today.
+
+Catalogs like Nessie do the same thing one level up, at the catalog rather than the table, so you can branch a whole set of tables and publish them together, which is what you want when the invariant spans tables.
+
+And notice that SQLMesh's virtual data environments, from [the previous post](/blog/the-rust-rewrite-fusion-sqlmesh-duckdb), are the same mechanism aimed at a different problem: physical tables keyed by fingerprint, a virtual layer of views, and publication as a view swap. Once you have that, WAP is not a feature you add, it is a thing that has become possible.
+
+The common requirement is worth naming, because it explains why dbt does not do this. WAP needs the storage layer to let you have two versions of a table at once, cheaply, with an atomic pointer flip between them. A plain mutable warehouse table gives you exactly one version and no pointer. On that substrate, commit-then-test is not a design choice, it is the only thing available.
+
+## What we built
+
+Windmill's [pipelines](/docs/core_concepts/pipelines) sit on DuckDB and DuckLake, which is a substrate with transactions and snapshots, so the timing question was one we actually had to answer rather than inherit.
+
+Data tests are declared as annotations, with the four dbt generic kinds mapped one to one plus an escape hatch for dbt's singular test:
+
+```
+-- data_test unique <col>
+-- data_test not_null <col>
+-- data_test accepted_values <col> = a,b,c
+-- data_test relationships <col> -> <asset-uri>.<col>
+-- data_test <script_path>
+```
+
+Each one compiles to a verifier probe: a one-row query that counts and samples the violating rows in a single scan. All of a table's probes are embedded into the materialization's summary query and run in one pass, so a run reports every failing test rather than aborting on the first. Which of five tests failed is usually more diagnostic than that one did.
+
+Failing tests carry a bounded sample of the offending rows (at most 20 rows and 50KB per test, dropped rather than truncated if over cap, because truncated JSON fails to parse after you have already paid the bytes). The sample is optional by contract at every layer: enforcement reads only the count, so a missing or unparseable sample can never flip a pass into a fail. It also deliberately stays out of the error *message*, so run descriptions and alert payloads carry counts rather than customer rows unless a handler explicitly reads the structured field.
+
+Then the actual decision, and we drew it as an edition line:
+
+**Community edition is commit-then-test, like dbt.** The write commits, the probes run, and a violation fails the run and stops the cascade. The bad slice is published. Because every write is a DuckLake snapshot, you can at least inspect exactly what failed and roll back to the previous version, which is more than the warehouse case offers.
+
+**Enterprise is write-audit-publish.** The same compiled checks also run inside the write transaction, as a guard statement that raises on any violation, aborting before the commit. A failing slice is never published, readers keep the previous version, and no snapshot is created at all. Even the first run of a brand new asset rolls back to "no table" rather than leaving an empty or invalid one.
+
+One honest consequence, because it is the kind of thing that should be documented rather than discovered: under write-audit-publish the violating rows cease to exist when the transaction aborts, so WAP failures are counts-only by construction. You cannot have both "never publish the bad rows" and "here are the bad rows" from the same run. That is a real trade and it is worth knowing which side you are on.
+
+There is also an ordering subtlety that took a while to see. A `relationships` test needs the referenced table to exist at test time, but it is not a read of that table in any data-consumption sense, so it contributes no lineage edge. Without something extra, a cold pipeline run can execute the tested script before the referenced dimension has ever been materialized, and fail with a table-not-found error that looks like a configuration problem. The fix is an ordering-only edge from the referenced asset's producer to the testing script, rendered distinctly on the canvas (amber, dashed, labelled as a test dependency) so nobody mistakes it for lineage.
+
+### Contracts by capture rather than declaration
+
+For the fourth question, "will my change break someone downstream", we went the opposite way from dbt.
+
+dbt contracts are declare-and-maintain: you write out every column and type, and you keep that YAML in sync with the model forever. That is real work, which is why contracts are usually enabled on a handful of published models rather than everywhere.
+
+Windmill captures instead. Every managed materialization records the table's output schema as versioned metadata, and a new version is recorded only when the column set actually changes, so the history is a schema-evolution log rather than one row per run. That capture *is* the contract, with nothing to maintain.
+
+Consumers are checked against it at save time, and the result is warnings, never errors. That was deliberate: a deliberate upstream reshape must not fail every downstream author's save. The same diff drives three surfaces: the authoritative server-side check right after deploy, live editor squiggles on the offending column read or annotation line, and column-name autocomplete on annotation references, so the broken reference is often never typed in the first place.
+
+The producer side has its own control, `on_schema_change`, deliberately with different defaults from dbt's:
+
+| Value | Behaviour |
+| --- | --- |
+| `warn` (default) | write proceeds, new schema captured, downstream consumers warned on next save |
+| `ignore` | same, but no downstream warning, for a landing table whose shape tracks an external payload |
+| `fail` | the run aborts before writing when the column set diverges |
+| `sync` | the target is altered to match, and the write uses `INSERT BY NAME` |
+
+The default is `warn` rather than dbt's `ignore`, because [as covered in post three](/blog/incremental-partitions-and-backfills), dbt's `ignore` silently drops new columns and loudly fails on removed ones, which is the wrong way round.
+
+And a caveat that is easy to get wrong: drift is detected on the *set* of column names, so `fail` catches an added, dropped or renamed column but not a pure reordering of same-named columns. A positional write with a reordered select puts values in the wrong columns and the name set is identical, so nothing fires. That specific case is what `sync` exists for, since `INSERT BY NAME` maps by name and reordering becomes harmless.
+
+## The summary I would give a colleague
+
+If you have five minutes to improve data quality in an existing dbt project, in order:
+
+1. Turn on `store_failures` for the tests you care about. "The test failed" plus the rows beats "the test failed" by an enormous margin.
+2. Set `error_if` and `warn_if` on your noisiest tests instead of flipping them between `error` and off.
+3. Write unit tests for the three models with the most conditional logic. They will find something.
+4. Check which of your contract constraints your platform actually enforces. If you are on Snowflake, Redshift or BigQuery, your `primary_key` declarations are documentation.
+5. Ask what a reader sees between a model committing and its test failing, and decide whether that window is acceptable for that table. For most tables it is. For the ones feeding a customer-facing number, it is not, and that is when a staging-and-swap or a branch-based publish stops being over-engineering.
+
+The last one is the one worth arguing about. Most teams have never explicitly decided it, because the tool made the choice for them at a layer they did not know they were choosing at.
+
+## The series
+
+1. [How dbt works, and why every orchestrator ends up wrapping it the same way](/blog/how-dbt-works-and-its-orchestrators)
+2. [Four tools, four ideas of what a table is](/blog/asset-graphs-and-lineage-across-tools)
+3. [Incremental models are three decisions wearing one config](/blog/incremental-partitions-and-backfills)
+4. [The Rust rewrite was never about speed](/blog/the-rust-rewrite-fusion-sqlmesh-duckdb)
+5. Your data tests run after you publish the bad data
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Materialization"
+		description="Managed writes, data tests, schema capture and contracts, and time travel."
+		href="/docs/core_concepts/pipelines/materialization"
+	/>
+	<DocCard
+		title="Pipelines"
+		description="Asset lineage, partitions, macros and local development."
+		href="/docs/core_concepts/pipelines"
+	/>
+</div>

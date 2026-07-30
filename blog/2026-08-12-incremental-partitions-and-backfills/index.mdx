@@ -1,0 +1,250 @@
+---
+slug: incremental-partitions-and-backfills
+draft: true
+authors: [rubenfiszel]
+tags: ['dbt', 'Data pipelines', 'Dagster', 'Airflow', 'Orchestration']
+description: 'Why do incremental models silently drop late-arriving rows? A look at dbt incremental strategies, the watermark trap, on_schema_change defaults, and why partition-first thinking (including dbt microbatch) subsumes most of it.'
+title: 'Incremental models are three decisions wearing one config'
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+{/* Thumbnail placeholder: a timeline of daily buckets, most filled, one bucket
+    highlighted mid-rewrite, and a single late-arriving row drawn falling past
+    a dashed "watermark" line into empty space below the timeline.
+    Muted blues on dark, Windmill blog cover style. */}
+
+# Incremental models are three decisions wearing one config
+
+Third post in the [data pipelines series](/blog/how-dbt-works-and-its-orchestrators). Previously: [how dbt works and how orchestrators wrap it](/blog/how-dbt-works-and-its-orchestrators), and [why four tools disagree about what a table is](/blog/asset-graphs-and-lineage-across-tools).
+
+`materialized='incremental'` is the most used and least understood thing in dbt. It is also, I think, three orthogonal decisions bundled into one config, which is why it has so many sharp edges and why the sharpest ones fail silently.
+
+The three decisions are:
+
+1. Which rows am I processing this run? (the slice)
+2. How do I combine them with what is already there? (the write strategy)
+3. What happens when the shape of the data changes? (schema drift)
+
+dbt answers all three through `materialized='incremental'` plus `incremental_strategy` plus `unique_key` plus `on_schema_change` plus a hand-written `is_incremental()` branch in your SQL, and the interactions between them are where the data goes missing.
+
+Interestingly, dbt has been quietly moving toward the decomposition for two years. `microbatch`, added in 1.9, is essentially "incremental, but you must have a partition key, and dbt owns the slice". This post is about why that is the right direction, what it still costs, and what the answer looks like if you start from partitions rather than arriving at them.
+
+{/* truncate */}
+
+## How dbt incremental actually works
+
+The canonical model:
+
+```sql
+{{ config(
+    materialized='incremental',
+    unique_key='order_id',
+    incremental_strategy='merge'
+) }}
+
+select order_id, user_id, amount, created_at
+from {{ ref('orders_raw') }}
+
+{% if is_incremental() %}
+  where created_at > (select max(created_at) from {{ this }})
+{% endif %}
+```
+
+Two runs, two behaviours:
+
+On the first run the target does not exist, so `is_incremental()` is false, the `where` clause is not rendered, and dbt emits a `create table as select`. Full build.
+
+On every later run `is_incremental()` is true, the `where` clause is rendered, dbt materialises the result into a temp table and then merges it into the target on `unique_key`.
+
+`is_incremental()` returns true when three things hold: the model already exists as a table, `--full-refresh` was not passed, and the model is configured incremental. `{{ this }}` is the target relation, so `select max(created_at) from {{ this }}` is the watermark: a query against the table you are about to write.
+
+The strategies differ only in that last step:
+
+| Strategy | What it emits | Role of `unique_key` |
+| --- | --- | --- |
+| `append` | `insert` only | none; duplicates in the source land as duplicates |
+| `merge` | one `merge` statement, update on match, insert otherwise | the match condition |
+| `delete+insert` | `delete` rows whose key is in the staged set, then `insert` | which rows to delete first |
+| `insert_overwrite` | replaces whole partitions | not used; granularity is the partition |
+| `microbatch` | one time-bounded query per batch | dedup within a batch |
+
+Adapter support is uneven in a way that matters if you ever move warehouse. `insert_overwrite` is not available on BigQuery through the generic strategy list, `microbatch` is listed for Snowflake and Databricks, and when microbatch runs it picks a different atomic mechanism per adapter: `merge` on Postgres, `delete+insert` on Redshift and Snowflake, `insert_overwrite` on BigQuery and Spark, `replace_where` on Databricks. Cross-warehouse merge dialect is, by a distance, dbt's largest internal complexity, and it exists because the abstraction promised warehouse portability for an operation the warehouses genuinely disagree about.
+
+## Three ways this goes wrong quietly
+
+### The watermark drops late-arriving rows
+
+`where created_at > (select max(created_at) from {{ this }})` says: process rows newer than the newest row I already have.
+
+Now suppose a row with `created_at` of Tuesday arrives on Thursday, because a source system backdated it, a webhook was replayed, or an upstream job was late. Wednesday's run already advanced the watermark past Tuesday. Thursday's run selects `created_at > Wednesday`. The Tuesday row is never selected, so it never reaches the temp table, so the merge never sees it, so `unique_key` never gets a chance to do anything about it.
+
+The row is not rejected. It is not logged. It is not in a dead-letter queue. It was never selected, and there is no artifact anywhere that records the non-selection. Every run is green.
+
+This is the single most common data-loss bug in analytics engineering, and it is a direct consequence of deriving the slice from the target's contents rather than declaring it.
+
+The mirror-image failure is in dbt's own docs: if the watermark column is `NULL`, or the table gets truncated, the condition is always true and you reload the entire source. So the two failure modes of a watermark filter are "silently lose rows" and "silently reprocess everything", and both of them produce a successful run.
+
+The standard mitigations (subtract a few days from the watermark, `where created_at > dateadd(day, -3, ...)`) work, and notice what they are: an admission that you wanted a time window all along, and a guess at how wide it needs to be.
+
+### `is_incremental()` is a compile-time branch
+
+The `{% if is_incremental() %}` block is Jinja. It is resolved when dbt renders the model, before any SQL runs. The SQL that executes has either the `where` clause or it does not, and the artifact that tells you which is `target/compiled/`.
+
+That means the usual debugging instinct (read the model, reason about the branch) is reading source that is not what ran. You need `dbt compile` and then you need to read a different file. It also means the branch cannot depend on anything discovered at run time.
+
+This is fine once you know it. It is a genuinely confusing hour the first time, and it is why "the model looks right but the table is wrong" is a common shape of bug report.
+
+### `on_schema_change` defaults to `ignore`, and `ignore` does not mean ignore
+
+The four values, and what they do:
+
+| | `ignore` (default) | `fail` | `append_new_columns` | `sync_all_columns` |
+| --- | --- | --- | --- | --- |
+| Column added upstream | not added to the target | error | added | added |
+| Column removed upstream | run fails | error | stays in target | removed |
+
+Read the default column. A new column upstream is silently not propagated: your model selects it, and it does not appear in the table. A removed column upstream fails the run. So the default is silent for the case you would want to be told about and loud for the case you would probably shrug at.
+
+And a warning that applies to all four: none of them backfill values into existing rows for a newly added column. You get the column, populated from the point it was added, and `NULL` behind that, unless you `--full-refresh`.
+
+## Microbatch is dbt going partition-first
+
+[Microbatch](https://docs.getdbt.com/docs/build/incremental-microbatch), added in dbt 1.9, changes the first decision. Instead of you deriving the slice from the target, you declare a time column and a grain, and dbt derives the slice:
+
+```sql
+{{ config(
+    materialized='incremental',
+    incremental_strategy='microbatch',
+    event_time='session_start',
+    begin='2024-01-01',
+    batch_size='day',
+    lookback=3
+) }}
+
+select * from {{ ref('page_views') }}
+```
+
+There is no `is_incremental()` and no watermark. dbt computes the set of batches from `begin`, `batch_size`, `lookback` and the current time, and runs one independent query per batch with its own bounds:
+
+```sql
+select * from (
+    select * from "analytics"."page_views"
+    where page_view_start >= '2024-10-01 00:00:00'
+      and page_view_start <  '2024-10-02 00:00:00'
+)
+```
+
+Four things fall out of that, and they are exactly the four things the watermark approach struggles with:
+
+**Late-arriving data becomes a config, not a bug.** `lookback=3` reprocesses the last three batches every run. It is the "subtract a few days" hack, promoted to a first-class setting with a name.
+
+**Each batch is atomic and independent, so retry is per batch.** `dbt retry` reprocesses only the batches that failed, because a batch is a unit of work rather than a slice of one big statement.
+
+**Backfill stops being a special mode.** `dbt run --event-time-start "2024-09-01" --event-time-end "2024-09-04"` runs those batches through the same code path as a normal run. There is no conditional logic that behaves differently during a backfill, which is where a surprising share of backfill bugs live.
+
+**Batches can run in parallel**, via `concurrent_batches`, because they do not depend on each other.
+
+The tax is real and worth stating. `event_time` has to be configured on every direct parent you want filtered, or dbt cannot narrow those `ref()`s and full-scans them on every batch, which turns one full scan per run into one per batch. All times are UTC, full stop. And your model SQL now has to be written to process exactly one batch, which is a different mental model from "process the new rows".
+
+But the shape is right, and the shape is: declare the unit of work, and let idempotent replacement of that unit do the rest.
+
+## What partitioning gives you that incremental has to reinvent
+
+Once you have said "a run processes one declared slice", most of the incremental machinery becomes unnecessary rather than automated:
+
+| Problem | With a declared partition | With watermark incremental |
+| --- | --- | --- |
+| Unit of work | one partition per run | implicit, derived from target contents |
+| Idempotency | delete-by-partition then insert is safe to rerun | depends on strategy and key; `append` is not |
+| State | which partitions are materialized is a fact you can store | "how far did we get" is only in the data |
+| Backfill | re-run a range of partitions | a separate mode with different code paths |
+| First run vs later runs | no distinction; every run processes partition P | `is_incremental()` branch |
+| Process only new data | the window is the filter | the watermark is the filter |
+| Late data | re-run the affected partition | hope your lookback was wide enough |
+
+That is roughly 80% of what `materialized='incremental'` exists for, obtained from one declaration rather than from a config matrix.
+
+### What partitioning genuinely does not cover
+
+One thing, and it is worth being precise about it because the temptation is to claim partitioning solves everything.
+
+Deduplication within a partition, by a key that is not the partition key.
+
+Concretely: you partition by `created_at` daily, but `orders_raw` is mutable and the same `order_id` can appear several times within one day (created, then amended twice). You want the target to hold the latest version per `order_id`.
+
+Delete-by-partition plus insert works only if you reprocess from a source of truth that already has one row per key. If you are consuming an amendment stream and need to dedup *inside* the slice, you need a keyed merge, not a partition replace.
+
+That is exactly what `unique_key` does, and it is orthogonal to partitioning: `partitioned` answers "which slice", `unique_key` answers "how do I dedup inside the slice". Composed as two declarations rather than fused into `incremental_strategy`, both become simple.
+
+There is a boundary here that catches people, so it is worth stating: a keyed merge reconciles incoming rows against the *target*. It does not deduplicate the *source*. "Latest version per `order_id`" is still your query's job, with a `qualify row_number() over (partition by order_id order by updated_at desc) = 1` or equivalent. A source that hands the merge two rows for one key has broken the one-row-per-key contract before the merge started. In Windmill's managed materialization that case fails the run rather than double-writing, which is the difference between a loud bug and a slow-burning one.
+
+## Whoever owns the partition owns the backfill
+
+There is a structural point underneath all of this, and it explains why backfills are hard in a way that is not really about backfills.
+
+The partition concept exists at three different layers, and they do not know about each other.
+
+**Airflow** owns it at the run layer: `data_interval_start` / `data_interval_end`, `catchup`, and a backfill that creates DAG runs for past intervals. It is time-shaped and run-shaped. Airflow knows a run covered an interval; it does not know whether the table for that interval is populated.
+
+**Dagster** owns it at the asset layer: `PartitionsDefinition` (time window, static, dynamic), `PartitionMapping` for when upstream and downstream have different grains (a daily partition depending on 24 hourly ones), and `BackfillPolicy` choosing between one run per partition, which is the default, and a single run covering many. Because Dagster tracks materialization per asset partition, it can tell you which partitions exist, which is what makes its backfill UI able to show gaps rather than just launch runs.
+
+**dbt** owns it at the model layer, through `microbatch` and `insert_overwrite`. dbt knows the batches it built this invocation. It does not persist which partitions of a model are populated across invocations, so "which days are missing" is a question you answer by querying the table.
+
+If your partition lives in one layer and your state lives in another, the backfill UI in the first layer is launching runs and hoping. This is why "re-run the DAG for last month" so often does not produce the same result as the original runs did: the orchestrator replays intervals, and the model derives its slice from the target's contents, and those two notions of "which rows" are unrelated.
+
+The fix is not clever. It is to make the partition a single value, resolved once, that travels with the run and is also the key of the state you record.
+
+## What this looks like when you build it that way
+
+In [Windmill's pipelines](/docs/core_concepts/pipelines), a script declares a partition kind and the platform resolves it once:
+
+```sql
+-- pipeline
+-- on schedule
+-- partitioned daily
+-- materialize ducklake://main/raw_orders
+
+SELECT *
+FROM shop_api_orders()
+WHERE wm_partition(created_at) = {partition};
+```
+
+The pieces that matter, and why each is there:
+
+**The value is resolved once, at the top of a chain, and carried down.** An explicit `partition` argument (a manual run, a backfill, a value propagated from upstream) wins and is never re-resolved. Otherwise a time kind renders the run's fire time in the declared timezone. Every downstream step of the same run receives the identical value, so a chain that crosses midnight stays on one partition, and a retry of a failed step reprocesses the run's partition instead of drifting to "now". That last property is the one that makes retries safe to automate.
+
+**`{partition}` stays literal in the lineage graph.** The graph says `s3:///lake/raw/orders/{partition}/orders.json`, not one node per day. Lineage is partition-agnostic; only runs are partitioned. Otherwise your graph grows a node per bucket and stops being a graph.
+
+**The logical partition becomes a physical one.** On first materialize, Windmill adds a `_wm_partition` column and runs `ALTER TABLE ... SET PARTITIONED BY (_wm_partition)` on the DuckLake target, so delete-by-partition rewrites only that partition's Parquet files and reads prune. Without that step "partition" is an orchestration fiction and every rewrite is a full-table rewrite.
+
+**One state table drives four features.** `materialized_partition`, keyed by workspace, asset and partition, holds the snapshot id, row count, job id and timestamp. That single row is what makes "last materialized: 1.2M rows at 09:14" renderable on the asset node, what makes gap detection possible, what makes the missing set *be* the backfill worklist rather than something recomputed, and what lets you pin a read to a past snapshot. Backfill stops being a feature you build and becomes a query over state you were already recording.
+
+**A grain-agnostic filter.** Only the daily identity string happens to be a valid SQL date literal, so `WHERE ts = TIMESTAMP {partition}` works for daily and raises a conversion error for hourly, weekly and monthly. Rather than making every author hand-write a `strftime` format that has to match the resolver's, the executor injects `CREATE OR REPLACE TEMP MACRO wm_partition(ts) AS strftime(ts, '<fmt>')` with the format read from the same single source the resolver uses, so the two cannot drift.
+
+Honest limitations, since this series is not a brochure: the range backfill UI is [Enterprise](/pricing), the SCD2 history strategy is non-partitioned in v1 and rejects the combination at deploy rather than at run time, and `// materialize` is DuckDB-only, so a Python or TypeScript step writing the lake directly goes through the SDK helpers and lands as a two-script shape (an extract that writes an object, a loader that materializes it) rather than as one node with an invisible write.
+
+## The actual point
+
+`incremental` is a performance optimization. People reach for it as a correctness mechanism, and it is not one: nothing in `materialized='incremental'` guarantees that re-running a period produces the same table, and the default watermark pattern guarantees the opposite in the presence of late data.
+
+Partition plus idempotent replace is a correctness mechanism that happens to also be fast. Re-running a partition is safe by construction, so retries are safe, so backfills are just retries, so gap detection is just a query, so the whole class of "did that backfill actually work" questions stops existing.
+
+dbt got there from the other side with `microbatch`, and the config it requires (`event_time`, `batch_size`, `begin`) is a partition definition in all but name. That is a good sign for the model, and it is the direction to build in.
+
+## Next
+
+Post four is on [the Rust rewrite](/blog/the-rust-rewrite-fusion-sqlmesh-duckdb): dbt Core 2.0 and Fusion, SQLMesh's virtual data environments, DuckDB and DuckLake as a substrate, and what a compiled transform engine changes for the orchestrator sitting above it.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Partitioned pipelines"
+		description="Declare time or key partitions and carry one partition value through a whole run."
+		href="/docs/core_concepts/pipelines/partitioning"
+	/>
+	<DocCard
+		title="Materialization"
+		description="Managed writes, strategies, SCD2 history, partition status and backfill."
+		href="/docs/core_concepts/pipelines/materialization"
+	/>
+</div>

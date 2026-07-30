@@ -1,0 +1,215 @@
+---
+slug: asset-graphs-and-lineage-across-tools
+draft: true
+authors: [rubenfiszel]
+tags: ['dbt', 'Data pipelines', 'Dagster', 'Airflow', 'Orchestration']
+description: 'Why does lineage break at the edge of your dbt project? dbt, Dagster, Airflow and OpenLineage each identify a table differently, and none of the four agrees with the others. A look at what asset identity has to be keyed on.'
+title: 'Four tools, four ideas of what a table is'
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+{/* Thumbnail placeholder: the same table drawn four times as four differently-shaped
+    nodes, labelled model.jaffle_shop.orders / ["marts","orders"] / s3://... /
+    postgres://host:5432 + db.schema.orders, with no edges between them.
+    Muted blues on dark, Windmill blog cover style. */}
+
+# Four tools, four ideas of what a table is
+
+Second post in the [data pipelines series](/blog/how-dbt-works-and-its-orchestrators). This one is about lineage graphs, and specifically about the thing that breaks them: identity.
+
+dbt's lineage is genuinely good, and it is free. You write `{{ ref('stg_orders') }}` because you have to, and a DAG falls out of it. No annotation, no registry, no metadata team. That is the single best design decision in the tool.
+
+It also stops dead at the boundary of the project. The Python script that reads `analytics.orders_daily` and posts to Slack is not in the graph. The Fivetran connector that lands `raw.orders` is a source stub with no producer. The reverse-ETL job that reads your marts is, at best, a hand-maintained `exposures:` block. Every one of those is a real edge in the real pipeline, and the graph does not have it.
+
+The usual explanation is that dbt only knows about dbt, which is true and not very interesting. The interesting part is what happens when you *do* put everything in one graph, using a tool designed for exactly that, and it still does not join up. That failure is about identity, and it is worth looking at closely, because four widely-used systems answer "what uniquely names a table" four different ways and none of the four answers is the physical table.
+
+{/* truncate */}
+
+## What dbt's graph actually is
+
+Worth being precise, because a lot of integrations are built on a misreading of it.
+
+`manifest.json` contains a node per resource, keyed by `unique_id`, which looks like this:
+
+```
+model.jaffle_shop.stg_orders
+source.jaffle_shop.raw.orders
+snapshot.jaffle_shop.orders_snapshot
+test.jaffle_shop.unique_stg_orders_order_id.6c02a7f5f2
+```
+
+Read the shape: resource type, then project name, then the resource's own name. The edges live in `parent_map`, a plain adjacency list over those ids, produced at parse time by resolving every `ref()` and `source()` call to the node it names.
+
+Three properties follow, and they explain most of dbt's behaviour:
+
+The graph is a compile-time artifact. It reflects the `ref()` calls in your SQL text, not what any query actually touched. That is a feature: it is available before anything runs, which is why `dbt build` can order the DAG, and why every integration in existence reads `manifest.json` rather than instrumenting the warehouse. It is also a limit: a model that reaches a table through `{{ this.schema }}` string interpolation or a raw `FROM analytics.something` has no edge, and nothing will tell you.
+
+The graph is scoped to the project. `unique_id` contains the project name, and `ref()` resolves within the project. Two dbt projects in one warehouse are two disconnected graphs, even where one reads the other's output. dbt Mesh addresses this with cross-project refs, in the platform, by making one project's models importable into another's namespace. Which is to say: by making the two projects share a name space, rather than by keying on the table.
+
+The graph names dbt resources, not relations. `model.jaffle_shop.stg_orders` is a fact about a dbt project. The relation it produces, `analytics_staging.stg_orders` in some database on some warehouse, is a separate field (`relation_name`) that most integrations never look at. Hold onto that, it is the whole post.
+
+## Four systems, four keys
+
+### dbt: `model.<project>.<name>`
+
+Tool, project, name. Not the relation. If two projects both write `analytics.customers`, dbt has two nodes and no idea they collide. If a Python script writes to a table a dbt model reads, dbt has a `source` stub with no producer.
+
+### Dagster: `AssetKey`, a sequence of strings
+
+Dagster's atom is the asset, and its key is a list of path components. This is the most deliberate of the four designs: assets are the unit of definition, of scheduling, of observability and of lineage all at once, which is why the dbt integration is so much less awkward than the Airflow ones.
+
+The default mapping [`dagster-dbt`](https://docs.dagster.io/integrations/libraries/dbt/reference) uses is:
+
+- a model, seed or snapshot with no schema configured becomes `["my_model"]`
+- with a schema, `["marketing", "my_model"]`
+- a source becomes `["jaffle_shop", "orders"]`, that is source name then table name
+
+So a dbt model's key is roughly schema-and-name, which is much closer to the physical relation than dbt's own id. But it stops short of it: there is no warehouse in the key. Two dbt projects, one against Snowflake prod and one against a Postgres replica, both with a `marketing.customers`, produce the same `AssetKey`.
+
+More to the point, the source case has a different shape from the model case. A dbt source `jaffle_shop.orders` keys as `["jaffle_shop", "orders"]` where `jaffle_shop` is the *source name*, an arbitrary label in a YAML file, not the schema the table lives in. So if you write a Dagster asset that lands `raw.orders` and a dbt source that reads it, the two keys do not match by construction, and the docs tell you the fix: call `get_asset_key_for_source()` and use its return value when you define your own asset. Same on the other side with `get_asset_key_for_model()` for downstream consumers.
+
+That works, and teams do it. But look at what it is: manual alignment of two names that both refer to one table, with a helper function whose job is to keep them in sync as they change. The graph joins up because a human made it join up.
+
+### Airflow: a URI
+
+An Airflow [Asset](https://airflow.apache.org/docs/apache-airflow/stable/authoring-and-scheduling/assets.html) (called a Dataset until Airflow 3.0 renamed it) is identified by a URI, which is its primary key. The documentation is admirably direct about what that means:
+
+Airflow does not validate URI semantics for user-defined schemes. It treats the URI as a string and makes no assumptions about the content or location of the data represented. URIs are case-sensitive. There are semantic constraints on a few pre-defined schemes (`file`, `postgres`, `s3`) and none at all on the rest, and if you want to guarantee no validation you are told to prefix your scheme with `x-`.
+
+So Airflow's asset identity is whatever string two DAG authors agree on. If one writes `postgres://prod-db:5432/analytics.orders` and another writes `postgres://prod-db.internal:5432/analytics.orders`, those are two assets. Nothing catches it. The graph looks complete and is wrong.
+
+There is a second property worth stating, because it matters more than the naming: Airflow does not check that any data changed. A task that declares an asset as an outlet has, by definition, updated that asset, and downstream asset-scheduled DAGs fire. The outlet is a declaration, not an observation.
+
+### OpenLineage: namespace plus name
+
+[OpenLineage's naming spec](https://openlineage.io/docs/spec/naming) is the only one of the four that actually tries to name the physical thing:
+
+| Source | Namespace | Name |
+| --- | --- | --- |
+| Postgres | `postgres://{host}:{port}` | `{database}.{schema}.{table}` |
+| Snowflake | `snowflake://{org}-{account}` | `{database}.{schema}.{table}` |
+| BigQuery | `bigquery` | `{project}.{dataset}.{table}` |
+| S3 | `s3://{bucket}` | `{object key}` |
+| Kafka | `kafka://{host}:{port}` | `{topic}` |
+
+This is the right instinct, and it is why OpenLineage works as a cross-tool standard where the other three do not: the key is the relation, so a Spark job and a dbt model that touch one table produce one node.
+
+It also shows exactly where the instinct gets expensive. Namespace is a connection string. The same Postgres is reachable as `prod-db:5432`, `prod-db.internal:5432`, `10.0.1.7:5432` and through a PgBouncer on a different port, and those are four namespaces. OpenLineage's own docs flag the sharpest version of this for Snowflake: the account identifier model gives no single standardized namespace, and migrating from the legacy account-locator format to the org-account format disconnects existing lineage nodes from new ones. Your historical lineage does not move with you.
+
+That is not a flaw in the spec so much as the actual difficulty of the problem. A network address is not an identity. It is one of several routes to an identity, and it changes for reasons that have nothing to do with the data.
+
+## The island problem
+
+Put the four together and the failure mode is always the same shape: one table, two nodes, no edge.
+
+It is worth dwelling on why this is worse than having no graph at all. If you have no lineage, you know you have no lineage, and you go read the code. If you have a graph with a missing edge, you have a tool that answers questions confidently and wrongly:
+
+- "What breaks if I drop this column?" returns the dbt models. It does not return the Python job that reads the mart and the internal app that renders it.
+- "Why is this dashboard stale?" walks up to the source and stops, because the Airbyte sync that actually stalled is not a node.
+- "What is downstream of this incident?" gives you a blast radius that is confidently too small.
+
+Every one of those looks like a working answer. None of them shows a hole where the missing edge was.
+
+This is also the specific way a dbt integration can be a lot of work and still be worthless. If you build the whole thing (parse the manifest, render every model as a node, stream events, colour them live) but key the nodes on `dbt://project/model_name`, then dbt is a beautifully rendered island in the middle of your graph, connected to nothing you did not write in dbt. That is the [BashOperator outcome](/blog/how-dbt-works-and-its-orchestrators) with a much larger bill.
+
+## What identity has to be keyed on
+
+The answer that falls out of the above is: the physical relation, addressed through a stable handle for the warehouse.
+
+Two things it must not be:
+
+Not the tool. `dbt://`, `spark://`, `fivetran://` and friends guarantee that every tool is its own island. The whole value of a graph is the edges between tools; keying on the tool deletes exactly those.
+
+Not the network address. Hosts, ports, account locators and connection strings change for operational reasons, and credentials have no business in a lineage key at all. OpenLineage's Snowflake caveat is the demonstration.
+
+What is left is something that names the warehouse by *reference*: a stable identifier for "the thing we connect to", resolved to a connection at run time and to a name at graph time. If your platform already has a concept of a connection or a credential object, that is your namespace, and it survives the DNS change, the PgBouncer, and the account-locator migration.
+
+In Windmill's [dbt runtime](https://github.com/windmill-labs/windmill/pull/10326) that is `table://<resource_path>/<schema>/<name>`, where the resource path is the Windmill resource that holds the warehouse credentials. It is the same shape the existing `datatable://` and `ducklake://` asset kinds already use, so a dbt model and a native DuckDB script that reads it land on the same node without anyone aligning two names by hand.
+
+There is an accepted limitation and it is worth stating rather than discovering: two resources pointing at one physical warehouse do not unify. Assets under one will not share edges with assets under the other. That is the price of not keying on the host, and it is a much better failure than the alternative, because it is fixed by pointing both scripts at one resource rather than by reconciling hostnames forever.
+
+### The unglamorous half: canonicalization
+
+Having picked the relation as the key, you now have to decide what "the same relation" means, and the warehouses do not agree.
+
+- Snowflake folds unquoted identifiers to upper case.
+- Postgres folds them to lower case.
+- DuckDB compares case-insensitively.
+- `manifest.json` hands you `relation_name` already quoted, as `"windmill"."Analytics"."Orders"`.
+- A human writing an annotation writes `analytics.orders`.
+
+Six spellings of one table, and if two of them survive as distinct keys you get two nodes, no edge, and nothing that looks broken in isolation. The fix is boring and has to be applied in exactly one place: strip the quoting characters (`"`, backtick, `[`, `]`) and ASCII-lowercase the schema and name at the single point where a URI becomes a graph key. Not at each call site. The failure mode of getting this wrong is that a run succeeds, the graph simply never moves, and no error is produced anywhere.
+
+One more: a model that overrides its database (Snowflake `database`, BigQuery `project`) is genuinely in a different place, so its schema segment has to qualify as `<database>.<schema>` or two same-named relations in two databases collapse onto one node. And when the database is unknown, because the project brought its own `profiles.yml` and Windmill never resolved a connection, everything qualifies, because assuming they share one database is precisely what would collapse them.
+
+None of this is interesting. All of it is load-bearing.
+
+## Lineage edges and scheduling edges are not the same graph
+
+Here is the design mistake I think is most common, and the one I am least sure everyone will agree with.
+
+An edge in a lineage graph means "B reads what A writes". An edge in a scheduling graph means "run B after A". These look like the same relation and they are not, and every tool that unifies them inherits a class of bug.
+
+dbt gets away with unifying them because it owns both ends. It knows every write in the graph, because every write is a model it generates. So "reads from" and "run after" really are the same relation inside a dbt project, and the DAG is correct.
+
+Airflow Assets unify them without owning either end, which is why an outlet declaration counts as an update regardless of whether the task wrote anything. The scheduling semantics are right (you asked for downstream to run) and the lineage semantics are a guess.
+
+Dagster keeps them related but distinct: the asset graph is lineage, and automation conditions decide when something actually runs. That separation is why declarative automation exists as its own concept rather than being implied by the edges.
+
+For dbt specifically, we concluded that a finished dbt run should record and draw, and not dispatch. The reasoning is worth spelling out because it is not obvious:
+
+A dbt run's `select` can build any subset of the project. So the write set recorded at deploy time is not the write set of the run that just finished. Dispatching from the deploy-time set wakes consumers of relations the run never touched. Narrowing it needs a per-job record of what was actually built, which a per-relation state table cannot give you, since it holds one row per relation stamped with its last writer.
+
+And the reverse direction cannot be expressed at all: nothing outside dbt can declare that it writes a warehouse relation, so an ingestion script waking a dbt project is not a thing the graph can say. So a cascade would only ever add one narrow edge, at the cost of a correctness problem in the common case.
+
+The conclusion: a plain read still renders the consumer beside the model, so the lineage is one graph, which was the entire goal. A subscription that asks to be *triggered* by a dbt write is refused at deploy rather than accepted and left dormant. An arrow on a canvas that can never fire is worse than an error telling you so.
+
+You may well want the opposite tradeoff. The point is that it is a tradeoff, and that "lineage edge" and "trigger edge" being the same arrow on the same canvas is what hides it.
+
+## Column lineage, and where it actually comes from
+
+Everyone wants column-level lineage. It is the feature that turns "what breaks if I drop this column" from a grep into an answer.
+
+The first thing to know is that it is not in `manifest.json`. We assumed it was when we specced the dbt integration, and it is not, in either core engine. What the manifest carries is declared column *metadata*: names, descriptions, types, tests. Not `orders.total ← order_items.amount`.
+
+So column lineage has to come from one of three places:
+
+1. SQL AST analysis. Parse each model's compiled SQL, walk the projection, map each output column to the source columns its expression reads. This is what [SQLGlot](https://github.com/tobymao/sqlglot)-based tools do, what DataHub does across 30-odd dialects, and what dbt's Fusion engine does natively (it has a real SQL comprehension layer, which is most of the point of the rewrite).
+2. Warehouse-native lineage. Some platforms expose it from query history. Accurate, retrospective, and platform-specific.
+3. Declaration. A human writes it down. Reliable where written, absent everywhere else.
+
+[OpenLineage has a `columnLineage` facet](https://openlineage.io/blog/column-lineage/), so the transport is standardised. Producing the facet is the entire problem.
+
+Windmill does option 1 for native DuckDB scripts: the SQL parser walks each output-producing query's projection and maps every output column to the source columns its expression reads, passthroughs and computed columns alike (`amount + tax AS total` maps to both), resolving each input to its asset through the same machinery the asset parser already uses. A `// column` annotation exists as the override for the cases inference cannot reach: Python and TypeScript transforms with no SQL to parse, dynamic SQL with raw interpolation, or a mis-inferred edge. Annotation wins over inference where both exist.
+
+For dbt models, it does not. Declared column metadata is ingested and rendered; column-to-column edges are not, because they are not in the manifest and we were not going to fabricate them from the model name. Getting them would mean running our own SQL-AST pass over compiled dbt SQL in every warehouse dialect, which is a real project, or waiting for Fusion. Saying so is better than shipping a lineage view that is right for DuckDB and quietly guessing for dbt.
+
+## What a graph has to answer
+
+A useful way to evaluate any of this: pick the three questions people actually ask a lineage graph, and check what identity scheme each one needs.
+
+**"If I change this, what breaks?"** Needs edges that cross tool boundaries, in both directions, including into things that are not pipelines (dashboards, apps, exports). Needs relation identity. Tool-namespaced keys answer this wrongly and confidently.
+
+**"Why is this stale, and what produced the version I am looking at?"** Needs the graph to record runs, not just structure: which job wrote this relation, when, how many rows, from which upstream state. Structure alone cannot answer it, which is why a lineage picture that is not attached to run history is a diagram rather than a tool.
+
+**"Is this number right?"** Needs column lineage and tests, which is the [last post](/blog/data-tests-contracts-and-write-audit-publish) in this series.
+
+The first one is the one that identity decides, and it is decided the moment you pick a key format, usually in an afternoon, usually without noticing.
+
+## Next
+
+Post three is on [incremental models, partitions and backfills](/blog/incremental-partitions-and-backfills): dbt's incremental strategies against partition-first thinking, why `microbatch` is dbt moving in that direction, and the watermark-plus-`unique_key` interaction that silently drops late-arriving rows.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Assets"
+		description="How Windmill infers reads and writes from code and builds the lineage graph."
+		href="/docs/core_concepts/assets"
+	/>
+	<DocCard
+		title="Pipelines"
+		description="Asset lineage, column-level lineage, partitions and data tests."
+		href="/docs/core_concepts/pipelines"
+	/>
+</div>
