@@ -689,9 +689,15 @@ TL;DR: below
 1. Ensure CA certificate is base64 encoded and has .crt extension.
 2. Create a directory for CA certificates.
 3. Modify docker-compose.yml to mount this directory to /usr/local/share/ca-certificates in read-only mode.
-4. Use INIT_SCRIPT in the worker config to run update-ca-certificates in worker containers.
+4. Set `RUN_UPDATE_CA_CERTIFICATE_AT_START=true` in the worker's [environment variables](../../core_concepts/47_environment_variables/index.mdx) to run `update-ca-certificates` in worker containers. You can also customize the command path using `RUN_UPDATE_CA_CERTIFICATE_PATH` if needed.
 
-Alternatively, you can use the `RUN_UPDATE_CA_CERTIFICATE_AT_START=true` [environment variable](../../core_concepts/47_environment_variables/index.mdx) to automatically run CA certificate updates at startup. You can also customize the command path using `RUN_UPDATE_CA_CERTIFICATE_PATH` if needed.
+:::caution
+
+Prefer `RUN_UPDATE_CA_CERTIFICATE_AT_START` over running `update-ca-certificates` through an [init script](../8_preinstall_binaries/index.mdx#init-scripts). `RUN_UPDATE_CA_CERTIFICATE_AT_START` runs at the very start of the process, before anything else, whereas an init script runs as a job once the worker is up.
+
+If the CA update fails, the process logs `Failed to update CA certificates, but continuing startup` and keeps going. Check for `Successfully updated CA certificates` at the top of the worker logs to confirm it worked.
+
+:::
 
 ### Establish Deno’s trust
 
