@@ -31,7 +31,12 @@ The [Draft and deploy](../0_draft_and_deploy/index.mdx) is another feature that 
 
 ### How it works
 
-For users with admin rights on the source workspace, in the `Workspace` settings, go to the "Deployment UI" tab and pick a workspace for "Workspace to link to".
+A workspace deploys into its parent workspace: a [workspace fork](../../advanced/20_workspace_forks/index.mdx) deploys into the workspace it was forked from, and a [dev workspace](../../advanced/26_dev_workspaces/index.mdx) deploys into the prod workspace it is paired with. Create a fork or pair a dev workspace to get a deployment target - there is no separate setting to link two unrelated workspaces.
+
+The parent workspace can for example be:
+
+- a Prod workspace, paired with a dev or staging workspace where scripts and flows are edited and tested first
+- a workspace the changes of a short-lived fork are merged back into.
 
 Items that can be deployed are:
 - [Scripts](../../script_editor/index.mdx)
@@ -40,14 +45,7 @@ Items that can be deployed are:
 - [Variables](../2_variables_and_secrets/index.mdx)
 - [Triggers](../../triggers/index.mdx)
 
-You can filter out on each of these types so that they won't be deployed.
-
-![Link to a workspace](./workspace_to_link_to.png 'Link to a workspace')
-
-The workspace to link to can for example be:
-
-- a Staging workspace to test scripts and flows
-- a Prod workspace where you can deploy scripts and flows when ready.
+Workspace admins can filter out each of these types, and restrict deployment to given paths, from `Workspace settings` -> `Dev workspace` (this section used to be a separate "Deployment UI" tab).
 
 Then, from the workspace, on the `⋮` menu of each [deployed](../0_draft_and_deploy/index.mdx#deployed-version) script or flow, pick "Deploy to staging/prod". This can be done also from the [Resources](../3_resources_and_types/index.mdx) and [Variables](../2_variables_and_secrets/index.mdx) menus or directly from a script or flow `Details` page.
 
@@ -90,6 +88,10 @@ If you are on a workspace fork, the first thing to know is that it will be preco
 ![Merge UI](./merge_ui.png 'Merge UI')
 
 Learn more about [merging forks through Merge UI](../../advanced/20_workspace_forks/index.mdx#merge-workspaces-from-the-ui-merge-ui)
+
+### Deploying into another workspace
+
+For a one-off migration into a workspace that is not the parent, the Compare & Deploy page accepts an arbitrary target: pick it from the destination badge in the merge header. Such a pair has no continuously tracked diff, so you first compute one over every item on both sides, and the comparison is one-way. See [merging into a workspace outside the lineage](../../advanced/20_workspace_forks/index.mdx#merging-into-a-workspace-outside-the-lineage).
 
 ### Workspace-specific resources and variables
 

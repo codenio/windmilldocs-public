@@ -192,6 +192,24 @@ Re-enabling a trigger or schedule that also exists in the parent shows a warning
 
 A trigger's or schedule's enabled/disabled state is owned by the parent workspace. When you sync or merge a fork back, the parent's state is preserved, so toggling a trigger in the fork never flips it in the parent and trigger state produces no spurious diff or conflict when [merging through git](#git-sync-based-merging). Any trigger you create in the fork is still surfaced in the [merge UI](#merge-workspaces-from-the-ui-merge-ui) so you can deploy, disable or delete it.
 
+#### Merging into a workspace outside the lineage
+
+Compare & Deploy targets the parent workspace by default. To deploy into another workspace instead - a one-off migration into a workspace that is not the parent, for instance - click the destination badge in the merge header (`into: <workspace>`) to open the target picker and select a workspace. The picker lists the workspaces you are a member of, minus this one and its own forks, and offers a way back to the parent. The same view opens from `Workspace settings` -> `Dev workspace` -> `Merge into another workspace`, and a workspace with no parent at all lands directly on the picker. The target can also be set through the URL:
+
+```text
+/forks/compare?target=<workspace id>
+```
+
+Merging outside the lineage requires being an admin of both workspaces.
+
+Windmill only tracks changes continuously between a workspace and its parent, so an unrelated pair starts with nothing to show. The page offers a `Compute diff` action that enumerates every item on both sides and compares them. This is expensive on large workspaces, which is why it is an explicit action rather than something the page does on load. The result is kept for later visits: the card then shows when the diff was computed, next to a `Recompute` button. Anything created or changed on either side since that scan is missing from the list until you recompute.
+
+Such a comparison is one-way, from the current workspace into the target. Nothing recorded which side a change came from, so the update direction and [behind changes and conflicts](#items-behind-and-conflicts) are not available - only deploying from here into the target is.
+
+An item that exists only in the target is listed as `Removes in target`: deploying it deletes the item there. Those rows are never picked up by `select all` and have to be ticked one by one, and a recompute unticks any row that has just turned into a removal.
+
+{/* TODO: screenshot of the Compare & Deploy header with the destination badge open on the target picker, and the merge card showing "Diff computed <date>", the Recompute button and the one-way banner. */}
+
 ### Git sync based merging
 
 When git sync is properly setup, the workspace is synchronized with one of the branches in your repo, and the forks are also synchronized with their own branches. It is then possible your preferred git workflow to merge into or out of these branches to sync, so you can update the fork, or deploy changes into the parent workspace.
