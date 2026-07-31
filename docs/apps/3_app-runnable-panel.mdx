@@ -608,6 +608,33 @@ A viewer of the app will execute the runnables of the app on behalf of the publi
 
 To understand how to handle resources in apps, see [Static resource select only / Resources from users allowed](#static-resource-select-only--resources-from-users-allowed).
 
+### Identifying the app viewer
+
+Because runnables execute on behalf of the publisher, the `WM_EMAIL` [contextual variable](../core_concepts/47_environment_variables/index.mdx#contextual-variables) holds the publisher's email, not the viewer's. The viewer's email is exposed separately as `WM_END_USER_EMAIL`, which is set on every runnable an app triggers - including the steps of a flow it runs - and is an empty string for runs that did not come from an app.
+
+The idiom for "the email of whoever is running this" is therefore:
+
+```ts
+// TypeScript
+const email = process.env.WM_END_USER_EMAIL || process.env.WM_EMAIL;
+```
+
+```python
+# Python
+import os
+email = os.environ.get("WM_END_USER_EMAIL") or os.environ.get("WM_EMAIL")
+```
+
+It resolves to the viewer inside an app and to the executing user (or the schedule owner, and so on) everywhere else. It also covers viewers who are not workspace members, for instance when the app is embedded and the request carries an instance token.
+
+A viewer of a [public app](./8_public_apps.mdx) who is not logged in has no identity to report: `WM_END_USER_EMAIL` is empty and the fallback yields the publisher. Test the variable on its own when a run must be attributed to a real viewer or not at all:
+
+```ts
+const viewer = process.env.WM_END_USER_EMAIL || undefined; // undefined for an anonymous viewer
+```
+
+The `usernameToEmail` / `username_to_email` client function is the legacy way to do this and is deprecated: it costs an API call, and it cannot resolve a viewer who has no workspace username.
+
 ### S3 file access in deployed apps
 
 The [S3 / object storage](../core_concepts/38_object_storage_in_windmill/index.mdx) files an app renders - rich results, table and image/PDF previews, CSV exports, the [download button](./4_app_configuration_settings/download_button.mdx), and file metadata - are read on behalf of the app's author, respecting the app's policy, just like its scripts, flows and queries. This holds for any viewer of a deployed app, whether anonymous or logged in: a logged-in viewer who lacks direct S3 permissions on a folder still sees the files the app displays.
