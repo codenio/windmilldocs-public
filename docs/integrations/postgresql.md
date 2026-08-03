@@ -71,3 +71,52 @@ GRANT rds_iam TO myuser;
 ```
 
 The `region` field is optional if the `AWS_REGION` environment variable is set on the worker. SSL is enforced automatically for IAM connections.
+
+---
+
+## Azure workload identity for Azure Database for PostgreSQL
+
+:::info Enterprise
+
+This feature is available on [Windmill Enterprise Edition](/pricing) only.
+
+:::
+
+On AKS, workers can authenticate to [Azure Database for PostgreSQL Flexible Server](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/concepts-azure-ad-authentication) as their own [workload identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview) instead of with a password. The pod's projected service account token is exchanged with Microsoft Entra ID for a short-lived access token, so no database password is stored in the resource.
+
+### Setup
+
+1. **Give the worker a workload identity.** Enable the OIDC issuer and the workload identity add-on on the cluster, create a user-assigned managed identity, and add a federated credential binding it to the worker's Kubernetes service account:
+
+```bash
+az identity federated-credential create \
+  --name windmill-worker \
+  --identity-name <managed-identity-name> \
+  --resource-group <resource-group> \
+  --issuer "$(az aks show -n <cluster> -g <resource-group> --query oidcIssuerProfile.issuerUrl -o tsv)" \
+  --subject "system:serviceaccount:<namespace>:<worker-service-account>" \
+  --audience api://AzureADTokenExchange
+```
+
+Annotate the service account with `azure.workload.identity/client-id: <client-id>` and label the worker pods with `azure.workload.identity/use: "true"`. The webhook then injects `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_FEDERATED_TOKEN_FILE` and `AZURE_AUTHORITY_HOST` into the worker, which is where Windmill reads the identity from. Nothing about the identity is configured on the resource, so a worker reaching two databases as two different identities needs two [worker groups](../core_concepts/9_worker_groups/index.mdx).
+
+2. **Create the database principal.** Connect as the server's Entra administrator and map the managed identity:
+
+```sql
+SELECT * FROM pgaadauth_create_principal('<managed-identity-name>', false, false);
+```
+
+3. **Create a PostgreSQL resource with `ms_entraid` as the password.** That value is a sentinel rather than a real password: it tells the worker to authenticate as its workload identity. `user` must be the Entra principal name created above.
+
+```json
+{
+  "host": "myserver.postgres.database.azure.com",
+  "port": 5432,
+  "user": "<managed-identity-name>",
+  "dbname": "mydb",
+  "sslmode": "require",
+  "password": "ms_entraid"
+}
+```
+
+SSL is enforced automatically for these connections, and the job logs state `Using Azure Workload Identity` whenever the sentinel takes effect. A resource whose password happens to be literally `ms_entraid` is treated the same way, so pick a different password if that ever collides.

@@ -154,7 +154,7 @@ Fill out the form with the information of your MS SQL instance and "Test connect
 | port      | number | Instance port            |         | false    | Your hosting provider's control panel or in your server's MS SQL configuration file             |
 | user      | string | Username                 |         | false    | Created in MS SQL (e.g., via SQL Server Management Studio) or provided by your hosting          |
 | dbname    | string | Database name            |         | true     | Created in MS SQL (e.g., via SQL Server Management Studio) or provided by your hosting          |
-| password  | string | User's password          |         | false    | Created in MS SQL (e.g., via SQL Server Management Studio) or provided by your hosting          |
+| password  | string | User's password, or `ms_entraid` to authenticate as the worker's [Azure workload identity](../../../integrations/mssql.md#azure-workload-identity-for-azure-sql) | | false | Created in MS SQL (e.g., via SQL Server Management Studio) or provided by your hosting |
 | integrated_auth | bool | Use Windows Integrated Authentication | false | false | Enable to use the worker's Kerberos credentials instead of username/password |
 | aad_token | object | OAuth token AD           |         | false    | Requires OAuth setup in Windmill      |
 | instance_name | string | Named instance      |         | false    | For named SQL Server instances (e.g., `MSSQLSERVER`) |
@@ -164,11 +164,12 @@ Fill out the form with the information of your MS SQL instance and "Test connect
 
 #### Authentication methods
 
-MS SQL Server supports three authentication methods:
+MS SQL Server supports four authentication methods:
 
 1. **Username/Password**: Provide `user` and `password` fields.
 2. **Azure AD (Entra)**: Use the `aad_token` field with OAuth.
-3. **Windows Integrated Authentication (Kerberos)**: Enable `integrated_auth`.
+3. **Azure workload identity**: Set `password` to `ms_entraid` on an AKS worker that has a [workload identity](../../../integrations/mssql.md#azure-workload-identity-for-azure-sql).
+4. **Windows Integrated Authentication (Kerberos)**: Enable `integrated_auth`.
 
 #### Windows Integrated Authentication
 
@@ -188,6 +189,8 @@ To specify the application intent for read-only requests, add `-- ApplicationInt
 
 :::info Azure AD (Entra)
 When using domain credentials via Entra (Azure Active Directory) you need to add the scope `https://database.windows.net//.default` to the [Windmill OAuth instance setting](../../../advanced/27_setup_oauth/index.mdx#azure-oauth).
+
+On AKS, [Azure workload identity](../../../integrations/mssql.md#azure-workload-identity-for-azure-sql) avoids the OAuth setup entirely: set the resource password to `ms_entraid` and the worker authenticates as its own managed identity. The same applies to [Azure Database for PostgreSQL](../../../integrations/postgresql.md#azure-workload-identity-for-azure-database-for-postgresql).
 :::
 
 ### BigQuery
