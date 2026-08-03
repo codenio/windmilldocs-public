@@ -43,7 +43,7 @@ This workflow lets you review all the changes on a PR before merging and deployi
 
 ## Option 4. Deploy to prod using the UI only - Multi workspace
 
-From a workspace in Windmill, you can deploy a script/flow/resource/variable and all its dependencies to another workspace.
+From a workspace in Windmill, you can deploy a script/flow/resource/variable and all its dependencies into the workspace it deploys to, item by item. That target is the workspace's parent: the workspace a [fork](../20_workspace_forks/index.mdx) was forked from, or the prod workspace a [dev workspace](../26_dev_workspaces/index.mdx) is paired with. Two unrelated workspaces are not linked by a setting, so pair them first if you want a standing staging/prod flow. A pair configured before Windmill 1.776.0 converts to that pairing on upgrade with nothing to do: see [upgrading from the deploy target setting](../../core_concepts/12_staging_prod/index.md#upgrading-from-the-deploy-target-setting) for the cases that do need a look.
 
 Deploy to prod using the UI is [Cloud plans and Self-Hosted Enterprise Edition](/pricing) only.
 

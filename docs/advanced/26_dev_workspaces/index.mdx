@@ -23,6 +23,7 @@ A dev workspace is a special kind of fork. Compared to an ordinary fork:
 - **Persistent**: it is the team's standing editable environment, not a short-lived branch you create, merge, and delete.
 - **No `wm-fork-` prefix**: a dev workspace keeps a plain, git-branch-safe workspace ID that you choose, instead of the auto-generated `wm-fork-` ID. An ordinary fork is still prefixed.
 - **One per workspace**: a workspace has at most one active dev workspace, and dev workspaces do not nest (you cannot create a dev of a dev).
+- **Its own job tags**: because its id is one you chose, `$workspace` in a [job tag](../../core_concepts/9_worker_groups/index.mdx#dynamic-tag) resolves to the dev workspace itself, so it can have its own workers. An ordinary fork resolves to its nearest named ancestor instead.
 - **Identified as dev**: dev workspaces show a badge (`dev`, or `stg` for a workspace [labelled `staging`](#dev-and-staging-labels)), sort ahead of ordinary forks in the workspace menu, auto-expand under their prod workspace, and are labelled "Dev workspace of \<prod\>" (or "Staging workspace of \<prod\>").
 
 Like ordinary forks, promotion stays manual through the [Compare & Deploy](#promoting-changes-to-prod) flow. Auto-sync from dev to prod is not available.
@@ -70,11 +71,15 @@ If you already have a workspace you want to use as the dev environment, attach i
 
 Attaching requires being an admin of both the prod workspace and the workspace being attached (or a superadmin). A workspace that already has its own dev workspace cannot be attached.
 
+This is also how you restore a staging/prod pair that used the pre-1.776.0 `Deployment UI` target setting and did not convert on upgrade - see [upgrading from the deploy target setting](../../core_concepts/12_staging_prod/index.md#upgrading-from-the-deploy-target-setting).
+
+![Dev workspace settings tab](./attach_dev_workspace.png 'Attaching an existing workspace as dev, with the staging label and both lock toggles')
+
 ### Detach
 
 From the same tab, click **Detach** to break the pairing. Detaching removes the prod lock that was applied when the pairing was created (see below). A protection rule you added manually is left in place.
 
-{/* TODO: screenshot of the Dev workspace settings tab showing the attach form and, when paired, the "Go to dev workspace" / "Detach" controls. */}
+{/* TODO: companion screenshot of the same tab once paired, showing the "Go to dev workspace" / "Detach" controls, and (from the dev side) the read-only "Workspace this one deploys into" card above the "Deployable items" filters. The filters card needs an Enterprise instance. */}
 
 ## Locking the prod workspace
 

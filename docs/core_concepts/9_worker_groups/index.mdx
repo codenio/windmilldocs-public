@@ -229,7 +229,9 @@ You can assign a worker group to an entire flow in the flow's settings:
 
 ### Dynamic tag
 
-If a workspace tag contains the substring `$workspace`, it will be replaced by the workspace id corresponding to the job. This is especially useful to have the same script deployed to different workspace and have them run on different workers.
+If a workspace tag contains the substring `$workspace`, it will be replaced by the workspace id the job routes to. This is especially useful to have the same script deployed to different workspace and have them run on different workers.
+
+That id is the workspace's own for a standalone workspace and for a [dev workspace](../../advanced/26_dev_workspaces/index.mdx), which is a workspace an admin names and provisions workers for. For a [fork](../../advanced/20_workspace_forks/index.mdx) it is the nearest such ancestor instead: a fork's id is generated per fork, so interpolating it would produce a tag no worker listens to and the job would stay queued.
 
 With the following assignable tag:
 
@@ -245,7 +247,9 @@ See [Deploy to staging prod](../12_staging_prod/index.md) to see a full UI flow 
 
 :::note Workspace-specific tags and workspace forks
 
-When workspace-specific default tags are enabled, [workspace forks](../../advanced/20_workspace_forks/index.mdx#workspace-specific-tags-and-forks) automatically resolve to their parent workspace's tag so fork jobs are routed to the same workers as the parent. An optional `-fork` suffix can be enabled in instance settings to route fork jobs to dedicated workers instead.
+The same resolution applies to workspace-specific default tags: when they are enabled, [workspace forks](../../advanced/20_workspace_forks/index.mdx#workspace-specific-tags-and-forks) resolve to their nearest provisioned ancestor, so fork jobs run on that workspace's workers. An optional `-fork` suffix can be enabled in instance settings to route fork jobs to dedicated workers instead.
+
+[Concurrency keys](../21_concurrency_limits/index.md), [volume names](../67_volumes/index.mdx) and dedicated workers are not affected: `$workspace` there is still the workspace's own id, so a fork keeps its own concurrency budget and a dedicated worker keeps running the code version it was pinned to.
 
 :::
 

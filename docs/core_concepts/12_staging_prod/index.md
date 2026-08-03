@@ -38,6 +38,8 @@ The parent workspace can for example be:
 - a Prod workspace, paired with a dev or staging workspace where scripts and flows are edited and tested first
 - a workspace the changes of a short-lived fork are merged back into.
 
+A workspace with no parent has nothing to deploy into: the deploy drawer shows `Staging/Prod deploy not set up`, and the fix is to pair it, not to fill in a target. See [upgrading from the deploy target setting](#upgrading-from-the-deploy-target-setting) if you used the Deployment UI before Windmill 1.776.0.
+
 Items that can be deployed are:
 - [Scripts](../../script_editor/index.mdx)
 - [Flows](../../flows/1_flow_editor.mdx)
@@ -80,10 +82,33 @@ This can be useful for non-admin (for example, operators) to share a page to pro
 
 > This page then allows users with the right permissions to deploy the given items.
 
+## Upgrading from the deploy target setting
+
+Before Windmill 1.776.0, the deployment target was named in a separate `Deployment UI` settings tab and could be any workspace you belonged to. That setting is gone: the target is the workspace's parent, and the tab is folded into `Workspace settings` -> [`Dev workspace`](../../advanced/26_dev_workspaces/index.mdx).
+
+There is nothing to do. A `staging` workspace that was the only one deploying into `prod` becomes prod's [dev workspace](../../advanced/26_dev_workspaces/index.mdx) on upgrade, and `Deploy to staging/prod` behaves as before.
+
+<details>
+<summary>Rare cases where the pair did not convert</summary>
+
+Both are named individually in the migration logs.
+
+- **Several workspaces deployed into the same target.** Only one can be the dev workspace of a given parent, so each becomes a plain [fork](../../advanced/20_workspace_forks/index.mdx) instead. Their [`$workspace` job tags](../9_worker_groups/index.mdx#dynamic-tag) then resolve to the parent, and their [git sync](../../advanced/11_git_sync/index.mdx) deploys move to a `wm-fork/**` branch with no promotion mode.
+- **The link could not be converted** (target missing or archived, self-reference, source already a fork of something else, cycle) and was dropped. Deploying reports `Staging/Prod deploy not set up`.
+
+Either way the fix is one attach, as an admin of both workspaces: on the prod workspace, `Workspace settings` -> `Dev workspace` -> `Attach an existing workspace as dev`. The [label](../../advanced/26_dev_workspaces/index.mdx#dev-and-staging-labels) is fixed once set, and the two [lock](../../advanced/26_dev_workspaces/index.mdx#locking-the-prod-workspace) toggles default to on, which is stricter than the old setup: turn them off to keep the previous behaviour.
+
+A converted workspace is parent-managed, as [attaching a dev workspace](../../advanced/26_dev_workspaces/index.mdx#pairing-an-existing-workspace-as-dev) makes it, so its git sync promotion repositories are removed and automatic pull and fork PRs turned off. If the pair promoted through git rather than through this UI, keep the workspaces unrelated and use the [git promotion workflow](../../advanced/9_deploy_gh_gl/index.mdx), or a [one-off deploy into another workspace](#deploying-into-another-workspace).
+
+`settings.yaml` no longer carries `deploy_to`. [`wmill sync pull`](../../advanced/3_cli/sync.mdx) stops emitting it, and a file that still has it is ignored on push, so committed settings files need no edit.
+
+</details>
+
 ## Merge UI for merging changes done in workspace forks
 
-If you are on a workspace fork, the first thing to know is that it will be preconfigured to set the parent workspace as the target for this same UI. Also, a fork-specific Merge UI is available, showing you exactly the items that were modified and letting you deploy but also update.
+A fork already deploys into the workspace it was forked from, so the per-item UI above needs no setup there. On top of it, a fork-specific Compare & Deploy page shows exactly the items that were modified, and lets you update the fork as well as deploy from it.
 
+{/* TODO: replace merge_ui.png - it predates the page being renamed from "Merge workspaces" to "Compare & Deploy". New screenshot: the Compare & Deploy page of a fork, with the "Deploy to prod" / "Update current" direction toggle, the "merge: <fork> -> into: <parent>" destination badge in the header, and a few rows showing "N ahead", "New" and "Show diff". */}
 
 ![Merge UI](./merge_ui.png 'Merge UI')
 
