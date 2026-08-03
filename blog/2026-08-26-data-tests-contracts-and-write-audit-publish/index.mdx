@@ -169,7 +169,7 @@ Data tests are declared as annotations, with the four dbt generic kinds mapped o
 
 Each one compiles to a verifier probe: a one-row query that counts and samples the violating rows in a single scan. All of a table's probes are embedded into the materialization's summary query and run in one pass, so a run reports every failing test rather than aborting on the first. Which of five tests failed is usually more diagnostic than that one did.
 
-Failing tests carry a bounded sample of the offending rows (at most 20 rows and 50KB per test, dropped rather than truncated if over cap, because truncated JSON fails to parse after you have already paid the bytes). The sample is optional by contract at every layer: enforcement reads only the count, so a missing or unparseable sample can never flip a pass into a fail. It also deliberately stays out of the error *message*, so run descriptions and alert payloads carry counts rather than customer rows unless a handler explicitly reads the structured field.
+Failing tests carry a bounded sample of the offending rows (at most 20 rows and 50KB per test, dropped rather than truncated if over cap, because truncated JSON fails to parse after you have already paid the bytes). The sample is optional by contract at every layer: enforcement reads only the count, so a missing or unparsable sample can never flip a pass into a fail. It also deliberately stays out of the error *message*, so run descriptions and alert payloads carry counts rather than customer rows unless a handler explicitly reads the structured field.
 
 Then the actual decision, and we drew it as an edition line:
 
