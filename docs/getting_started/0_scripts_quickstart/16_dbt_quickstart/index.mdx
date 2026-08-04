@@ -24,9 +24,56 @@ A dbt project on Windmill carries no connection of its own. Warehouses are confi
 
 The name is also the warehouse's identity in the asset graph - every model becomes `dbt://<warehouse>/<schema>/<name>` - so two projects pointing at the same warehouse share their nodes instead of drawing two disconnected islands.
 
-<!-- SCREENSHOT PLACEHOLDER: workspace settings -> dbt, showing the warehouses table with columns Name / Resource / Target and one row named `main` pointing at a Postgres resource. File: warehouse_settings.png (+ .webp) -->
+![Workspace settings, dbt tab: a warehouses table with Name, Resource and Target columns - `main` on a Postgres resource with target `prod`, and `lake` on a dbt_profile resource](./warehouse_settings.png 'Warehouses configured under Workspace settings -> dbt')
 
-The adapter is inferred from the resource's type: `postgresql`, `redshift`, `mysql`, `duckdb`, `snowflake`, `bigquery`, `databricks`, and (on Enterprise) `ms_sql_server` and `oracledb`. Any other warehouse - ClickHouse, Salesforce, anything with a dbt adapter but no Windmill resource type - is reached through the project's own `profiles.yml` (see [Bring your own profiles.yml](#bring-your-own-profilesyml)).
+A warehouse points at one of two kinds of resource.
+
+**A Windmill connection resource**, when one exists for your warehouse: `postgresql`, `redshift`, `mysql`, `snowflake`, `bigquery` (or `gcp_service_account`) and `databricks`. Windmill translates the fields it carries into the keys dbt reads, so there is nothing dbt-specific to fill in - the resource you already use elsewhere works. The adapter comes from the resource's type.
+
+**A `dbt_profile` resource**, for everything else - and for anything the translation above does not cover. It is one entry of a `profiles.yml` `outputs` map, as a resource. Given this file on a developer's machine:
+
+```yaml
+# ~/.dbt/profiles.yml
+my_project:
+  target: prod
+  outputs:
+    prod:
+      type: clickhouse
+      host: ch.internal
+      port: 8123
+      user: analytics
+      password: s3cret
+      schema: marts
+      secure: true
+```
+
+the resource *is* the `prod` block - paste it in as it stands, `type` and all:
+
+```json
+{
+  "type": "clickhouse",
+  "host": "ch.internal",
+  "port": 8123,
+  "user": "analytics",
+  "password": "$var:u/alice/ch_password",
+  "schema": "marts",
+  "secure": true
+}
+```
+
+Nothing is renamed or lifted out, so the block you run locally is the block Windmill runs. The resource type declares no fields, so you get a JSON editor. `$var:` and `$res:` references resolve, including inside nested keys, so credentials stay Windmill secrets.
+
+The layers *above* the block are not in the resource, because Windmill already has them: the profile name comes from the project's own `dbt_project.yml`, and which output to use is the warehouse's `Target` (or the descriptor's `profile.target`). A project with a `dev` and a `prod` output becomes two warehouses, one resource each.
+
+Every key is handed to dbt unchanged - so **any adapter dbt supports works**, including ones Windmill has never heard of (`trino`, `athena`, `spark`, `fabric`, whatever ships next). Copy the keys from your adapter's own dbt documentation; numbers and booleans keep their type.
+
+With the `dbt-core-1x` engine the adapter is installed from PyPI as `dbt-<type>`, and that install is not sandboxed - so it is limited to adapters Windmill ships a list of, plus whatever an instance admin adds to `DBT_EXTRA_ADAPTERS`. `dbt-core-2x` and `fusion` carry their adapters in the binary and install nothing, so they take any `type` at all.
+
+Two conveniences on top of a literal target: `root_certificate_pem` is written next to `profiles.yml` and pointed at by `sslrootcert` rather than being sent as a value, and the descriptor's `profile.schema` and `threads` override their keys in the block.
+
+The `mssql` and `oracle` adapters need an [enterprise](/pricing) license, whichever kind of resource reaches them - the same boundary the native `ms_sql_server` and `oracledb` script languages draw. Every other adapter is CE.
+
+A project that would rather keep its own `profiles.yml` file still can: see [Bring your own profiles.yml](#bring-your-own-profilesyml).
 
 Configuring a warehouse is what makes it available: the resource is read on the runner without a per-user permission check, exactly as `s3://` reaches the workspace bucket. Anyone who may run a dbt script may build with the warehouses it names.
 
@@ -105,7 +152,7 @@ Each `{{ placeholder }}` the descriptor interpolates in `vars` becomes one more 
 
 While a run is in flight, the run page shows each model's state on the project graph: green as nodes finish, spinners on the ones still building, and failures with the nodes dbt skipped behind them. When it ends, every node carries its status, timing, row count and dbt's own message, so a partial failure is legible without reading the log. Live per-model progress is `dbt-core-1x` only; the other two engines settle every node from `run_results.json` when the invocation ends (see [Engines](#engines)).
 
-<!-- SCREENSHOT PLACEHOLDER: a dbt run page mid-flight - the project graph with green checks on finished staging models, spinners on the marts still building, one failed model and its skipped downstream. File: dbt_run_live.png (+ .webp) -->
+![A dbt run page: the project graph with each model's status, and a result summary reading 4 passed, 1 failed, 1 skipped of 6 nodes, with the failing model's database error](./dbt_run_live.png 'A run page: per-model status on the graph, and the failure that skipped its downstream')
 
 Test failures honor dbt's own `severity`: an `error` test fails the job and names the failing node, a `warn` test surfaces without failing it. Selecting a model on the run page shows its SQL and fully-qualified relation, and `Preview rows` dispatches a `dbt show` for exactly that node.
 
@@ -149,7 +196,7 @@ env:
 | `profile.warehouse` | `main` | A warehouse configured on the workspace, by name |
 | `profile.target` | the warehouse's, else `default` | dbt target name within the profile |
 | `profile.schema` | the resource's | Target schema. Required for BigQuery, whose resource is a service-account JSON with no dataset in it |
-| `profile.type` | inferred | dbt adapter, spelled as dbt's own `type:`. Pins it when the inference is wrong or the resource is a custom type |
+| `profile.type` | the resource's, else inferred | dbt adapter, spelled as dbt's own `type:`. Pins it when the inference is wrong or the resource is a custom type. A `dbt_profile` resource states its own, and a descriptor disagreeing with it is an error rather than a silent override |
 | `profile.profiles_yml` | - | Path (relative to the project) of the project's own `profiles.yml`, used instead of rendering one |
 | `select` / `exclude` / `selector` | - | Passed to dbt verbatim. They also scope what the script owns in the graph |
 | `test_behavior` | `build` | `build` interleaves tests with models (dbt's own default); `after_all` runs them as a second phase; `none` skips them |
@@ -171,7 +218,7 @@ A project that keeps its own `profiles.yml` runs unchanged - point `profile.prof
 
 Every model, seed, snapshot and source the project declares becomes an [asset](../../../core_concepts/52_assets/index.mdx) named `dbt://<warehouse>/<schema>/<name>`, with the project's `ref()` lineage as edges between them. Models, seeds and snapshots are writes; sources are reads. Each node carries its materialization (`view`, `table`, `incremental`, `snapshot`, `seed`), its tags, its declared column descriptions and its data tests, and the script node is badged with the number of models it materializes.
 
-<!-- SCREENSHOT PLACEHOLDER: the folder asset graph with two dbt projects - source nodes, model nodes badged with their materialization, ref() lineage between them, and each project's script node badged with its model count. File: dbt_asset_graph.png (+ .webp) -->
+![The asset graph of a folder holding two dbt projects: source nodes, model nodes badged view or table, and ref() lineage running between the two projects through a shared table](./dbt_asset_graph.png 'Two dbt projects in one folder, meeting on the table one writes and the other reads')
 
 The workspace graph is written at deploy time, so redeploying is what refreshes it. A descriptor that is dynamic by construction (a `{{ }}` placeholder in `vars`, or a `$var:` value in `env`) can select a different model set per run, so those runs re-parse and each run page shows the models that run actually built. The editor's own [Refresh models](#refreshing-the-model-graph) draws from a parse of the buffer instead, which is why it can show a project that has never been deployed and why its graph stays inside that editing session.
 
