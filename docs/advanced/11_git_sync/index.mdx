@@ -170,6 +170,8 @@ This requires the GitHub App installation to have the webhooks permission. If yo
 
 Self-managed GitHub Apps for GitHub Enterprise Server use the same per-repository webhook path: grant the same permissions on your app and Windmill registers the webhook against your GHES host. Your Windmill base URL only needs to be reachable from the GHES host, not from the public internet, so this also works on private networks.
 
+If GitHub has to reach Windmill on a different url than your users' browsers do, set a [webhook base url](../18_instance_settings/index.mdx#webhook-base-url) in instance settings.
+
 If your instance is not reachable from GitHub at all, webhook registration fails and the repository stays on polling. Nothing breaks; latency is the only difference.
 
 ### Polling

@@ -639,6 +639,12 @@ Once the app is configured, a **Workspace assignments** panel appears below the 
 
 For setup instructions, see [Self-managed GitHub App](../../integrations/git_repository.mdx#self-managed-github-app).
 
+### Webhook base url
+
+Base url GitHub delivers [Git sync webhooks](../11_git_sync/index.mdx#webhooks) to, without trailing slash. When empty, the [base url](#base-url) is used. Set it, for the managed and self-managed apps alike, when GitHub cannot reach your instance on the url your users' browsers use.
+
+Configure it before connecting any GitHub App: changing it later does not move the webhooks GitHub already holds, and the setting then lists the workspaces whose Git sync settings must be re-saved to move them.
+
 ## DB Health
 
 The DB Health diagnostic dashboard provides on-demand insights into your Windmill database. It is available under **Monitoring > DB Health** in Instance Settings and is accessible to superadmins only.
