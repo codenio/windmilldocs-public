@@ -198,6 +198,8 @@ Migrations sync like any other workspace item:
 
 Local migration sets are validated on push and rejected if two `.up` (or two `.down`) files share a timestamp, or if a `.down.sql` has no matching `.up.sql`.
 
+Migrations are not covered by the `includes` / `excludes` patterns, since `migrations/datatable/` sits outside the namespaces those are written against; set [`skipDatatableMigrations: true`](./wmill-yaml-reference.mdx#skipdatatablemigrations) in `wmill.yaml` to leave them out. Workspaces with [git sync](../11_git_sync/index.mdx#type-filters) enabled also commit them to the linked repository. A push only deletes migrations the current branch has committed at some point, so pushing from a checkout that predates the sync cannot wipe them from the workspace.
+
 ## Starting a PostgreSQL proxy server
 
 Start a PostgreSQL wire-protocol proxy that serves all datatables. This allows any Postgres-compatible client (psql, DBeaver, pgAdmin, etc.) to connect and query your datatables.

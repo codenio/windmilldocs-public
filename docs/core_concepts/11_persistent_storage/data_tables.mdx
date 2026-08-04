@@ -225,7 +225,7 @@ wmill datatable migrate up                     # apply all pending migrations
 wmill datatable migrate down                   # roll back the most recent migration
 ```
 
-See the [CLI datatable reference](../../advanced/3_cli/datatable.md#managing-migrations) for the full command reference and sync behavior.
+See the [CLI datatable reference](../../advanced/3_cli/datatable.md#managing-migrations) for the full command reference and sync behavior. If the workspace has [git sync](../../advanced/11_git_sync/index.mdx#type-filters) enabled, migrations are committed to the linked repository as they are created, edited or deleted.
 
 ---
 

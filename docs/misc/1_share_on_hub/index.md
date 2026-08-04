@@ -1,5 +1,5 @@
 ---
-description: How do I share scripts, flows, apps, and resource types on Windmill Hub?
+description: How do I share projects, scripts, flows, apps, and resource types on Windmill Hub?
 ---
 
 # Share on Windmill Hub
@@ -17,6 +17,26 @@ With the Hub, we aim to create a trusted support for users to save time and find
 The Hub is complementary to our [Discord][wm-discord] where community members give mutual support & kudos.
 
 Below you will find guides on how to contribute to the Hub, thank you for being part of the community!
+
+## Projects
+
+A project bundles a whole [folder](../../core_concepts/8_groups_and_folders/index.mdx) - its scripts, flows, apps and the resources they depend on - into a single Hub page others can fork. Workspace admins publish one from the Folders page: open the `...` menu next to a folder and pick "Publish to Hub".
+
+Publishing happens in three steps:
+
+1. Bundle your project - pick the items of the folder to include and create a draft on the Hub.
+2. Record demos - capture one execution per script or flow, one session per app, and the whole data pipeline as a single interactive replay, so visitors can see the project work before forking it. Optional but recommended.
+3. Submit for review - the Windmill team approves the bundle before it goes live.
+
+### Resource dependencies
+
+The bundle step lists the [resource types](../../core_concepts/3_resources_and_types/index.mdx) the selected items depend on, either because an item takes a resource as an input, or because it pins a resource path in its code. Types derived from an input only count when the workspace actually declares them as a resource type, so a stale or misspelled `resource-<type>` argument format is ignored instead of being published as an empty type.
+
+For every dependency, a stub resource is synced to the Hub, so a fork knows which credentials it needs to fill and a hardcoded `$res:` path in the published code still resolves. This is automatic and needs no action.
+
+Publishing a type's own definition - its schema and description - is a separate, explicit choice. In the "Resource dependencies" drawer, turn on "Export type definition" for a type to include it in the project. It is off by default: only enable it for custom types the Hub does not already define. Standard types such as `postgresql` or `stripe` are already on the Hub and need no export. Exported types are marked with an `exported` badge in the bundle summary.
+
+![Resource dependencies drawer](./hub_project_resource_dependencies.png.webp "Export type definition toggle in the Resource dependencies drawer")
 
 ## Scripts
 

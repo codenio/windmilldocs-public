@@ -80,6 +80,7 @@ workspaces:
 | [`skipApps`](#skipapps) | `boolean` | `false` | Skip syncing apps |
 | [`skipFolders`](#skipfolders) | `boolean` | `false` | Skip syncing folders |
 | [`skipWorkspaceDependencies`](#skipworkspacedependencies) | `boolean` | `false` | Skip workspace dependencies |
+| [`skipDatatableMigrations`](#skipdatatablemigrations) | `boolean` | `false` | Skip data table SQL migrations |
 | [`includeSchedules`](#includeschedules) | `boolean` | `false` | Include schedules |
 | [`includeTriggers`](#includetriggers) | `boolean` | `false` | Include triggers (HTTP, WebSocket, Kafka, …) |
 | [`includeUsers`](#includeusers) | `boolean` | `false` | Include workspace users |
@@ -232,6 +233,17 @@ metadata and ACLs). Equivalent CLI flag: `--skip-folders`.
 Skips the workspace-level shared dependency manifests
 (`package.json`, `requirements.txt`, …) used by TypeScript/Python scripts.
 Equivalent CLI flag: `--skip-workspace-dependencies`.
+
+### `skipDatatableMigrations`
+
+- Type: `boolean`
+- Default: `false`
+
+Skips the SQL [migrations](../../core_concepts/11_persistent_storage/data_tables.mdx#migrations)
+of data tables, stored under `migrations/datatable/`. That root sits outside the
+namespaces `includes` / `excludes` are written against, so this flag is the only
+way to leave migrations out of a sync. Corresponds to the "Data table migrations"
+[git sync type filter](../11_git_sync/index.mdx#type-filters).
 
 ### `includeSchedules`
 

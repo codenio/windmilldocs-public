@@ -464,6 +464,7 @@ You can filter on:
 - **Workspace settings** - Global workspace configuration
 - **Encryption key** - Workspace encryption key
 - **[Workspace dependencies](../../core_concepts/55_workspace_dependencies/index.mdx)** - Shared dependency files. Creating, archiving, or deleting workspace dependencies triggers deployment callbacks for git sync.
+- **[Data table migrations](../../core_concepts/11_persistent_storage/data_tables.mdx#migrations)** - SQL migrations of data tables, stored under `migrations/datatable/`. On by default, including on git sync configurations predating the type. Like workspace dependencies, users and workspace settings, they sit outside the `f/` and `u/` namespaces, so the [path filters](#path-filters) do not apply to them and this toggle (or [`skipDatatableMigrations`](../3_cli/wmill-yaml-reference.mdx#skipdatatablemigrations) in `wmill.yaml`) is the only way to opt out.
 
 ## Workspace forks integration
 
