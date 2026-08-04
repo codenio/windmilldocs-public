@@ -66,6 +66,12 @@ View of a scheduled run:
 
 > Although scheduled scripts and flows are visible on their [dedicated tab](../1_scheduling/index.mdx), the run menu helps you see the next scheduled one.
 
+### Trigger
+
+The run page shows a Trigger field with how the run was started: a [schedule](../1_scheduling/index.mdx), one of the [triggers](../../triggers/index.mdx) (HTTP route, Kafka, email, ...) or an [app](../../apps/0_app_editor/index.mdx).
+
+Runs started through the API with a [token](../59_user_tokens/index.mdx) are all reported as `Webhook`, which covers [webhook](../4_webhooks/index.mdx) calls as well as the [CLI](../../advanced/3_cli/index.mdx) and the SDKs. Runs started from the Windmill interface have no trigger and the field is not displayed. The same goes for runs that predate the version which started recording it.
+
 ## Filters
 
 You can adjust the level of details by picking playing with filters on:
@@ -73,6 +79,7 @@ You can adjust the level of details by picking playing with filters on:
 - **Datetime**
 - **Metadata**: [Path](../16_roles_and_permissions/index.mdx#path) / [User](../16_roles_and_permissions/index.mdx#users) / [Folder](../8_groups_and_folders/index.mdx) / [Worker](../9_worker_groups/index.mdx) / [Concurrency key](../21_concurrency_limits/index.md#custom-concurrency-key) / [Labels](#jobs-labels)
 - **Kind**: All / Runs / Previews / Dependencies
+- **[Trigger kind](#trigger)**: Webhook / Schedule / HTTP route / Kafka / ... - can be negated to exclude a kind, for instance to hide all scheduled runs
 - **Status**: All / Success / Failure
 - **Skipped flows**
 - **Arguments**
