@@ -370,6 +370,10 @@ The `azure.workload.identity/use: "true"` label must be present on every pod tha
 4. The access token is used as the PostgreSQL password when opening connections.
 5. A background task refreshes the token approximately every 24 hours, before the previous token expires. Active connections are re-authenticated transparently.
 
+### Database resources
+
+A worker with a workload identity can also use it to reach the databases your scripts and flows query, on [PostgreSQL](../../integrations/postgresql.md#azure-workload-identity-for-azure-database-for-postgresql) and [MS SQL](../../integrations/mssql.md#azure-workload-identity-for-azure-sql) resources. The sentinel there is `ms_entraid`, set as the resource password, rather than the `entraid` used in `DATABASE_URL`.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Self-host Windmill"
