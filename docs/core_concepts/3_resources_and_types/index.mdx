@@ -58,6 +58,8 @@ Each **Resource** has a **Resource Type**, that defines what fields that
 resource contains. Select one from the list and check the schema to see what
 fields are present.
 
+For resource types backed by an OAuth provider, the token is fetched from the provider and refreshed automatically instead of being entered by hand. The dialog lists providers configured on the instance under "Instance-configured OAuth APIs", and every other resource type under "Others". Picking a provider from "Others" lets you connect it with your own [client credentials](../../advanced/27_setup_oauth/index.mdx#client-credentials) rather than the instance-wide ones. See [Setup OAuth and SSO](../../advanced/27_setup_oauth/index.mdx) to configure providers.
+
 Resources commonly need to access secrets or re-use
 [Variables](../2_variables_and_secrets/index.mdx), for example, passwords or API
 tokens. To insert a Variable into a Resource, use **Insert variable** (the `$`

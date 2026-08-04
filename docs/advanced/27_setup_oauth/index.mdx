@@ -8,7 +8,7 @@ import DocCard from '@site/src/components/DocCard';
 
 Windmill supports Single Sign-On for [Google](#google-login), [Microsoft](#microsoft), [Okta](#okta), [GitHub](#github), [GitLab](#gitlab), [Jumpcloud](#jumpcloud), [Keycloak](#keycloak), [Authentik](#authentik), [Authelia](#authelia), [Kanidm](#kanidm), [Zitadel](#zitadel), [Nextcloud](#nextcloud), [PocketID](#pocketid) and domain restriction.
 
-Windmill supports [Slack](#slack), [GitHub](#github-1), [GitLab](#gitlab-1), [Bitbucket](#bitbucket), [Google Sheets](#google-sheets), [Google Drive](#google-drive-gdrive), [Gmail](#gmail), [Google Calendar](#google-calendar-gcal), [Google Forms](#google-forms-gforms), [Google Cloud](#google-cloud-gcloud), [Google Workspace](#google-workspace-gworkspace), [Basecamp](#basecamp), [LinkedIn](#linkedin), [QuickBooks](#quickbooks), [Visma](#visma), [Snowflake](#snowflake), and [Custom OAuth](#custom-oauth).
+Windmill supports [Slack](#slack), [GitHub](#github-1), [GitLab](#gitlab-1), [Bitbucket](#bitbucket), [Google Sheets](#google-sheets), [Google Drive](#google-drive-gdrive), [Gmail](#gmail), [Google Calendar](#google-calendar-gcal), [Google Forms](#google-forms-gforms), [Google Cloud](#google-cloud-gcloud), [Google Workspace](#google-workspace-gworkspace), [Basecamp](#basecamp), [LinkedIn](#linkedin), [QuickBooks](#quickbooks), [Visma](#visma), [Snowflake](#snowflake), and [Custom OAuth](#custom-oauth-1). Providers can be connected through the browser sign-in flow or, for server-to-server integrations, through the [client credentials](#client-credentials) grant.
 
 On [self-hosted instances](../../advanced/1_self_host/index.mdx), OAuth configuration are set in the [instance settings](../../advanced/18_instance_settings/index.mdx).
 
@@ -623,4 +623,54 @@ interface OAuthConfig {
 
 `connect_config` is used for resources, and `login_config` for SSO.
 
+For a provider that only supports the [client credentials](#client-credentials) grant, leave the Auth URL empty and fill in the Token URL: the provider is then offered exclusively with server-to-server authentication.
+
+As for any OAuth setting, the connect dialog only lists the provider if a [resource type](../../core_concepts/3_resources_and_types/index.mdx) with exactly the same name exists in the workspace. Custom providers have no resource type on the hub, so create one from the Resources page with "Add resource type", using the same name as the OAuth entry and with at least a `token` property of type string.
+
 Once you have validated your custom item, we would be grateful if you could open a PR. See [Contributor's guide](../../misc/4_contributing/index.md) for more details.
+
+### Client credentials
+
+Available on [Enterprise Edition](/pricing).
+
+The authorization code grant used by most integrations requires a browser step: the user signs in to the provider and authorizes Windmill. The client credentials grant is the server-to-server alternative. Windmill exchanges a client ID and secret directly against the provider's token endpoint, with no browser window and no user consent. The resulting token is stored in a linked [secret variable](../../core_concepts/2_variables_and_secrets/index.mdx) and refreshed automatically before expiration, exactly like an authorization code token.
+
+It is available for the built-in providers that support it, and for any [custom OAuth](#custom-oauth-1) provider.
+
+#### Choose the grant type
+
+In [Instance settings](../18_instance_settings/index.mdx#authoauth) -> OAuth, each provider entry has a "These credentials are for" selector:
+
+| Choice | Behavior |
+| ------ | -------- |
+| Authorization code | Users sign in through a browser popup using the instance's client ID and secret. |
+| Client credentials | Server-to-server token exchange, no browser step. Custom providers require a Token URL in their `connect_config`. |
+| Both | Both flows are offered, and users pick one when creating the resource. |
+
+The selector is shown for custom providers and for built-in providers that support both grants. Built-in providers that only support one grant use it implicitly.
+
+#### Shared or per-resource client credentials
+
+Once the client credentials grant is enabled, whether one client is shared by the whole instance depends on whether you fill in the credentials:
+
+- Client ID and Client Secret filled in: every connection uses that single service account. The secret stays server-side and users enter nothing. Rotating it in instance settings takes effect immediately for all connections using it.
+- Client ID and Client Secret left empty: the provider becomes bring-your-own. Each user enters their own client ID and secret when creating a resource. Those credentials are stored on that resource's OAuth account and reused for its own token refreshes, so each resource refreshes independently. The rest of the configuration (token URL, scopes, extra params) stays shared, defined once in instance settings.
+
+![Custom OAuth entry configured for bring-your-own client credentials](./oauth_client_credentials_settings.png.webp 'Custom OAuth entry configured for bring-your-own client credentials')
+
+#### Create a resource with your own credentials
+
+From the Resources page, "Add resource" opens a dialog with two sections:
+
+- "Instance-configured OAuth APIs" lists the providers whose instance entry carries a client ID and secret. Clicking one connects with those shared credentials, so no credential form is shown.
+- "Others" lists every resource type in the workspace. Clicking a provider there opens the bring-your-own form, where you enter your own client ID and secret.
+
+![The connect dialog lists the custom provider under Others](./oauth_connect_others_section.png.webp 'The connect dialog lists the custom provider under Others')
+
+A provider configured with empty client ID and secret only appears under "Others". If you do not see it there, the workspace is missing a resource type with the same name - create it as described in [Custom OAuth](#custom-oauth-1), or sync the resource types with the hub.
+
+Selecting a provider from "Others" is also how you override shared credentials: a provider that has instance-level credentials still appears there, and picking it from that section opens the same bring-your-own form instead of using the shared client.
+
+![Bring-your-own client credentials form](./oauth_client_credentials_form.png.webp 'Bring-your-own client credentials form')
+
+Besides the client ID and secret, the form exposes an optional "Token URL override" that points this one resource at a different token endpoint than the provider's configured one. It is stored with the connection and reused on refresh. Built-in providers whose token endpoint is derived from an instance name (Coupa, ServiceNow) ask for that instance name instead, and the endpoint is built from it.
