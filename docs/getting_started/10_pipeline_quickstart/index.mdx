@@ -14,6 +14,8 @@ This guide builds your first [pipeline](../../core_concepts/63_pipelines/index.m
 
 DuckLake is not required, though. Pipelines wire scripts in any language (Python, TypeScript, ...) by the plain [assets](../../core_concepts/52_assets/index.mdx) they exchange - S3 objects, resources, data tables or volumes - with the same `-- on` model and no materialization. See [inputs and outputs](../../core_concepts/63_pipelines/index.mdx#inputs-and-outputs-assets) for that path; this guide shows DuckLake because it is the most powerful default.
 
+Already using dbt? You do not have to port the project into a pipeline. Windmill runs an unmodified dbt project as [a script of its own kind](../0_scripts_quickstart/16_dbt_quickstart/index.mdx), with dbt still owning its models, refs and tests, and shows its models in the asset graph as `dbt://` nodes beside whatever pipelines you build. Windmill's own pipelines page (`/pipeline`) points there too, next to the [warehouse settings](../0_scripts_quickstart/16_dbt_quickstart/index.mdx#configure-a-warehouse) a dbt project needs.
+
 :::info Prerequisite
 Because this guide uses DuckLake, you need a [workspace storage and a DuckLake](../../core_concepts/11_persistent_storage/ducklake.mdx) configured. The default DuckLake is named `main`; this guide uses it. (A plain S3-based pipeline needs only the [workspace storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#workspace-object-storage).)
 
@@ -95,5 +97,10 @@ Add materialization strategies (merge, append, SCD2 history), partitions, schedu
 		title="Assets"
 		description="How Windmill detects and tracks the S3 objects, resources and tables your scripts read and write."
 		href="/docs/core_concepts/assets"
+	/>
+	<DocCard
+		title="dbt"
+		description="Run an existing dbt project on Windmill unchanged, as a script of its own, with its models in the asset graph."
+		href="/docs/getting_started/scripts_quickstart/dbt"
 	/>
 </div>

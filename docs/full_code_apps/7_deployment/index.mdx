@@ -6,7 +6,7 @@ import DocCard from '@site/src/components/DocCard';
 
 # Deployment
 
-Full-code apps can be deployed via the [CLI](../5_cli_workflow/index.mdx) or the [UI editor](../6_ui_editor/index.mdx). This page covers deployment options and configuration.
+Full-code apps can be deployed via the [CLI](../5_cli_workflow/index.mdx), the [UI editor](../6_ui_editor/index.mdx) or the API. This page covers deployment options and configuration.
 
 ## Deploy via CLI
 
@@ -21,6 +21,46 @@ The CLI reads `raw_app.yaml`, bundles your frontend code, uploads backend runnab
 ## Deploy via UI
 
 From the in-browser editor, click the deploy button to save and publish your app.
+
+## Deploy from sources via the API
+
+A deployed full-code app is served as a compiled bundle, which is why the CLI and the editor both build before deploying. An API client has no bundler of its own, so two endpoints take the app's sources as JSON and compile them on a worker instead:
+
+| Endpoint | |
+| --- | --- |
+| [`POST /w/{workspace}/apps/create_raw_source`](https://app.windmill.dev/openapi.html#/operations/createAppRawSource) | Create an app from its sources. Requires `path`, `value`, `summary` and `policy`, and returns `201` |
+| [`POST /w/{workspace}/apps/update_raw_source/{path}`](https://app.windmill.dev/openapi.html#/operations/updateAppRawSource) | Deploy a new version of an existing full-code app |
+
+```bash
+curl -X POST "$WM_BASE_URL/api/w/$WORKSPACE/apps/update_raw_source/f/folder/my_app" \
+  -H "Authorization: Bearer $WM_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "value": {
+          "files": {
+            "/index.tsx": "import { createRoot } from \"react-dom/client\" ...",
+            "/App.tsx": "export default function App() { ... }",
+            "/package.json": "{ \"dependencies\": { \"react\": \"^19.0.0\" } }"
+          },
+          "runnables": {},
+          "data": {}
+        },
+        "deployment_message": "deployed from the API"
+      }'
+```
+
+`files` maps each source path to its content and must contain an entry point (`/index.tsx`, `/index.ts` or `/index.js`). On update, send the whole `value`, not a patch: read the current one with [`GET /w/{workspace}/apps/get/p/{path}`](https://app.windmill.dev/openapi.html#/operations/getAppByPath) and edit it. `runnables` and `data` are carried through unchanged, and `/ui/` imports of the workspace shared UI folder resolve as they do locally.
+
+The compile runs as an ordinary [job](../../core_concepts/20_jobs/index.mdx) on a worker, using the same build as [`wmill app bundle`](../../advanced/3_cli/app.md#bundle-an-app-without-deploying-it) and the editor. It shows up in the runs list as `bundle raw app` with the build logs, and the app's dependencies are installed but never executed. Because the build happens before the version is written, a build failure deploys nothing and returns the compiler's own error:
+
+```
+Bad request: raw app bundling failed (job 019fcc07-...): Could not resolve: "./does-not-exist"
+  App.tsx:1:22  import { nope } from "./does-not-exist"
+```
+
+Deploying sources over a low-code app is refused unless `allow_kind_change: true` is set, so an app is never converted by accident. Operators cannot deploy apps, the workspace [protection rulesets](../../core_concepts/56_protection_rulesets/index.mdx) apply as for any other deploy, and a [token](../../core_concepts/59_user_tokens/index.mdx) needs both the `apps:write` and `jobs:run` scopes since the call makes a worker build the sources it was given.
+
+Both endpoints are exposed over [MCP](../../core_concepts/51_mcp/index.mdx) as the `createApp` and `updateApp` tools, so an AI agent can read a full-code app, edit its sources and deploy them, getting compile errors back as the error of the call.
 
 ## Public apps
 

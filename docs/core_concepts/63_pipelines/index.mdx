@@ -680,6 +680,8 @@ The equivalents map closely: [materializations](./materialization.mdx), [data te
 
 Pipelines are in alpha and do not yet cover everything those tools do: dbt's docs-site generation, seeds and semantic layer have no direct equivalent. The goal is not feature-for-feature parity but doing the whole asset-based workflow (transform, orchestrate, test, materialize, version) in a single platform, on your own compute.
 
+If you already have a dbt project, you do not have to port it to get there: Windmill also runs an unmodified dbt project as a script of its own, with its models on the same asset graph as everything above. See [dbt](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx).
+
 ## Related
 
 <div className="grid grid-cols-2 gap-6 mb-4">

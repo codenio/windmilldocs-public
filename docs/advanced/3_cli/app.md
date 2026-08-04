@@ -58,6 +58,16 @@ wmill app dev
 
 Starts a local development server with hot reload and WebSocket backend. Options: `--port`, `--host`, `--entry`, `--no-open`.
 
+### Bundle an app without deploying it
+
+```bash
+wmill app bundle [app_folder] --out <dir>
+```
+
+Runs the same build `wmill app push` runs, but writes `bundle.js` and `bundle.css` to a directory instead of deploying. The folder defaults to the current directory and the output to `<app_folder>/dist`. Use `--no-minify` to skip minification.
+
+This is also the build behind the [source-deploy API endpoints](/docs/full_code_apps/deployment#deploy-from-sources-via-the-api), so an app deployed from sources through the API is compiled exactly as the CLI and the editor compile it.
+
 ### Generate lock files
 
 Generate `.lock` files for backend runnables with dependencies using the [`wmill generate-metadata`](./generate-metadata.md) command:

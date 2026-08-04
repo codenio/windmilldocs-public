@@ -1,0 +1,248 @@
+---
+title: 'dbt quickstart'
+description: 'How do I run dbt projects in Windmill? Author or import an unmodified dbt project as a script, run it on your own workers and refresh its model graph from the editor.'
+slug: '/getting_started/scripts_quickstart/dbt'
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# dbt quickstart
+
+Windmill runs [dbt](https://www.getdbt.com/) projects as a script language of its own. One dbt project is one Windmill script: the project's own files ride with the script as its module bundle, and the worker materializes them into the job directory before invoking dbt. Nothing is cloned at run time, and the project itself is unmodified - the same directory a developer runs `dbt build` against locally.
+
+What you get on top of `dbt build` is the rest of Windmill: [scheduling and triggers](../../../triggers/index.mdx), [permissions](../../../core_concepts/16_roles_and_permissions/index.mdx), run history, live per-model progress, and the project's models as first-class [assets](../../../core_concepts/52_assets/index.mdx), so a Python or DuckDB script reading one of its marts appears on the same lineage graph.
+
+The runtime, the model graph and the UI are all in the Community Edition. Only the `mssql` and `oracle` adapters require an [Enterprise Edition](/pricing) license, mirroring the boundary the native SQL languages already draw.
+
+dbt is in the browser's new-script language picker, and a dbt script opens in [an editor of its own](#the-dbt-editor) rather than the generic one. Projects can equally be imported and edited with the [CLI](../../../advanced/3_cli/index.mdx).
+
+dbt is not offered as an inline language, though: a [flow](../../6_flows_quickstart/index.mdx) step and an [app](../../7_apps_quickstart/index.mdx) runnable are a raw body with nowhere to carry a project, so a flow reaches a dbt project the way it reaches any other script - by path, to a deployed one.
+
+## Configure a warehouse
+
+A dbt project on Windmill carries no connection of its own. Warehouses are configured once per workspace, under `Workspace settings` -> `dbt`: each entry is a name, a [resource](../../../core_concepts/3_resources_and_types/index.mdx) and an optional dbt target. A project reaches one by name, and takes `main` when it names none.
+
+The name is also the warehouse's identity in the asset graph - every model becomes `dbt://<warehouse>/<schema>/<name>` - so two projects pointing at the same warehouse share their nodes instead of drawing two disconnected islands.
+
+<!-- SCREENSHOT PLACEHOLDER: workspace settings -> dbt, showing the warehouses table with columns Name / Resource / Target and one row named `main` pointing at a Postgres resource. File: warehouse_settings.png (+ .webp) -->
+
+The adapter is inferred from the resource's type: `postgresql`, `redshift`, `mysql`, `duckdb`, `snowflake`, `bigquery`, `databricks`, and (on Enterprise) `ms_sql_server` and `oracledb`. Any other warehouse - ClickHouse, Salesforce, anything with a dbt adapter but no Windmill resource type - is reached through the project's own `profiles.yml` (see [Bring your own profiles.yml](#bring-your-own-profilesyml)).
+
+Configuring a warehouse is what makes it available: the resource is read on the runner without a per-user permission check, exactly as `s3://` reaches the workspace bucket. Anyone who may run a dbt script may build with the warehouses it names.
+
+## Import a project
+
+The project is copied in as-is, into a `<script>__dbt/` folder next to where the script will live. There is no transformation step and no Windmill-specific file to add:
+
+```bash
+mkdir -p f/analytics/analytics__dbt
+cp -r my-dbt-project/. f/analytics/analytics__dbt/
+wmill sync push
+```
+
+That deploys the script `f/analytics/analytics`. A `wmill sync pull` writes the bundle back verbatim, so the tree stays a canonical dbt project that dbt itself can run with `--project-dir analytics__dbt`:
+
+```text
+f/analytics/
+├── analytics.script.yaml           the script's Windmill metadata
+└── analytics__dbt/                 the module bundle: the project, unmodified
+    ├── wm_dbt.yaml                 the descriptor - OPTIONAL
+    ├── dbt_project.yml
+    ├── packages.yml
+    ├── models/staging/stg_orders.sql
+    ├── models/marts/_marts__models.yml
+    ├── macros/cents_to_dollars.sql
+    ├── seeds/country_codes.csv
+    └── snapshots/orders_snapshot.sql
+```
+
+`dbt_project.yml` is what identifies a project - the worker refuses a bundle without it. A team whose repository must stay canonical keeps it and lets [git sync](../../../advanced/11_git_sync/index.mdx) push the project into the workspace; a team with no repository pushes straight from a working copy. Either way the version of the project is the version of the script: a deploy is atomic, a rollback is a redeploy, and the graph the deploy parsed is exactly what a run builds.
+
+Two paths deploying to the same script path is an error rather than a silent overwrite, so `f/analytics/analytics.py` and `f/analytics/analytics__dbt/` cannot coexist.
+
+## The dbt editor
+
+A dbt script is a project rather than a body of code, so it opens in an editor shaped like one: a file tree, the descriptor, the run arguments and the model graph. Picking dbt in the new-script language picker seeds a minimal project - `wm_dbt.yaml`, `dbt_project.yml` and one model - and an imported project opens the same way.
+
+![The dbt editor: project file tree, the open model, and the Models pane showing a graph parsed from the editor](./dbt_editor.png 'The dbt editor, with a graph parsed from the buffer')
+
+The header names the project folder, its [engine](#engines) and the warehouse its assets are keyed on, and flags a descriptor that does not parse. The tree adds and removes files - `.sql`, `.py`, `.yml`, `.yaml`, `.csv` and `.md` - all but `dbt_project.yml`, which cannot be deleted since it is what makes the bundle a project. Selecting a file opens it with the grammar its extension implies, and the descriptor sits at the root of the tree.
+
+The run button reads `Build <model>` when a model file is open and `Build project` otherwise. The whole bundle travels with the job either way, since dbt resolves `ref()` project-wide and cannot run a subset of the files; `Build <model>` only adds dbt's own `--select` for that model, with its tests along for the ride. A `.sql` file that is not a model - a macro, an analysis, a singular test - is not selectable by name, so those build the project.
+
+The right pane has two tabs: `Models`, the graph covered below, and `Run`, the run form over the job log. That form is derived from the descriptor server-side, which is why a dbt script has no `Generated UI` settings tab: anything refined there would be overwritten by the next deploy.
+
+### Refreshing the model graph
+
+The `Models` pane draws the project's graph, and it says where the graph came from: `as of last deploy` for a deployed project, `never parsed` for one that has never been deployed or refreshed.
+
+`Refresh models` redraws it from the project as it is in the editor. It runs a real `dbt parse` job over the files - `dbt deps`, then `dbt parse`, no build and no warehouse writes - and the label becomes `parsed from the editor at 01:18 PM`. The buffer's graph and the deploy's are drawn identically, so the label is how you tell them apart. The graph is always dbt's own: it comes from the manifest dbt produced, not from a scan of the `ref()` calls, so it agrees with dbt about `enabled`, macro-built refs, loops and package models.
+
+The parse runs on your workers under the script's [worker tag](../../../core_concepts/9_worker_groups/index.mdx) and timeout, so a project reaching a private network parses on a worker that can reach it. It carries whatever run arguments have been filled in, since `vars` steer `enabled`, schemas, aliases and relation identity - a parse without them would describe a different project than a build with them.
+
+It renders `profiles.yml` before dbt runs, so the warehouse the descriptor names has to be one configured on the workspace: a project that names an unknown one fails a refresh the way it would fail a run, and the pane shows dbt's own message with a link to the parse job.
+
+Selecting a node shows that model's SQL and the file it lives in, with `Edit` to open it in the tree.
+
+A refresh's graph belongs to the editing session rather than to the script: it carries no deployed version, is readable only through the parse job that produced it, and publishes no asset ownership, so refreshing a project you are writing never changes what the workspace [asset graph](#models-in-the-asset-graph) says about the deployed one. Only the last few parses of a script are kept per user, dropped as newer ones land.
+
+## Run it
+
+Deploying parses the project (`dbt deps` + `dbt parse`, no warehouse touched) and stores its graph. Running it invokes one `dbt build` per job - dbt's own threading provides the parallelism, Windmill provides the observability.
+
+A run takes a single `command` argument whose variant is the dbt command, so it carries exactly the overrides that command accepts:
+
+| Command | What it does | Arguments |
+| --- | --- | --- |
+| `build` | Builds the project (models, seeds, snapshots and tests interleaved) | `select`, `exclude`, `vars`, `full_refresh`, each defaulting to the descriptor's own value |
+| `retry` | Resumes a failed run from its failure point, rebuilding only what it left failed or skipped | `dbt_retry_job`, the id of the run to resume |
+| `show` | Previews a model's rows without writing anything | `model`, `vars`, `limit` (100 by default, 1000 max) |
+| `parse` | Parses the project and ingests its model graph, building nothing | `vars` |
+
+Each `{{ placeholder }}` the descriptor interpolates in `vars` becomes one more required run argument, so a date-parameterized project gets a proper run form, webhook payload and schedule argument.
+
+`show` and `parse` are not run-form variants - each is a thing you do to the project in front of you, and the graph and the [editor](#the-dbt-editor) are where they live - but both are accepted from a [flow](../../6_flows_quickstart/index.mdx), the CLI and the API, which is what makes the editor's refresh scriptable. A `parse` of a deployed version records that run's own snapshot of the graph and changes nothing about what the script owns.
+
+While a run is in flight, the run page shows each model's state on the project graph: green as nodes finish, spinners on the ones still building, and failures with the nodes dbt skipped behind them. When it ends, every node carries its status, timing, row count and dbt's own message, so a partial failure is legible without reading the log. Live per-model progress is `dbt-core-1x` only; the other two engines settle every node from `run_results.json` when the invocation ends (see [Engines](#engines)).
+
+<!-- SCREENSHOT PLACEHOLDER: a dbt run page mid-flight - the project graph with green checks on finished staging models, spinners on the marts still building, one failed model and its skipped downstream. File: dbt_run_live.png (+ .webp) -->
+
+Test failures honor dbt's own `severity`: an `error` test fails the job and names the failing node, a `warn` test surfaces without failing it. Selecting a model on the run page shows its SQL and fully-qualified relation, and `Preview rows` dispatches a `dbt show` for exactly that node.
+
+`Resume this run` on a failed run page fills in the `retry` command for you. Retry state is kept per worker and in the database, so a retry works from any worker with a database connection, and it is refused rather than misapplied when the project, warehouse or engine has changed since. Retries do not take a lock: a project that must not run twice at once sets the script's [concurrency limit](../../../core_concepts/21_concurrency_limits/index.md), which covers its retries with it.
+
+## The descriptor
+
+`wm_dbt.yaml`, inside the project folder, holds the run configuration. It is optional - an unmodified dbt project is already a complete Windmill script, running the whole project against the workspace's default warehouse - and appears only when the project wants something Windmill-specific.
+
+```yaml
+# dbt-core-1x (default) | dbt-core-2x | fusion
+engine: dbt-core-1x
+profile:
+  warehouse: main       # a warehouse configured on the workspace, by name
+  target: prod          # dbt target within that profile
+  # schema: marts       # target schema (BigQuery calls it the dataset)
+  # type: postgres      # pin the adapter when inference is wrong
+  # profiles_yml: profiles.yml   # or keep the project's own file
+# Passed to dbt verbatim - this is dbt's selector grammar, not Windmill's
+select: ["tag:nightly+"]
+exclude: []
+# build (models and tests interleaved) | after_all | none
+test_behavior: build
+vars:
+  run_date: "{{ day }}" # a placeholder becomes a required run argument
+  strict: false         # non-string values keep their YAML type
+threads: 8
+full_refresh: false
+# Rebuild the nodes a failed build left failed or skipped, in this same job
+retry_failed_nodes:
+  attempts: 2
+  delay_seconds: 30
+# Extra env for the project's own {{ env_var() }} lookups
+env:
+  DBT_PASSWORD: $var:u/alice/warehouse_password
+```
+
+| Field | Default | Purpose |
+| --- | --- | --- |
+| `engine` | `dbt-core-1x` | Which dbt to run, see [Engines](#engines) |
+| `profile.warehouse` | `main` | A warehouse configured on the workspace, by name |
+| `profile.target` | the warehouse's, else `default` | dbt target name within the profile |
+| `profile.schema` | the resource's | Target schema. Required for BigQuery, whose resource is a service-account JSON with no dataset in it |
+| `profile.type` | inferred | dbt adapter, spelled as dbt's own `type:`. Pins it when the inference is wrong or the resource is a custom type |
+| `profile.profiles_yml` | - | Path (relative to the project) of the project's own `profiles.yml`, used instead of rendering one |
+| `select` / `exclude` / `selector` | - | Passed to dbt verbatim. They also scope what the script owns in the graph |
+| `test_behavior` | `build` | `build` interleaves tests with models (dbt's own default); `after_all` runs them as a second phase; `none` skips them |
+| `vars` | - | `--vars`. Values keep their YAML type; string leaves may carry `{{ arg }}` placeholders substituted from job arguments |
+| `threads` | dbt's own | dbt's `--threads` |
+| `full_refresh` | `false` | dbt's `--full-refresh` |
+| `retry_failed_nodes` | - | `{attempts, delay_seconds}`: in-job retry of a build's failed and skipped nodes, up to 10 attempts. Not available on [agent workers](../../../core_concepts/28_agent_workers/index.mdx) |
+| `env` | - | Environment for the dbt process, for the project's own `{{ env_var() }}` lookups and for engine flags. A `$var:<path>` value resolves to that Windmill [variable](../../../core_concepts/2_variables_and_secrets/index.mdx) |
+
+`select`, `exclude` and `vars` are overridable per run. Overriding `select` changes what a run builds without changing what the graph says the script owns; when the graph itself should differ, split the project across several scripts, each with its own selection. Unknown fields are refused at parse time rather than silently ignored.
+
+Prefer the descriptor's `env` over the script's own environment variables for anything the graph depends on (an `env_var()` feeding a schema, alias or `enabled`): the descriptor's map applies to the deploy-time parse as well as the run, so the stored graph and the build agree.
+
+### Bring your own profiles.yml
+
+A project that keeps its own `profiles.yml` runs unchanged - point `profile.profiles_yml` at it and inject any credentials as Windmill variables through the descriptor's `env` map, which `{{ env_var() }}` then reads. Such a project still names a warehouse, but only to say where its assets belong: the name grants nothing, and without it the project's models land on a node nothing else reaches.
+
+## Models in the asset graph
+
+Every model, seed, snapshot and source the project declares becomes an [asset](../../../core_concepts/52_assets/index.mdx) named `dbt://<warehouse>/<schema>/<name>`, with the project's `ref()` lineage as edges between them. Models, seeds and snapshots are writes; sources are reads. Each node carries its materialization (`view`, `table`, `incremental`, `snapshot`, `seed`), its tags, its declared column descriptions and its data tests, and the script node is badged with the number of models it materializes.
+
+<!-- SCREENSHOT PLACEHOLDER: the folder asset graph with two dbt projects - source nodes, model nodes badged with their materialization, ref() lineage between them, and each project's script node badged with its model count. File: dbt_asset_graph.png (+ .webp) -->
+
+The workspace graph is written at deploy time, so redeploying is what refreshes it. A descriptor that is dynamic by construction (a `{{ }}` placeholder in `vars`, or a `$var:` value in `env`) can select a different model set per run, so those runs re-parse and each run page shows the models that run actually built. The editor's own [Refresh models](#refreshing-the-model-graph) draws from a parse of the buffer instead, which is why it can show a project that has never been deployed and why its graph stays inside that editing session.
+
+A native script joins the same lineage by naming a relation in its own code: a `dbt://` URI written as a string literal in a Python, TypeScript, DuckDB or Ansible script is [detected as an asset](../../../core_concepts/52_assets/index.mdx#static-code-analysis) there, and marking it a read in the editor's asset panel renders the script as a consumer of the very node the dbt model writes.
+
+```python
+# The URI literal is what puts this script on the graph, beside the model.
+CUSTOMERS = "dbt://main/analytics/customers"
+
+def main():
+    ...
+```
+
+A dbt run does not trigger downstream runs. dbt already orders its own DAG, and a run's `select` can build any subset of the project, so the deploy-time write set is not what ran; `# on dbt://...` is refused at deploy rather than drawing a cascade arrow that never fires. Schedule the consumer, or run it from the graph. For the same reason a dbt script is not a member of its folder's [pipeline](../../../core_concepts/63_pipelines/index.mdx) - its models are on the shared asset graph regardless, which is what puts a native reader beside them.
+
+Two limits worth knowing: two workspace warehouses pointing at one physical warehouse do not unify, so point both projects at one warehouse to link them; and column-level lineage is not available for dbt, because `manifest.json` carries declared column metadata but no column-to-column edges.
+
+## Engines
+
+`engine` picks which dbt runs the project. None is baked into the images - each is fetched or built on first use and cached on the worker.
+
+| Engine | What it is | Cold start | Live per-model progress |
+| --- | --- | --- | --- |
+| `dbt-core-1x` (default) | dbt Core 1.x, a uv virtualenv resolved per adapter | One venv build per (core range, adapter) | Yes |
+| `dbt-core-2x` | dbt Core 2.x, one adapter-agnostic binary fetched from GitHub releases | One download | No, settled at the end of the run |
+| `fusion` | The dbt Fusion engine, fetched from dbt Labs and subject to their license agreement | One ~290 MB download | No, settled at the end of the run |
+
+The shipped default is `dbt-core-1x` because it runs today's projects untouched. dbt Core 2.x and Fusion are v2 semantics and drop all deprecated functionality, so a valid 1.x project may fail to parse on them until its deprecations are resolved.
+
+Engine provisioning is tunable with [environment variables](../../../core_concepts/47_environment_variables/index.mdx) on the worker: `DBT_CORE_1X_FLOOR` / `DBT_CORE_1X_CEILING` bound the resolved 1.x range, `DBT_CORE_2X_VERSION` pins 2.x, and `DBT_BUNDLED_DIR` (default `/usr/local/dbt`) lets an operator pre-stage an engine in a derived image for an air-gapped instance - the worker prefers it over its own cache. dbt jobs run on the `dbt` [worker tag](../../../core_concepts/9_worker_groups/index.mdx), which is in the default set.
+
+## What the bundle carries
+
+The bundle is the project's authored files, and nothing else:
+
+- Directories dbt generates are excluded: `target`, `dbt_packages`, `logs`, `.git`, `.venv`, `__pycache__`, plus whatever `dbt_project.yml` configures as `target-path`, `packages-install-path` or `clean-targets`.
+- Only text is carried. A binary file - an image under `docs/`, a `.DS_Store`, a parquet seed - is skipped with the reason.
+- `.env`, `.env.*` and `.envrc` are skipped. What a `.gitignore` was keeping out of the repository must not become a script version instead; dbt reads `env_var()` from the process environment, which the descriptor's `env` map fills.
+- Files over 5 MB are an error, not a skip: dbt would have read the file, so deploying without it ships a project that fails at run time with a missing relation. A committed dataset belongs in the warehouse.
+
+The [dbt editor](#the-dbt-editor) edits the bundle in place, but a browser is still not where a dbt project is developed: that is a local `dbt run` / `dbt test` loop against a warehouse you can iterate on. Windmill is the runner, the viewer and the place a project is corrected. A module-only edit still pushes its parent script, so `wmill sync push` after editing a model deploys the project once.
+
+## Dependencies
+
+A project declaring `packages.yml` ranges asks dbt to resolve them, and dbt re-resolves on every `dbt deps`. Windmill resolves once, at deploy, and pins the result in the script's lockfile alongside the engine and adapter versions - the same contract every other language gets here. A run restores the package tree from a worker-local cache keyed on that resolution; a worker that resolves anything else is refused rather than run.
+
+Two consequences: to pick up a newer version of a ranged dependency you have to deploy a change, since only a deploy re-resolves; and committing `package-lock.yml` lets a deploy hit the cache instead of paying a real `dbt deps`, which is dbt's own recommendation for the same reason.
+
+Worker-local caches - package trees, engine installs and retry state - live under `$WINDMILL_DIR/cache_nomount/` and are not reclaimed by `cache_clear`. Engine installs dominate the space, at roughly 270-290 MB each.
+
+## Related
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Assets"
+		description="How Windmill detects and tracks the datasets your scripts read and write, and how lineage is drawn."
+		href="/docs/core_concepts/assets"
+	/>
+	<DocCard
+		title="Pipelines"
+		description="Windmill's native asset-based orchestration: DuckDB transformations materialized into managed DuckLake tables."
+		href="/docs/core_concepts/pipelines"
+	/>
+	<DocCard
+		title="Command-line interface"
+		description="Sync a workspace to a local folder, push and pull scripts, and develop locally."
+		href="/docs/advanced/cli"
+	/>
+	<DocCard
+		title="Triggers"
+		description="Trigger scripts and flows on-demand, by schedule or on external events."
+		href="/docs/triggers"
+	/>
+</div>

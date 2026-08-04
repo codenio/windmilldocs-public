@@ -1,5 +1,5 @@
 ---
-description: How do I write and run scripts in Windmill? Quickstart guides for TypeScript, Python, Go, PHP, Bash, SQL, Rust, C#, Java, Ruby, R and Docker.
+description: How do I write and run scripts in Windmill? Quickstart guides for TypeScript, Python, Go, PHP, Bash, SQL, Rust, C#, Java, Ruby, R, dbt and Docker.
 ---
 
 import DocCard from '@site/src/components/DocCard';
@@ -17,6 +17,7 @@ import {
 	SiCplusplus,
 	SiRuby,
 	SiR,
+	SiDbt,
 } from 'react-icons/si';
 
 import { LiaJava } from "react-icons/lia";
@@ -109,6 +110,12 @@ Windmill supports scripts in TypeScript, Python, Go, PHP, Bash, C#, SQL and more
 		description="Write your first Windmill script in R."
 		href="/docs/getting_started/scripts_quickstart/r"
 		Icon={SiR}
+	/>
+	<DocCard
+		title="dbt"
+		description="Run an unmodified dbt project as a Windmill script."
+		href="/docs/getting_started/scripts_quickstart/dbt"
+		Icon={SiDbt}
 	/>
 </div>
 
