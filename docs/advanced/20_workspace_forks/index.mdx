@@ -184,6 +184,17 @@ If it is detected that some of the differences come in fact from the original wo
 
 The merge will transfer all selected scripts, flows, apps, resources, and variables from the fork to the parent workspace.
 
+#### Deletions and renames
+
+Deleting an item in the fork, or renaming it, is a change the merge carries to the parent like any other:
+
+- A deleted item is listed with a red `Removes in <parent>` badge. Removals are never part of a bulk selection - you tick them one by one - so a merge cannot delete something in the parent by accident.
+- A rename merges as two rows: the new path as `New`, and the old path as `Removes in <parent>`, so the parent is not left with a copy under the former name.
+
+Only a removal the fork itself made is offered. An item can be missing from a fork for other reasons - the parent created it after the fork was made, or a [git sync](../11_git_sync/index.mdx) pull reverted a deploy in the fork - and those never show up as deletions to merge into the parent. They stay listed in the update direction as `New`, so updating the fork brings them in.
+
+Windmill tells the two apart by what wrote to the fork: `wmill sync push` (which the [automatic fork sync](../11_git_sync/index.mdx#automatic-fork-sync) runs on your behalf) and `wmill workspace merge --direction to-fork` apply a state computed elsewhere, so what they change in the fork is never read back as the fork's own decision.
+
 #### Triggers and schedules
 
 When a fork is created, it clones the parent's [triggers](../../triggers/index.mdx) and [schedules](../../core_concepts/1_scheduling/index.mdx), but always as disabled, so nothing fires or competes with the parent automatically. You re-enable in the fork only what you need to test. [Native triggers](../../triggers/11_native_triggers/index.mdx) (such as Nextcloud, Google Drive and GitHub) and non-workspaced [HTTP](../../triggers/2_http_routing/index.mdx) and [email](../../triggers/1_email_triggers/index.mdx) triggers are not cloned, because their external endpoints cannot be safely duplicated.
