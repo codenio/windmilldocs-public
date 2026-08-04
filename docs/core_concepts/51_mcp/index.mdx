@@ -256,7 +256,7 @@ When configuring the MCP scope (via OAuth or token generation), you can select *
 | `updateApp` | Update a full-code app from its sources |
 | `listWorkers` | List workers and their status |
 
-The two write tools deploy [full-code apps](../../full_code_apps/index.mdx): they take the app's source files and [compile them on a worker](../../full_code_apps/7_deployment/index.mdx#deploy-from-sources-via-the-api), returning compile errors as the error of the call so the agent can fix its own code. Granting either lets the agent make a worker build the sources it wrote, so the token needs the `jobs:run` scope as well as `apps:write`.
+The two write tools deploy [full-code apps](../../full_code_apps/index.mdx): they take the app's source files and [compile them on a worker](../../full_code_apps/7_deployment/index.mdx#deploy-from-sources-via-the-api), returning compile errors as the error of the call so the agent can fix its own code. That compile runs the app's own dependencies on a worker, which a token is only allowed to do if it names these tools: select `createApp` and `updateApp` individually when configuring the scope. A token exposing all tools, favorites or a whole folder still lists them, but their calls are refused.
 
 [Low-code apps](../../apps/0_app_editor/index.mdx) have no write tool: an agent can list and read them, but they are built in the app editor. `raw_app` in the result of `listApps` and `getAppByPath` tells the two kinds apart. `updateApp` takes the whole value rather than a patch, so read it with `getAppByPath` first; an app large enough to hit the tool-result size limit comes back truncated, and deploying that fails the build rather than deploying something partial, so edit those in the app editor or with the [CLI](../../full_code_apps/5_cli_workflow/index.mdx).
 
@@ -264,7 +264,9 @@ The two write tools deploy [full-code apps](../../full_code_apps/index.mdx): the
 
 | Tool | Description |
 |------|-------------|
-| `queryDocumentation` | Query the Windmill AI documentation assistant (EE only) |
+| `searchDocs` | Search the Windmill documentation and get back matching pages |
+| `readDocsPage` | Read one documentation page, or one of its sections |
+| `listDataMetrics` | List the [measures and dimensions](../63_pipelines/measures.mdx) declared on DuckLake tables |
 
 ---
 
