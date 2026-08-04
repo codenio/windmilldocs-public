@@ -4,7 +4,7 @@ description: How do I deploy items from a staging workspace to production using 
 
 # Deploy to prod using the UI
 
-## Per item Deployment UI
+## Per item deploy
 
 From a workspace in Windmill, you can deploy a item and all its dependencies to another workspace. This is a natural way of implementing staging/prod. This feature is available for [Cloud plans and Self-Hosted Enterprise Edition](/pricing) only.
 
@@ -38,7 +38,7 @@ The parent workspace can for example be:
 - a Prod workspace, paired with a dev or staging workspace where scripts and flows are edited and tested first
 - a workspace the changes of a short-lived fork are merged back into.
 
-A workspace with no parent has nothing to deploy into: the deploy drawer shows `Staging/Prod deploy not set up`, and the fix is to pair it, not to fill in a target. See [upgrading from the deploy target setting](#upgrading-from-the-deploy-target-setting) if you used the Deployment UI before Windmill 1.776.0.
+A workspace with no parent has nothing to deploy into: the deploy drawer shows `Staging/Prod deploy not set up`, and the fix is to pair it, not to fill in a target. See [upgrading from the deploy target setting](#upgrading-from-the-deploy-target-setting) if you used the `Deployment UI` settings tab before Windmill 1.776.0.
 
 Items that can be deployed are:
 - [Scripts](../../script_editor/index.mdx)
