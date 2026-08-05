@@ -153,6 +153,12 @@ Replace `<windmill_url_with_token>` with your actual MCP URL from the previous s
 
 Once connected, your LLM will be able to run any script or flow in your Windmill workspace.
 
+### Protocol versions
+
+The server answers five revisions of the MCP specification on the same endpoint: `2024-11-05`, `2025-03-26`, `2025-06-18`, `2025-11-25` and `2026-07-28`. Clients built against an older revision keep negotiating through the `initialize` handshake. Clients on `2026-07-28`, which removes that handshake, send their version in the `MCP-Protocol-Version` header instead and are served statelessly.
+
+Both eras expose the same tools, and the client picks the revision it speaks, so there is nothing to configure on the Windmill side. A client asking for a revision outside that list gets a `400` with JSON-RPC error `-32022`, whose payload lists the revisions the server accepts.
+
 ## Example: Triggering a script from Claude
 
 Say you’ve created a script called `send_welcome_email`.
@@ -281,6 +287,7 @@ The two write tools deploy [full-code apps](../../full_code_apps/index.mdx): the
 - **Client has issues connecting to the MCP server**
   - Make sure your MCP client is configured to use **HTTP streamable** as the transport protocol.
   - Verify that your MCP URL is correct and the token is valid.
+  - If the client reports error `-32022`, it asked for a [protocol revision](#protocol-versions) the server does not serve; the error payload lists the ones it does.
 
 ---
 
