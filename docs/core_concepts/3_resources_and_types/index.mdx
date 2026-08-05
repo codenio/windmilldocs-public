@@ -544,3 +544,9 @@ You can explore and manage your database tables with all CRUD operations. You ca
 If you need finer control, you can use the SQL interactive REPL on the bottom.
 
 ![Database Manager](./database_manager.png)
+
+### Worker tag
+
+Everything the manager does runs as a [job](../20_jobs/index.mdx) tagged with the database's language (`postgresql`, `mysql`, `duckdb`, etc.), so the [tag](../9_worker_groups/index.mdx#set-tags-to-assign-specific-queues) decides which [worker group](../9_worker_groups/index.mdx) picks it up.
+
+The "Worker tag" button in the action bar runs them on a custom tag instead. Use it when the database is only reachable from one worker group (a private network or VPC), or when no worker listens to the language's tag. The tag is remembered per workspace and database in your browser, and also applies to the "Data" drawer of [full-code apps](../../full_code_apps/index.mdx).
