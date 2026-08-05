@@ -250,6 +250,12 @@ The shipped default is `dbt-core-1x` because it runs today's projects untouched.
 
 Engine provisioning is tunable with [environment variables](../../../core_concepts/47_environment_variables/index.mdx) on the worker: `DBT_CORE_1X_FLOOR` / `DBT_CORE_1X_CEILING` bound the resolved 1.x range, `DBT_CORE_2X_VERSION` pins 2.x, and `DBT_BUNDLED_DIR` (default `/usr/local/dbt`) lets an operator pre-stage an engine in a derived image for an air-gapped instance - the worker prefers it over its own cache. dbt jobs run on the `dbt` [worker tag](../../../core_concepts/9_worker_groups/index.mdx), which is in the default set.
 
+### Which adapters an instance installs
+
+`dbt-core-1x` builds a virtualenv per adapter and fetches the adapter itself from PyPI as `dbt-<adapter>`, so which packages it may install is an operator's decision rather than a script author's. Windmill vouches for the published `dbt-*` adapters (postgres, snowflake, bigquery, databricks, redshift, trino, athena, clickhouse, duckdb, spark and the rest of the list it ships); `DBT_EXTRA_ADAPTERS` on the worker adds to it, as comma-separated adapter names spelled the way dbt's own `type:` spells them. An adapter on neither list fails the job naming itself, rather than being fetched.
+
+`dbt-core-2x` and `fusion` carry their adapters in the binary and install nothing, so they take any adapter, with no list to extend.
+
 ## What the bundle carries
 
 The bundle is the project's authored files, and nothing else:
