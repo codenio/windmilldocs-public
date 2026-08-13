@@ -311,6 +311,12 @@ Using `capabilities: add: [ALL]` also works if your security policy allows it.
 
 The only isolation you lose is UID remapping — with `privileged: true`, nsjail maps root outside to UID 1000 inside the jail, whereas with `DISABLE_NUSER=true` the jailed process runs as root (UID 0). However, this is a better tradeoff overall: `privileged: true` removes the container boundary entirely (full host access, all devices, unmasked `/proc`, no seccomp, no apparmor), so a jail escape gives full host access. With `DISABLE_NUSER=true` and limited capabilities, a jail escape only reaches the container, which remains sandboxed. You're trading an inner defense layer (UID remapping) for a much stronger outer one (container boundary).
 
+## Recycling the worker process
+
+A deployment that cannot run nsjail can rely on the process lifetime instead: with `EXIT_AFTER_N_JOBS` set, the worker exits once it has run that many jobs (`1` for one process per job) and its supervisor restarts it on a fresh process. Set it on a worker process (`MODE=worker`) running a single worker, since the exit takes the whole process down. The restart replaces the process, not the container filesystem, so caches and `/tmp` survive it. Only jobs that can leave something behind count: the worker's own [init and periodic scripts](../../core_concepts/9_worker_groups/index.mdx#worker-scripts), flow orchestration, [cache](../../core_concepts/24_caching/index.md) hits and jobs handed to [dedicated workers](../../core_concepts/25_dedicated_workers/index.mdx) do not, and a flow pinned to one worker runs to its end even past the limit.
+
+The worker name suffix, otherwise random, is then derived from the hostname so that the restarted process keeps its entry in the workers list. Only if several worker processes of the same [worker group](../../core_concepts/9_worker_groups/index.mdx) run on one host, give each of them a distinct `WORKER_SUFFIX` to tell them apart.
+
 ## Isolation comparison
 
 | Feature                | NSJAIL      | PID Namespace | None       |
