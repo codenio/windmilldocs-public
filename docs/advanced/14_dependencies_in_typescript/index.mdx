@@ -232,6 +232,8 @@ windmill_worker:
 
 When a default registry is set (a `registry=` line in the `.npmrc`, or `Npm config registry`), the [code editor](../../code_editor/index.mdx) resolves the types it uses for autocompletion through that registry rather than a public CDN, falling back to the CDN if the registry is unreachable. Private packages then get their actual types, and an internal package that shares its name with a public one no longer shows the public package's types.
 
+Those types are cached on the server under `<WINDMILL_DIR>/cache/npm_proxy/`, `/tmp/windmill/cache/npm_proxy/` by default, bounded at 2 GiB with the least recently used evicted first. On Enterprise Edition with [instance object storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage) configured, they also go to the bucket, so a server missing on disk pulls from there rather than from the registry.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Private npm registry & private npm packages"
