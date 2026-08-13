@@ -25,6 +25,10 @@ This rule is particularly useful for production workspaces where all changes sho
 
 When enabled, this rule prevents users from creating [workspace forks](../../advanced/20_workspace_forks/index.mdx) of the current workspace.
 
+#### Restrict public run sharing
+
+When enabled, only workspace admins and bypass users can copy a [public link to a run](../5_monitor_past_and_future_runs/index.mdx#share-a-run), which is readable by anyone without logging in. The read-only link for workspace members stays available to everyone. Public links minted before the rule was enabled keep working, so enable it before handing out links you may want to keep private.
+
 ## Creating a protection ruleset
 
 1. Navigate to **Workspace Settings** > **Protection Rulesets**

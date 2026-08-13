@@ -72,6 +72,23 @@ The run page shows a Trigger field with how the run was started: a [schedule](..
 
 Runs started through the API with a [token](../59_user_tokens/index.mdx) are all reported as `Webhook`, which covers [webhook](../4_webhooks/index.mdx) calls as well as the [CLI](../../advanced/3_cli/index.mdx) and the SDKs. Runs started from the Windmill interface have no trigger and the field is not displayed. The same goes for runs that predate the version which started recording it.
 
+## Share a run
+
+The Share button on a run page copies a read-only link to that run, with two options:
+
+- Copy link for members: the usual run page, at `/run/<job id>?workspace=...&view_token=...`. The recipient must be logged in and be a member of the workspace, but does not need [permissions](../16_roles_and_permissions/index.mdx) on the script or flow that ran.
+- Copy public link: a minimal public run page, at `/public_run/<workspace>/<job id>?view_token=...`. Anyone holding the link can open it, logged in or not.
+
+The public run page shows the run status and its inputs, plus the result and logs for a script run. For a [flow](../../flows/1_flow_editor.mdx) run, it shows the flow graph with each step's inputs, result and logs, updating live while the flow is still running. It cannot expand a subflow: the definition of the subflow is not part of the run, so opening it requires being logged in with access to that flow.
+
+{/* TODO: screenshot of the Share dropdown on a run page, showing the two entries "Copy link for members" and "Copy public link" with their tooltips. A second one could show the public run page of a completed flow as an anonymous visitor: Windmill header with the blue "Public read-only view" badge, status, inputs and the flow graph. */}
+
+Both links grant read access only, to that run and to the steps of its flow. Cancelling, force cancelling, resuming a [suspended step](../../flows/11_flow_approval.mdx) and minting further share links are never granted, whatever the link and whoever opens it. Since the link itself is the credential, the public run page asks search engines not to index it and sends no referrer.
+
+Share links are signatures rather than stored grants, so they have no expiry and cannot be revoked one by one. Updating the [workspace encryption key](../30_workspace_secret_encryption/index.mdx) invalidates all of the workspace's outstanding share links at once.
+
+Minting a public link is always recorded in the [audit logs](../14_audit_logs/index.mdx), as the `jobs.share_publicly` operation. On [Enterprise Edition](/pricing), workspace admins can control who is allowed to mint one with the [Restrict public run sharing](../56_protection_rulesets/index.mdx#restrict-public-run-sharing) protection rule. A [token](../59_user_tokens/index.mdx) restricted to specific tags cannot mint a public link at all, since an anonymous viewer carries no scope and the link could not keep that restriction on the run's steps.
+
 ## Filters
 
 You can adjust the level of details by picking playing with filters on:
