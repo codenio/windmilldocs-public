@@ -228,6 +228,10 @@ windmill_worker:
     - DENO_CERT=/custom-certs/root-ca.crt
 ```
 
+#### Types in the editor
+
+When a default registry is set (a `registry=` line in the `.npmrc`, or `Npm config registry`), the [code editor](../../code_editor/index.mdx) resolves the types it uses for autocompletion through that registry rather than a public CDN, falling back to the CDN if the registry is unreachable. Private packages then get their actual types, and an internal package that shares its name with a public one no longer shows the public package's types.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Private npm registry & private npm packages"
