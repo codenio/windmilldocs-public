@@ -85,18 +85,50 @@ The messages are sent in the order they are specified.
 
 ### Filters
 
+Instead of having all messages trigger the runnable, you can specify filters to restrict which messages trigger the runnable. The message is parsed as a JSON object and each criterion checks that the field it addresses exists and that its value is equal to (or a superset of) the criterion's value. The runnable still receives the message as the raw string argument `msg`.
 
-Instead of having all messages trigger the runnable, you can specify filters to restrict which messages trigger the runnable.
-Windmill supports the following filter:
-- **JSON**: The message is parsed as a JSON object and the filter checks that the filter `key` exists and the value at the key is equal to or is a superset of the filter `value`. Keys are matched literally against the message's top-level fields (e.g. `type`); to match a nested field, use the parent key with an object value (e.g. key `data`, value `{"status": "active"}`). The runnable receives the message as the raw string argument `msg`.
+A criterion addresses its field in one of two ways, selected by the Key/Path toggle:
+- Key: a top-level field of the message, matched literally (e.g. `type`). A key that contains a dot means the top-level field spelled that way, not a nested field.
+- Path: a dotted path into nested objects (e.g. `account.id`). It does not traverse arrays.
 
-When multiple filters are configured, a filter logic selector lets you choose how they are combined:
-- **AND** (default): the message must match all filters to trigger the runnable.
-- **OR**: the message triggers the runnable as soon as it matches any one of the filters.
+Values are compared with a superset check: the value in the message must contain every field of the criterion's value, and extra fields in the message are allowed. Key `data` with value `{"status": "active"}` therefore matches `{"data": {"status": "active", "id": 3}}`, which is the other way to reach a nested field.
 
-Existing triggers without an explicit filter logic default to **AND**. The selector is only shown when at least one filter is present.
+When at least one filter is present, a filter logic selector lets you choose how the top-level entries are combined:
+- All criteria (AND), the default: the message must match every entry.
+- Any criterion (OR): the message triggers the runnable as soon as it matches one entry.
 
-![Filters](./filters.png 'Filters')
+Existing triggers without an explicit filter logic default to AND.
+
+<!-- SCREENSHOT PLACEHOLDER: ./filters.png (+ .webp) - the Filters section of the WebSocket trigger
+     editor, showing the filter logic selector, two leaf criteria with the Key/Path toggle visible
+     (one on Key, one on Path with a dotted path such as account.id), and an OR group nesting two
+     criteria. The previous filters.png predates this UI and was removed. -->
+
+#### Filter groups
+
+An entry can be a group instead of a criterion, with its own logic, so a condition like "A and B and (C or D)" is expressible. Groups can be nested, up to three levels in the editor: past that, "Add group" is no longer offered. Besides AND and OR, a group can use NONE, which matches when none of its criteria match. A field the message does not carry satisfies NONE, since there is nothing there to match. NONE is available on groups only, not at the top level.
+
+A group left empty is dropped rather than evaluated, so its siblings stay in force.
+
+In a trigger's raw configuration (what the [CLI](../../advanced/3_cli/index.mdx) syncs and what the API takes), a criterion is `{key, value}` or `{path, value}`, and a group is `any_of` (OR), `all_of` (AND) or `none_of` (NONE):
+
+```yaml
+filter_logic: and
+filters:
+  - path: account.id
+    value: 1028
+  - key: event
+    value: message_created
+  - key: message_type
+    value: incoming
+  - any_of:
+      - path: in_reply_to_message.content_attributes.sent_by
+        value: u/alice/reminders/send_reminder
+      - path: previous_public_message.content_attributes.sent_by
+        value: u/alice/reminders/send_reminder
+```
+
+Filters that don't parse (a mistyped `anyOf` instead of `any_of`, say) are rejected when the trigger is saved, rather than silently widening what it accepts. Flat `key`/`value` filters written before groups existed keep matching exactly what they matched before, and nothing needs migrating.
 
 ### Application-level heartbeat
 

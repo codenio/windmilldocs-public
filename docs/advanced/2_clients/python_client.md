@@ -55,6 +55,7 @@ The client provides both module-level convenience functions and a `Windmill` cla
 - `run_script_by_path_async(path, args)` - Run a script asynchronously by path
 - `run_flow_async(path, args)` - Run a flow asynchronously
 - `get_result(job_id)` - Get the result of a completed job
+- `cancel_job(job_id, reason=None)` - Cancel a queued or running job
 - `get_state()` - Get the script's state
 - `set_state(value)` - Set the script's state
 

@@ -71,3 +71,40 @@ export async function main() {
 </Tabs>
 
 In the example above, the `getResource` function is used to retrieve a resource with the path `'u/user/name'` from the Windmill platform. The returned resource can be further processed or used as needed in your application.
+
+## Cancel a job
+
+`cancelJob(jobId, reason?)` cancels a queued or running [job](../../core_concepts/20_jobs/index.mdx) and returns the message from the cancel endpoint. It is the TypeScript equivalent of the Python client's `cancel_job`.
+
+<Tabs className="unique-tabs">
+<TabItem value="bun" label="TypeScript (Bun)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```ts
+import * as wmill from 'windmill-client';
+
+export async function main() {
+	const jobId = await wmill.runScriptByPathAsync('f/scripts/long_task', { input: 'value' });
+
+	// Later on, stop the job while it is still queued or running
+	await wmill.cancelJob(jobId, 'superseded by a newer run');
+}
+```
+
+</TabItem>
+<TabItem value="deno" label="TypeScript (Deno)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```ts
+import * as wmill from 'npm:windmill-client';
+
+export async function main() {
+	const jobId = await wmill.runScriptByPathAsync('f/scripts/long_task', { input: 'value' });
+
+	// Later on, stop the job while it is still queued or running
+	await wmill.cancelJob(jobId, 'superseded by a newer run');
+}
+```
+
+</TabItem>
+</Tabs>
+
+`jobId` is the UUID of the job to cancel. `reason` is optional and is stored as the job's cancel reason, visible in the [runs menu](../../core_concepts/5_monitor_past_and_future_runs/index.mdx); it defaults to `cancelled via cancelJob method` when omitted.

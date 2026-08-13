@@ -22,24 +22,35 @@ A dev workspace is a special kind of fork. Compared to an ordinary fork:
 
 - **Persistent**: it is the team's standing editable environment, not a short-lived branch you create, merge, and delete.
 - **No `wm-fork-` prefix**: a dev workspace keeps a plain, git-branch-safe workspace ID that you choose, instead of the auto-generated `wm-fork-` ID. An ordinary fork is still prefixed.
-- **One per workspace**: a workspace has at most one active dev workspace, and dev workspaces do not nest (you cannot create a dev of a dev).
+- **One per workspace, chainable**: a workspace has at most one active dev workspace, but a dev workspace can itself be paired with one - see [chained dev workspaces](#chained-dev-workspaces).
 - **Its own job tags**: because its id is one you chose, `$workspace` in a [job tag](../../core_concepts/9_worker_groups/index.mdx#dynamic-tag) resolves to the dev workspace itself, so it can have its own workers. An ordinary fork resolves to its nearest named ancestor instead.
-- **Identified as dev**: dev workspaces show a badge (`dev`, or `stg` for a workspace [labelled `staging`](#dev-and-staging-labels)), sort ahead of ordinary forks in the workspace menu, auto-expand under their prod workspace, and are labelled "Dev workspace of \<prod\>" (or "Staging workspace of \<prod\>").
+- **Identified as dev**: dev workspaces show a badge carrying their [environment label](#environment-labels), sort ahead of ordinary forks in the workspace menu, auto-expand under their prod workspace, and are labelled "\<Label\> workspace of \<prod\>".
 
 Like ordinary forks, promotion stays manual through the [Compare & Deploy](#promoting-changes-to-prod) flow. Auto-sync from dev to prod is not available.
 
-## Dev and staging labels
+## Environment labels
 
-A dev workspace carries a display label that is either `dev` (the default) or `staging`. Choose it when you [create](#creating-a-dev-workspace) or [attach](#pairing-an-existing-workspace-as-dev) the dev workspace; it is fixed afterwards. The **Dev workspace** settings tab shows the current label, but does not let you change it. The label controls:
+A dev workspace carries an environment label, picked from a fixed list ordered dev to prod: `dev` (the default), `qa`, `test`, `uat`, `staging`, `demo`, `sandbox`, `preprod`. Choose it when you [create](#creating-a-dev-workspace) or [attach](#pairing-an-existing-workspace-as-dev) the dev workspace; it is fixed afterwards. The **Dev workspace** settings tab shows the current label, but does not let you change it.
 
-| Label | Badge | Identity wording | Git sync branch |
-|-------|-------|------------------|-----------------|
-| `dev` (default) | `dev` | Dev workspace of \<prod\> | `dev` |
-| `staging` | `stg` | Staging workspace of \<prod\> | `staging` |
+The label decides three things:
 
-Nothing else changes: the paired-fork behaviour (locking, promotion, and Compare & Deploy) is identical for both labels. Use `staging` when your team treats the paired environment as staging rather than dev.
+- The badge on the workspace: the label itself, except `staging`, which shows as `stg`.
+- The wording that names the workspace: "This is a uat workspace paired with staging workspace demo-stg".
+- The git branch the workspace deploys to when [git sync](../11_git_sync/index.mdx) is configured: the label verbatim (`uat`), instead of the `wm-fork/...` branch an ordinary fork gets. On a repository set up for [Git Promotion](../9_deploy_gh_gl/index.mdx), a dev workspace keeps the per-item `wm_deploy/**` deploy branches instead.
 
-When [git sync](../11_git_sync/index.mdx) is configured, a dev workspace deploys to the branch matching its label (`dev` or `staging`) instead of a `wm-fork/...` branch.
+Nothing else follows from the label: locking, promotion and Compare & Deploy behave the same whichever one you pick.
+
+The list is fixed rather than free text because the label doubles as a branch name. Every entry is a usable single-segment branch, none is a plausible default branch (`main`, `master`), and none collides with the `wm-fork/**` and `wm_deploy/**` branches git sync already writes. For the same reason a label is refused when a git sync repository in the chain tracks a branch of that name, or a branch nested under it (label `uat` against a tracked `uat/foo`, which git cannot hold at the same time): every deploy from the dev workspace would fail.
+
+## Chained dev workspaces
+
+A dev workspace can itself be paired with a dev workspace, giving a promotion chain longer than a single pair - for example `demo-uat` (`uat`) into `demo-stg` (`staging`) into `demo`. This is not the recommended shape: promotion runs one level at a time, so each extra level is another [Compare & Deploy](#promoting-changes-to-prod) to run. Keep the chain no longer than your environments require.
+
+Every dev workspace in a chain must carry a distinct label. A chain shares its git sync repositories, so two dev workspaces on the same label would deploy to the same branch and overwrite each other. The label picker therefore only offers the labels still free in the chain, and once all eight are taken the **Dev workspace** tab drops the attach form and points you at the existing chain instead. Attaching a workspace that already has dev workspaces of its own brings them into the chain, so the attach is refused when one of them holds a label the chain would then use twice.
+
+![Environment label picker in a chain](./dev_workspace_label_picker.png 'Attaching a dev workspace to a workspace that is itself a dev workspace, with the label picker offering only the labels still free in the chain')
+
+Fork nesting is capped independently of the labels: the chain cannot go deeper than `MAX_FORK_DEPTH` levels below the root workspace (5 by default).
 
 ## Creating a dev workspace
 
@@ -48,7 +59,7 @@ Create a dev workspace from the fork creation form (workspace menu → **Fork cu
 In the fork form:
 
 1. Enable the **Persistent dev workspace** toggle ("Dev workspace"). This creates the fork as a standing dev workspace with no `wm-fork-` prefix.
-2. Optionally switch the [label](#dev-and-staging-labels) from `dev` to `staging` with the label link, which previews the resulting badge.
+2. Optionally pick another [environment label](#environment-labels). Changing it also updates the suggested workspace name, which is prefilled as `<root>-<badge>` (`demo-stg` for `staging`).
 3. Set the **Workspace ID** (shown under the fork name). It must be git-branch-safe.
 4. Optionally configure the **Protect \<root\>** options to lock the prod workspace (see [Locking the prod workspace](#locking-the-prod-workspace)):
    - **Block direct edits (deploy via the dev workspace)**
@@ -67,15 +78,15 @@ Attaching is also how you make two pre-existing workspaces deploy into one anoth
 
 1. On the prod workspace, open **Workspace settings** → **Dev workspace**.
 2. Under **Attach an existing workspace as dev**, select a workspace. You can attach a standalone workspace or an existing fork of this same workspace (a fork parented to a different workspace cannot be attached).
-3. Optionally set the [label](#dev-and-staging-labels) to `dev` or `staging`.
+3. Optionally set the [environment label](#environment-labels). It defaults to the first one still free in the chain.
 4. Optionally enable the lock toggles (**Block direct edits in this workspace** and **Prevent forking this workspace**).
 5. Click **Attach dev workspace**.
 
-Attaching requires being an admin of both the prod workspace and the workspace being attached (or a superadmin). A workspace that already has its own dev workspace cannot be attached.
+Attaching requires being an admin of both the prod workspace and the workspace being attached (or a superadmin). A candidate that already has dev workspaces of its own keeps them: they join the [chain](#chained-dev-workspaces) with their labels.
 
 This is also how you restore a staging/prod pair that used the pre-1.776.0 `Deployment UI` target setting and did not convert on upgrade - see [upgrading from the deploy target setting](../../core_concepts/12_staging_prod/index.md#upgrading-from-the-deploy-target-setting).
 
-![Dev workspace settings tab](./attach_dev_workspace.png 'Attaching an existing workspace as dev, with the staging label and both lock toggles')
+A workspace that is itself a dev workspace shows the same form under **This workspace's own dev workspace**, at the bottom of the tab - see [chained dev workspaces](#chained-dev-workspaces).
 
 ### Detach
 
@@ -141,7 +152,7 @@ The session's system prompt also tells the AI when it operates in a dev workspac
 ## Lifecycle and limitations
 
 - Renaming a dev workspace keeps it the canonical dev workspace, and renaming the prod (root) workspace updates the dev workspace's promotion target to follow.
-- Deleting or archiving an attached dev workspace requires being an admin of the prod workspace; it clears the prod lock. Deleting a prod workspace that still has a dev workspace is blocked - detach first.
+- Deleting or archiving an attached dev workspace requires being an admin of the prod workspace; it clears the prod lock. Deleting a prod workspace that still has a dev workspace is blocked - detach first. A [chain](#chained-dev-workspaces) is torn down bottom-up for the same reason: archiving a dev workspace, or detaching one that would revert to a throwaway fork, is refused while it still has a dev workspace of its own.
 - A prod admin who still has write access to a locked prod sees the normal editor (rather than the "Edit in \<dev\>" redirect) and is stopped by the backend deploy block instead.
 - Auto-sync from dev to prod, and special handling of triggers and schedules, are not part of this workflow. Triggers are not copied into a fork on creation - see [triggers and schedules](../20_workspace_forks/index.mdx#triggers-and-schedules).
 - Like any fork, a dev workspace gets an isolated DuckLake data environment per lake by default, with reads deferred to the prod workspace's data until the dev workspace materializes a table itself - see [fork data environments for DuckLake](../20_workspace_forks/index.mdx#fork-data-environments-for-ducklake).

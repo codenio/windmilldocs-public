@@ -474,6 +474,8 @@ Git sync automatically creates corresponding git branches for [workspace forks](
 
 This enables parallel development workflows where multiple developers can work on separate workspace forks, each with its own git branch, and merge changes back to the parent workspace either through the UI or via pull requests.
 
+A [dev workspace](../26_dev_workspaces/index.mdx) is the exception: it deploys to a top-level branch named after its [environment label](../26_dev_workspaces/index.mdx#environment-labels) (`dev`, `qa`, `test`, `uat`, `staging`, `demo`, `sandbox` or `preprod`) rather than to a `wm-fork/**` branch, which is why a label cannot be a branch this repository already tracks. On a repository set up for [Git Promotion](../9_deploy_gh_gl/index.mdx), a dev workspace keeps the per-item `wm_deploy/**` deploy branches instead.
+
 For repositories connected through the GitHub App, both fork directions can be fully managed by Windmill: [automatic fork sync](#automatic-fork-sync) deploys external changes on a fork's branch into the fork workspace, and the ["Open a pull request when an item is deployed in a fork" toggle](#in-app-pull-request-creation) opens the pull request back to the tracked branch.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
