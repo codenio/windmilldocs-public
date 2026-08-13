@@ -20,6 +20,14 @@ Windmill's [script editor](./index.mdx) includes a built-in debugger for [Python
 2. Click the **Debug** button in the toolbar (next to the run controls).
 3. The editor enters debug mode, indicated by the **Exit Debug** button and debug controls appearing in the toolbar.
 
+## Dependencies
+
+Before a session starts, the script's imports are installed: `uv` for Python, `bun install` for TypeScript. The install uses the instance's [registry settings](../advanced/18_instance_settings/index.mdx#registries), including any [workspace-specific override](../advanced/18_instance_settings/index.mdx#workspace-specific-registry-overrides), so a debug session resolves [private npm packages](../advanced/14_dependencies_in_typescript/index.mdx#private-npm-registry--private-npm-packages) and [private PyPI repositories](../advanced/15_dependencies_in_python/index.mdx#private-pypi-repository) the same way a job does. Private registries are an [Enterprise Edition](/pricing) feature: on Community Edition the session installs from the public registries and says so in its logs.
+
+Registry credentials stop at the installer. They are never set in the environment of the session itself, which runs the code being debugged.
+
+When the install fails (unreachable registry, unknown package, untrusted certificate), the installer's error is reported in the session logs instead of surfacing later as a missing import.
+
 ## Breakpoints
 
 Click the gutter (left margin) next to a line number to toggle a breakpoint. A red dot appears to indicate an active breakpoint. When the script execution reaches a breakpoint, it pauses and the current line is highlighted.
