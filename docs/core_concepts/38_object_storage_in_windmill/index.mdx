@@ -499,6 +499,12 @@ This feature is available on [Enterprise Edition](/pricing) and is configurable 
 
 For [Bun](../../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx#caching), Rust, and [Go](../../getting_started/0_scripts_quickstart/3_go_quickstart/index.mdx#caching), the binary bundle is cached on disk by default. However, if Instance Object storage is configured, these bundles can also be stored on the configured object storage (like S3), providing a distributed cache across all workers.
 
+#### Auto-build binaries on deployment
+
+The binary of a [Rust](../../getting_started/0_scripts_quickstart/9_rust_quickstart/index.mdx), [Go](../../getting_started/0_scripts_quickstart/3_go_quickstart/index.mdx) or [C#](../../getting_started/0_scripts_quickstart/11_csharp_quickstart/index.mdx) script is compiled lazily, by the first worker that runs it. With instance object storage configured, "Auto-build binaries on deployment" (`auto_build_binary_on_deploy`, env fallback `AUTO_BUILD_BINARY_ON_DEPLOY`) in the [instance settings](../../advanced/18_instance_settings/index.mdx#auto-build-binaries-on-deployment) makes each deployment of such a script queue a job that compiles it and uploads the binary to the bucket instead, so no run ever pays the compile. It is off by default and does nothing without instance object storage. A script that does not compile fails on that build job, at deployment time, rather than on its first run - the deployed script itself is left intact. All [workers](../9_worker_groups/index.mdx) must be on version 1.789.0 or later.
+
+"Auto-build worker tag" (`auto_build_binary_tag`, env fallback `AUTO_BUILD_BINARY_TAG`) pins those builds to a [worker tag](../9_worker_groups/index.mdx); left empty, they run on the script's language tag. Point it at a group that has the toolchains and matches the platform of your runtime workers, since the cache key includes the OS and architecture. That group then runs the script author's build steps (Cargo build scripts, MSBuild targets, cgo) at deployment time, with the same isolation a first-run compile has.
+
 #### Global Python dependency cache
 
 The first time a dependency is seen by a worker, if it is not cached locally, the worker search in the bucket if that specific `name==version` is there:

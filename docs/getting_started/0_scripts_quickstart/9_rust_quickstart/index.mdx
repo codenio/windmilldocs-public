@@ -227,6 +227,8 @@ You can also choose to [run the script from the CLI](../../../advanced/3_cli/ind
 
 Every bundle on Rust is cached on disk by default. Furthermore if you use the [Distributed cache storage](../../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage-distributed-cache-for-python-rust-go), it will be available to every other worker, allowing fast startup for every worker.
 
+Instance admins can have the binary built and cached at deployment time rather than on its first run, with [auto-build binaries on deployment](../../../core_concepts/38_object_storage_in_windmill/index.mdx#auto-build-binaries-on-deployment).
+
 ## Fast development iteration
 
 Windmill optimizes Rust development for faster iteration cycles. When developing and testing scripts:

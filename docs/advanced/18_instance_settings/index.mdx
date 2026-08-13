@@ -198,6 +198,12 @@ Only audit logs created after the setting is enabled are exported (no historical
 
 This setting is only available on [Enterprise Edition](/pricing).
 
+### Auto-build binaries on deployment
+
+When enabled and [instance object storage](#instance-object-storage) is configured, deploying a Rust, Go or C# script queues a job that compiles it and uploads the binary to the bucket, so its first run does not pay the compile. Off by default. The companion "Auto-build worker tag" setting picks the [worker tag](../../core_concepts/9_worker_groups/index.mdx) those build jobs run on. See [auto-build binaries on deployment](../../core_concepts/38_object_storage_in_windmill/index.mdx#auto-build-binaries-on-deployment).
+
+This setting is only available on [Enterprise Edition](/pricing).
+
 ### Private Hub base url
 
 Base url of your [Private Hub](../../core_concepts/32_private_hub/index.mdx) instance, without trailing slash.
