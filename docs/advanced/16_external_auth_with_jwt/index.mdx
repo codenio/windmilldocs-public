@@ -30,6 +30,30 @@ The JWT payload has to contain the following fields:
 
 While you don't need to create the user on Windmill, you should create the workspaces and folders.
 
+### Format of the `folders` and `groups` claims
+
+Both claims expect bare names, without any path prefix. This is the most common source of "you have no read-access to that item" errors.
+
+For `folders`, pass only the folder name, not the `f/` prefix and not the full path of the item you want to reach. Windmill matches the second segment of an item's path against that list, so to grant read access to the app `f/my_folder/apps/my_app`, the folder entry is `my_folder`. Wildcards such as `*` are not supported, every folder has to be listed explicitly.
+
+For `groups`, pass the group name without the `g/` prefix, which Windmill adds internally. Passing `"g/all"` is interpreted as the group `g/g/all` and matches nothing, the correct value is `"all"`.
+
+Here's a payload granting read access to `f/my_folder/apps/my_app` in the `my_workspace` workspace:
+
+```json
+{
+  "username": "foo",
+  "email": "foo@windmill.dev",
+  "is_admin": false,
+  "is_operator": true,
+  "workspace_id": "my_workspace",
+  "folders": [["my_folder", false, false]],
+  "groups": ["all"]
+}
+```
+
+Note that `scopes` only restricts what a token is allowed to do, it never grants access to an item. A token still needs the matching `folders` or `groups` entry, so adding a scope like `apps:read:f/my_folder/apps/my_app` does not by itself make the app reachable.
+
 Here's an example TypeScript code that generates the JWT token with the required payload and token prefix:
 
 ```typescript
@@ -45,8 +69,8 @@ async function generateJWT(
   is_operator= false,
   workspace_id?: string,
   workspace_ids?: string[],
-  folders: [string, boolean, boolean][] = [],
-  groups: string[] = [],
+  folders: [string, boolean, boolean][] = [], // bare folder names, e.g. [['my_folder', false, false]]
+  groups: string[] = [], // bare group names, e.g. ['all']
   scopes: string[] = []
 ) {
   const signer = createSigner({
