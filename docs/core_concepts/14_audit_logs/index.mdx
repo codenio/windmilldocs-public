@@ -30,6 +30,12 @@ Audit logs can be filtered by Date, Username, Action (Create, Update, Delete, Ex
 	/>
 </div>
 
+## Streaming a slow page in batches
+
+The selector at the bottom of the table sets how many logs a page holds: 25, 100 or 1000. On instances with a lot of audit logs, a full page can take a while to come back. If a load takes more than 4 seconds, Windmill offers to stream it in batches of 25 instead, so rows appear as each batch arrives rather than only once the whole page is ready.
+
+While a page is streaming, the table footer shows the progress, a batch size you can change mid-load (down to one log at a time, which Windmill also offers if the batches themselves are slow), and a Stop button that ends the load and keeps the logs already fetched on screen. The [Runs page](../5_monitor_past_and_future_runs/index.mdx) streams slow pages the same way.
+
 ## Retention policy
 
 For self-hosted Windmill instances, you can set how long audit log entries are kept in the database via the [Audit log retention (days)](../../advanced/18_instance_settings/index.mdx#audit-log-retention-days) [instance setting](../../advanced/18_instance_settings/index.mdx), accessible in the top right corner of the workspace settings. Instance settings are accessible only to [superadmins](../16_roles_and_permissions/index.mdx#superadmin). It defaults to 365 days on [Enterprise Edition](/pricing) and 14 days on the Community Edition. Audit logs are maintained in Postgres and output to the FileSystem as logs.
