@@ -120,9 +120,13 @@ The jobs tray next to the edits bar shows every job of the session with its live
 
 For output that deserves a document rather than a chat reply, such as a plan, a design write-up or a spec, the AI creates artifacts: markdown documents attached to the session. Artifacts open in the preview panel with a rendered view, a view-source toggle and copy and download actions. The artifacts token above the chat input lists them, with per-row open, download and delete.
 
-Artifacts are stored with the session and deleted with it.
-
 ![An artifact rendered in the preview panel, with the artifacts token above the chat input](./artifact_viewer.png 'Artifact rendered in the preview panel')
+
+Ask for a change and the AI revises the artifact in place instead of creating a second copy. Every revision is saved as a version with a short note describing what changed. Once an artifact has more than one version, a picker in the viewer header lets you read an earlier one: a banner marks the view as stale and takes you back to the latest. The AI can read past versions too, so you can ask it to restore earlier wording rather than have it rewrite from memory. History is bounded, keeping up to 20 versions per artifact and fewer for large documents, so the oldest revisions of a heavily edited document eventually drop off.
+
+![A revised artifact showing the version picker in the viewer header, with the artifacts list open on the session's artifacts and their version numbers](./artifact_version_picker.png 'Version picker on a revised artifact')
+
+Artifacts are stored with the session and deleted with it. A single artifact is capped at 256 KB, so ask for a long document to be split rather than written as one file.
 
 ## Sessions, workspaces and forks
 
