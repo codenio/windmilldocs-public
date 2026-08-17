@@ -71,6 +71,26 @@ Typing `/` in the chat input opens the command picker, with built-in actions and
 - `/clear` saves the conversation to history and starts a fresh chat in the same session.
 - AI skills defined in your workspace appear as additional commands.
 
+## Autonomy and plan mode
+
+The picker in the chat footer sets how much the AI does without asking. A session chat offers three postures:
+
+- Plan (read-only): the AI can only investigate, and proposes a plan for your approval before it can change anything. See [plan mode](#plan-mode).
+- Ask permission: the default in a session chat. Every tool call that writes, runs or deploys waits for your confirmation.
+- Yolo (bypass permissions): tool confirmations are accepted automatically. Its tooltip lists the tools being bypassed in the current chat.
+
+### Plan mode
+
+In plan mode the AI can only read, everything else is refused with a "Blocked in plan mode" row in the transcript. Then, nothing changes until you approve its plan.
+
+You enter it by picking Plan in the autonomy picker, or by accepting when the AI asks: on a task that is open-ended, spans several items or needs a decision on the approach, it proposes planning first with a "Start planning?" card. It cannot ask while you are in Yolo: entering a read-only posture there is your own move.
+
+Once its plan is ready, the AI hands it over for approval: the plan opens in the preview panel and the chat shows it as a card with "Approve and implement" and "Keep planning". Approving unblocks the AI and restores the exact posture you were in before, Yolo included. "Keep planning" leaves the posture on, so you can say what to change and have the plan proposed again. Leaving plan mode from the picker also ends a pending proposal without approving it, unless you switch to Yolo, which is taken as a go-ahead.
+
+Each session has a single plan document, kept with its [artifacts](#artifacts) and pinned to the top of that list. The version you approved is the one marked as the plan, a revision you have not approved shows as a draft.
+
+![A session in plan mode: the proposed plan waits for approval in the chat, with buttons to keep planning or approve and implement, the plan document open in the preview panel with a draft badge, and the read-only Plan posture shown in the chat footer](./plan_mode_approval.png 'A proposed plan waiting for approval')
+
 ## Preview panel
 
 The right-hand panel is a tabbed view of the session's workspace. Two kinds of tabs exist:
@@ -118,7 +138,7 @@ The jobs tray next to the edits bar shows every job of the session with its live
 
 ## Artifacts
 
-For output that deserves a document rather than a chat reply, such as a plan, a design write-up or a spec, the AI creates artifacts: markdown documents attached to the session. Artifacts open in the preview panel with a rendered view, a view-source toggle and copy and download actions. The artifacts token above the chat input lists them, with per-row open, download and delete.
+For output that deserves a document rather than a chat reply, such as a [plan](#plan-mode), a design write-up or a spec, the AI creates artifacts: markdown documents attached to the session. Artifacts open in the preview panel with a rendered view, a view-source toggle and copy and download actions. The artifacts token above the chat input lists them, with per-row open and delete.
 
 ![An artifact rendered in the preview panel, with the artifacts token above the chat input](./artifact_viewer.png 'Artifact rendered in the preview panel')
 
