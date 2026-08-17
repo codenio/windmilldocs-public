@@ -5,13 +5,24 @@ description: How do I contribute to the Windmill open-source project?
 
 # Contributor guide
 
-As an open-source platform, Windmill relies on the developer community for enhancements and support. Your work, from coding to writing docs, directly improves our platform. This guide outlines how you can get involved.
+:::caution At this time, we are not seeking outside contribution
 
-Here are some ways you can contribute to our platform:
+AI has made writing code easy. The hard part, today, is not writing the code, but reviewing it, making sure quality stays high, and keeping the product coherent. In that light, unfortunately, external code contributions are "donating" the easy part of the job, while creating more of the hard work.
 
-- **Share Your Work**: [Upload your Scripts, Flows, Apps, and Resource types](../1_share_on_hub/index.md) to Windmill Hub. Approved high-quality submissions are accessible for community use.
-- **Code Contributions**: Enhance the [Windmill codebase](https://github.com/windmill-labs/windmill) by submitting pull requests (PRs) on GitHub. Bug reports and feature requests are valuable—please file an issue to start the conversation.
-- **Community Engagement**: Join our [Discord community](https://discord.com/invite/V7PM2YHsPB) to offer suggestions, assist others, or discuss your ideas.
+With that said, we are happy to accept small, trivially-verified PRs that fix a problem. However, we ask that you refrain from submitting low-value PRs (e.g. typo fixes) or PRs that are more than a dozen or so lines. Such PRs will be closed with a reference to this guideline.
+
+If you have a big idea you'd like us to consider, feel free to open a [feature request](https://github.com/windmill-labs/windmill/issues/new?template=feature_request.md) about it.
+
+This policy may change in the future as the project matures. Until then, thank you for your understanding.
+:::
+
+There are still many ways to help, and they are the ones that help us most:
+
+- **Share your work**: [Upload your Scripts, Flows, Apps, and Resource types](../1_share_on_hub/index.md) to Windmill Hub. Approved high-quality submissions are accessible for community use.
+- **Report bugs and request features**: [File a bug report](https://github.com/windmill-labs/windmill/issues/new?template=bug_report.yml) on GitHub with clear reproduction steps, or a [feature request](https://github.com/windmill-labs/windmill/issues/new?template=feature_request.md) for anything you would like us to consider, including ideas too big to be a PR.
+- **Report security vulnerabilities**: See [Security bounty program](#security-bounty-program) below.
+- **Community engagement**: Join our [Discord community](https://discord.com/invite/V7PM2YHsPB) to offer suggestions, assist others, or discuss your ideas.
+- **Small, well-scoped PRs**: [Adding an OAuth provider](#expanding-windmills-integrations-adding-new-oauth-providers) and [mapping a Python import](#mapping-python-imports) below are the kind of contributions we still gladly merge.
 
 ## Security bounty program
 
