@@ -1,0 +1,77 @@
+<svg viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)" />
+
+  <!-- Subtle grid lines -->
+  <g stroke="#334155" stroke-width="0.5" opacity="0.3">
+    <line x1="0" y1="90" x2="1200" y2="90" />
+    <line x1="0" y1="180" x2="1200" y2="180" />
+    <line x1="0" y1="270" x2="1200" y2="270" />
+    <line x1="0" y1="360" x2="1200" y2="360" />
+    <line x1="0" y1="450" x2="1200" y2="450" />
+    <line x1="0" y1="540" x2="1200" y2="540" />
+    <line x1="150" y1="0" x2="150" y2="630" />
+    <line x1="300" y1="0" x2="300" y2="630" />
+    <line x1="450" y1="0" x2="450" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="750" y1="0" x2="750" y2="630" />
+    <line x1="900" y1="0" x2="900" y2="630" />
+    <line x1="1050" y1="0" x2="1050" y2="630" />
+  </g>
+
+  <!-- Glow behind the triage node -->
+  <circle cx="1072" cy="300" r="190" fill="#3b82f6" opacity="0.05" />
+  <circle cx="1072" cy="300" r="110" fill="#a855f7" opacity="0.05" />
+
+  <!-- Connectors: channels funnel into the triage node -->
+  <g fill="none" stroke="#3b82f6" stroke-opacity="0.55" stroke-width="2.5">
+    <path d="M 862 191 C 930 191, 922 300, 988 300" />
+    <path d="M 862 315 C 930 315, 940 300, 988 300" />
+    <path d="M 862 439 C 930 439, 922 300, 988 300" />
+  </g>
+
+  <!-- Channel chips -->
+  <g font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="22" font-weight="600" fill="#0f172a">
+    <rect x="690" y="165" width="172" height="52" rx="12" fill="#ffffff" />
+    <circle cx="716" cy="191" r="7" fill="#4A154B" />
+    <text x="736" y="199">Slack</text>
+
+    <rect x="690" y="289" width="172" height="52" rx="12" fill="#ffffff" />
+    <circle cx="716" cy="315" r="7" fill="#5865F2" />
+    <text x="736" y="323">Discord</text>
+
+    <rect x="690" y="413" width="172" height="52" rx="12" fill="#ffffff" />
+    <circle cx="716" cy="439" r="7" fill="#94a3b8" />
+    <text x="736" y="447">Email</text>
+  </g>
+
+  <!-- Triage node -->
+  <rect x="988" y="262" width="168" height="76" rx="14" fill="#ffffff" stroke="#3b82f6" stroke-width="2.5" />
+  <text x="1012" y="311" font-family="Inter, -apple-system, sans-serif" font-size="27" fill="#a855f7">✦</text>
+  <text x="1044" y="309" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="23" font-weight="600" fill="#0f172a">triage</text>
+
+  <!-- Windmill logo -->
+  <g transform="translate(80, 118) scale(0.16)">
+    <polygon fill="#BCD4FC" points="134.78,14.22 114.31,48.21 101.33,69.75 158.22,69.75 177.97,36.95 191.67,14.22" />
+    <polygon fill="#3B82F6" points="227.55,69.75 186.61,69.75 101.33,69.75 129.78,119.02 158.16,119.02 228.61,119.02 256,119.02" />
+    <polygon fill="#3B82F6" points="136.93,132.47 116.46,167.93 73.82,241.78 130.71,241.78 144.9,217.2 180.13,156.18 193.82,132.46" />
+    <polygon fill="#3B82F6" points="121.7,131.95 101.23,96.49 58.59,22.63 30.15,71.91 44.34,96.49 79.57,157.5 93.26,181.22" />
+    <polygon fill="#BCD4FC" points="64.81,131.95 25.15,131.21 0,130.74 28.44,180.01 66.73,180.72 93.26,181.21" />
+    <polygon fill="#BCD4FC" points="165.38,181.74 184.58,216.46 196.75,238.47 225.19,189.2 206.66,155.69 193.83,132.46" />
+  </g>
+  <text x="130" y="149" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="32" font-weight="700" fill="#ffffff">Windmill</text>
+
+  <!-- Title -->
+  <text x="80" y="318" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="54" font-weight="700" fill="#ffffff" letter-spacing="-0.02em">Automating quality</text>
+  <text x="80" y="382" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="54" font-weight="700" fill="#ffffff" letter-spacing="-0.02em">support at scale</text>
+
+  <!-- Subtitle -->
+  <text x="80" y="432" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="23" fill="#94a3b8">AI and human in the loop, on our own Windmill</text>
+</svg>
