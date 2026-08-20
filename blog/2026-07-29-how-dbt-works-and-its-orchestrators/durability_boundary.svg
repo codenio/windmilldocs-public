@@ -1,0 +1,105 @@
+<svg width="1200" height="740" viewBox="0 0 1200 740" xmlns="http://www.w3.org/2000/svg" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <linearGradient id="artifact" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3B82F6" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#1E3A8A" stop-opacity="0.30"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.28" cy="0.92" r="0.95">
+      <stop offset="0" stop-color="#1E3A8A" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#1E3A8A" stop-opacity="0"/>
+    </radialGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f87171"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="740" rx="24" fill="url(#bg)"/>
+  <rect width="1200" height="740" rx="24" fill="url(#glow)"/>
+
+  <text x="90" y="84" fill="#ffffff" font-size="40" font-weight="700" letter-spacing="-0.02em">Fanning out moves the record, not the boundary</text>
+  <text x="90" y="120" fill="#94a3b8" font-size="21" font-weight="400">Everything above the line differs. Nothing below it does.</text>
+
+  <!-- divider between the two panels -->
+  <line x1="600" y1="170" x2="600" y2="516" stroke="#1E3A8A" stroke-width="1.5" stroke-opacity="0.5" stroke-dasharray="4 8"/>
+
+  <!-- ================= LEFT: task per model ================= -->
+  <text x="90" y="198" fill="#64748b" font-size="14" font-weight="600" letter-spacing="0.10em">TASK PER MODEL</text>
+
+  <g fill="#1E3A8A" fill-opacity="0.3" stroke="#60a5fa" stroke-width="1.5">
+    <rect x="90"  y="222" width="104" height="52" rx="10"/>
+    <rect x="212" y="222" width="104" height="52" rx="10"/>
+    <rect x="334" y="222" width="104" height="52" rx="10"/>
+    <rect x="456" y="222" width="104" height="52" rx="10"/>
+  </g>
+  <g fill="#e2e8f0" font-size="16" font-weight="600" text-anchor="middle">
+    <text x="142" y="254">dbt run</text>
+    <text x="264" y="254">dbt run</text>
+    <text x="386" y="254">dbt run</text>
+    <text x="508" y="254">dbt run</text>
+  </g>
+  <text x="90" y="300" fill="#94a3b8" font-size="16">one process per node, each re-paying the parse</text>
+
+  <g stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)">
+    <line x1="142" y1="316" x2="142" y2="348"/>
+    <line x1="264" y1="316" x2="264" y2="348"/>
+    <line x1="386" y1="316" x2="386" y2="348"/>
+    <line x1="508" y1="316" x2="508" y2="348"/>
+  </g>
+
+  <g fill="url(#artifact)" stroke="#3B82F6" stroke-width="1.5">
+    <rect x="98"  y="356" width="88" height="40" rx="8"/>
+    <rect x="220" y="356" width="88" height="40" rx="8"/>
+    <rect x="342" y="356" width="88" height="40" rx="8"/>
+    <rect x="464" y="356" width="88" height="40" rx="8"/>
+  </g>
+  <g fill="#bcd4fc" font-size="13" text-anchor="middle" font-weight="600">
+    <text x="142" y="381">run_results</text>
+    <text x="264" y="381">run_results</text>
+    <text x="386" y="381">run_results</text>
+    <text x="508" y="381">run_results</text>
+  </g>
+  <text x="90" y="422" fill="#94a3b8" font-size="16">four files, each covering one node</text>
+  <text x="90" y="444" fill="#94a3b8" font-size="16">nothing coherent for dbt retry to resume</text>
+
+  <line x1="325" y1="462" x2="325" y2="494" stroke="#f87171" stroke-width="2" marker-end="url(#arrowRed)"/>
+
+  <rect x="150" y="502" width="350" height="52" rx="10" fill="#1E3A8A" fill-opacity="0.22" stroke="#f87171" stroke-width="1.5"/>
+  <text x="325" y="534" fill="#fca5a5" font-size="17" font-weight="600" text-anchor="middle">orchestrator task table</text>
+  <text x="325" y="580" fill="#f87171" font-size="16" text-anchor="middle">a second copy of the truth, and</text>
+  <text x="325" y="602" fill="#f87171" font-size="16" text-anchor="middle">the one that can disagree with dbt</text>
+
+  <!-- ================= RIGHT: one invocation ================= -->
+  <text x="660" y="198" fill="#64748b" font-size="14" font-weight="600" letter-spacing="0.10em">ONE INVOCATION</text>
+
+  <rect x="660" y="222" width="450" height="52" rx="10" fill="#1E3A8A" fill-opacity="0.35" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="885" y="254" fill="#e2e8f0" font-size="18" font-weight="600" text-anchor="middle">dbt build</text>
+  <text x="660" y="300" fill="#94a3b8" font-size="16">one process, one parse, dbt's own scheduler inside</text>
+
+  <line x1="885" y1="316" x2="885" y2="348" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="745" y="356" width="280" height="40" rx="8" fill="url(#artifact)" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="885" y="381" fill="#bcd4fc" font-size="14" font-weight="600" text-anchor="middle">run_results.json</text>
+  <text x="660" y="422" fill="#94a3b8" font-size="16">one file, covering every node</text>
+  <text x="660" y="444" fill="#94a3b8" font-size="16">the checkpoint dbt retry already understands</text>
+
+  <line x1="885" y1="462" x2="885" y2="494" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="710" y="502" width="350" height="52" rx="10" fill="url(#artifact)" stroke="#3B82F6" stroke-width="2"/>
+  <text x="885" y="534" fill="#ffffff" font-size="17" font-weight="700" text-anchor="middle">persisted dbt state</text>
+  <text x="885" y="580" fill="#94a3b8" font-size="16" text-anchor="middle">one source of truth, kept where it</text>
+  <text x="885" y="602" fill="#94a3b8" font-size="16" text-anchor="middle">survives the worker that wrote it</text>
+
+  <!-- ================= shared floor ================= -->
+  <line x1="325" y1="624" x2="325" y2="652" stroke="#60a5fa" stroke-width="2" stroke-opacity="0.6" marker-end="url(#arrow)"/>
+  <line x1="885" y1="624" x2="885" y2="652" stroke="#60a5fa" stroke-width="2" stroke-opacity="0.6" marker-end="url(#arrow)"/>
+  <rect x="90" y="660" width="1020" height="60" rx="12" fill="#1E3A8A" fill-opacity="0.20" stroke="#60a5fa" stroke-width="1.5" stroke-opacity="0.55"/>
+  <text x="600" y="686" fill="#e2e8f0" font-size="17" font-weight="700" text-anchor="middle">the warehouse</text>
+  <text x="600" y="708" fill="#94a3b8" font-size="16" text-anchor="middle">each model is its own committed statement, the same either way. Fanning out adds no durability here.</text>
+</svg>
