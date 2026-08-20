@@ -16,11 +16,13 @@ import DocCard from '@site/src/components/DocCard';
 
 First post in a five-part series on data pipelines. This one is the primer: what dbt is architecturally, the five ways people run it in production, and why the arrangement that looks most sophisticated is the slowest and the most fragile.
 
-Briefly, for anyone who has not used it: dbt is the transformation layer over a data warehouse. You write `select` statements as files, and dbt wraps each one in the DDL that materializes it as a table or view, derives the run order from the references between them, and sends the SQL to the warehouse to execute.
+Briefly, for anyone who has not used it: [dbt](https://www.getdbt.com/) is the transformation layer over a data warehouse. You write `select` statements as files, one per table you want to build, and each of those files is called a model. dbt wraps each model in the DDL that materializes it as a table or view, works out what order to run them in from the references between them, and sends the SQL to the warehouse to execute. A project is typically a few hundred models.
 
-The counter-intuitive conclusion first: dbt should almost always run as a single invocation, and the per-model observability and per-model retry that people fan out to get are better obtained by persisting dbt's own run state than by turning each model into a task on a different worker.
+The counter-intuitive conclusion first: dbt should almost always run as one command, rather than split into one orchestrator task per model.
 
-That is not a contrarian take any more. It is where Dagster started, and it is where astronomer-cosmos, the library that popularised one Airflow task per dbt model, ended up after measuring its own default at [roughly six times the cost of a single invocation](https://astronomer.github.io/astronomer-cosmos/guides/run_dbt/airflow-worker/watcher-execution-mode.html). What follows is why the appealing design loses, and what the two systems that converged on it still got wrong on the way.
+Splitting it up is tempting for two reasons, and both are worth wanting. You want to see which model failed without opening a log, and you want to retry that one model rather than the whole project. The argument of this post is that you get both more cheaply by keeping the record dbt already writes of what it ran, and reading it, than by turning two hundred models into two hundred tasks spread across workers.
+
+That is not a contrarian take any more. It is where [Dagster](https://dagster.io/) started, and it is where [astronomer-cosmos](https://github.com/astronomer/astronomer-cosmos), the library that popularised one [Airflow](https://airflow.apache.org/) task per dbt model, ended up after measuring its own default at [roughly six times the cost of a single invocation](https://astronomer.github.io/astronomer-cosmos/guides/run_dbt/airflow-worker/watcher-execution-mode.html). What follows is why the appealing design loses, and what the two systems that converged on it still got wrong on the way.
 
 {/* truncate */}
 
@@ -28,7 +30,7 @@ That is not a contrarian take any more. It is where Dagster started, and it is w
 
 Three things sharing a CLI.
 
-A templating layer. A dbt model is a file containing a `select` statement with Jinja in it. `{{ ref('stg_orders') }}` is a macro call that returns the name of another model's relation. A whole model is just this:
+A templating layer. A dbt model is a file containing a `select` statement with [Jinja](https://jinja.palletsprojects.com/) in it. `{{ ref('stg_orders') }}` is a macro call that returns the name of another model's relation. A whole model is just this:
 
 ```sql
 -- models/marts/orders_daily.sql
@@ -43,7 +45,7 @@ where status = 'paid'
 group by 1
 ```
 
-dbt renders the template, wraps the result in DDL, and sends the string to your warehouse. With the BigQuery adapter and `materialized='table'`, what actually arrives is:
+dbt renders the template, wraps the result in DDL, and sends the string to your warehouse. With the [BigQuery](https://cloud.google.com/bigquery) adapter and `materialized='table'`, what actually arrives is:
 
 ```sql
 create or replace table `analytics`.`orders_daily` as (
@@ -201,11 +203,11 @@ Do not replicate dbt's state into task state. Persist dbt's own state, somewhere
 
 The one thing genuinely lost is heterogeneous placement per model. If one model truly needs a different machine than the others, one job cannot give you that.
 
-With a warehouse adapter it matters less than it sounds, because the model is not running on your machine in the first place: it is a `select` executing in Snowflake or BigQuery while your worker holds a connection open. Where that worker sits changes nothing the warehouse has not already decided.
+With a warehouse adapter it matters less than it sounds, because the model is not running on your machine in the first place: it is a `select` executing in [Snowflake](https://www.snowflake.com/) or BigQuery while your worker holds a connection open. Where that worker sits changes nothing the warehouse has not already decided.
 
-With an in-process engine like `dbt-duckdb` the work really is on the node, and the thing being asked for is data locality: run the compute where the bytes are. That is worth wanting, but pinning individual models to machines is a blunt way to get it. Putting the data in the same region, or on something like S3 Express One Zone, moves the bytes closer without fragmenting the run, and it keeps working when the graph changes shape. Where placement genuinely does bite, the unit is a group of models rather than one, which is a project boundary.
+With an in-process engine like `dbt-duckdb` the work really is on the node, and the thing being asked for is data locality: run the compute where the bytes are. That is worth wanting, but pinning individual models to machines is a blunt way to get it. Putting the data in the same region, or on something like [S3 Express One Zone](https://aws.amazon.com/s3/storage-classes/express-one-zone/), moves the bytes closer without fragmenting the run, and it keeps working when the graph changes shape. Where placement genuinely does bite, the unit is a group of models rather than one, which is a project boundary.
 
-There is a larger point for DuckDB specifically. `dbt-duckdb` works, but it applies dbt's warehouse-shaped model to an engine that has its own: DuckLake offers transactions, snapshots and partition rewrites that per-dialect Jinja materializations were never built to reach for. An orchestrator that leans on those directly is a different design, and it is the one we ended up building for [pipelines](/docs/core_concepts/pipelines). For a team already on dbt, running it on DuckDB is a reasonable stepping stone rather than the destination.
+There is a larger point for [DuckDB](https://duckdb.org/) specifically. [`dbt-duckdb`](https://github.com/duckdb/dbt-duckdb) works, but it applies dbt's warehouse-shaped model to an engine that has its own: [DuckLake](https://ducklake.select/) offers transactions, snapshots and partition rewrites that per-dialect Jinja materializations were never built to reach for. An orchestrator that leans on those directly is a different design, and it is the one we ended up building for [pipelines](/docs/core_concepts/pipelines). For a team already on dbt, running it on DuckDB is a reasonable stepping stone rather than the destination.
 
 ### The case for splitting it anyway
 
@@ -238,6 +240,8 @@ dbt owns ordering and parallelism within the project. It has the graph, it has t
 The orchestrator owns triggering, credentials, worker placement, observability, recovery, cross-tool lineage, and everything that is not SQL: the ingestion before the project and the notification, export or Python job after it.
 
 The failure mode of most dbt integrations is trying to take the first list off dbt, at considerable expense, and then not doing a very good job of the second. An orchestrator whose pitch is "we render your dbt project as per-model tasks" is competing on the half dbt already does well, and, as post four will get into, on the half that is about to shrink further as the transform engines learn to decide what needs rebuilding at all.
+
+The recommendation at the top follows from that division. Run dbt as one command, and read the file it leaves behind: per-model status and per-model retry are both in `run_results.json` already, and the topology that promises them is the one thing that destroys it.
 
 ## What wrapping cannot buy
 
