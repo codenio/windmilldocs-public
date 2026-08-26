@@ -14,7 +14,7 @@ Volumes are an [Enterprise](/pricing) feature. On the Community Edition, volumes
 
 Volumes require two things to be configured in your workspace:
 
-1. A [workspace object storage](../38_object_storage_in_windmill/index.mdx#workspace-object-storage) (S3, Azure Blob, GCS, or filesystem).
+1. A [workspace object storage](../38_object_storage_in_windmill/index.mdx#workspace-object-storage) (S3, Azure Blob, or GCS).
 2. A **volume storage** selection in the workspace settings under **Storage > Volume storage**. This can be set to the primary storage or any configured secondary storage. If volume storage is not selected, scripts with volume annotations will fail with an error.
 
 Volume data is stored under the `volumes/<workspace_id>/<volume_name>/` prefix in the selected storage.
