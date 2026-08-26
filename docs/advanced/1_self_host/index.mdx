@@ -300,10 +300,12 @@ services:
     deploy:
       # To use an external database, set replicas to 0 and set DATABASE_URL to the external database url in the .env file
       replicas: 1
-    image: postgres:14
+    image: postgres:18
     restart: unless-stopped
     volumes:
-      - db_data:/var/lib/postgresql/data
+      # From 18 on, the official image keeps the cluster in a major-version
+      # subdirectory, so the mount is the parent directory and not .../data
+      - db_data:/var/lib/postgresql
     expose:
       - 5432
     networks:
@@ -521,10 +523,28 @@ docker compose pull windmill_server
 docker compose up -d
 ```
 
-Database volume is persistent, so updating the database image is safe too. Windmill provides graceful exit for jobs in workers so it will not interrupt current jobs unless they are longer than docker stop hard kill timeout (30 seconds).
+Database volume is persistent, so updating the database image within the same PostgreSQL major version is safe too. Moving to a new major version is not, and needs the steps in [Upgrade PostgreSQL to 18](#upgrade-postgresql-to-18). Windmill provides graceful exit for jobs in workers so it will not interrupt current jobs unless they are longer than docker stop hard kill timeout (30 seconds).
 
 It is sufficient to run `docker compose up -d` again if your Docker is already running detached, since it will pull the latest `:main` version and restart the containers.
 NOTE: The previous images are not removed automatically, you should also run `docker builder prune` to clear old versions.
+
+### Upgrade PostgreSQL to 18
+
+Windmill's [`docker-compose.yml`][windmill-docker-compose] ships `postgres:18`. A `db_data` volume
+written by `postgres:16` or earlier makes the container refuse to start until you migrate. It fails
+with an explanatory error and leaves your data untouched.
+
+The migration is a dump and restore of the whole cluster, not of the `windmill` database alone.
+Staying on 16 is also fine, it is supported upstream until November 2028, but that means pinning
+both the image and the mount.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Upgrade PostgreSQL to 18"
+		description="Migrate a self-hosted docker compose stack from PostgreSQL 16 to 18."
+		href="/docs/advanced/self_host/postgres_18_upgrade"
+	/>
+</div>
 
 ### Reset your instance
 

@@ -1,0 +1,149 @@
+---
+title: Upgrade PostgreSQL to 18
+description: How do I migrate a self-hosted Windmill docker compose stack from PostgreSQL 16 to 18?
+---
+
+Windmill's [`docker-compose.yml`](https://github.com/windmill-labs/windmill/blob/main/docker-compose.yml)
+ships `postgres:18`. If your `db_data` volume was written by `postgres:16` or earlier, the container
+refuses to start until you migrate. It fails with an explanatory error and leaves your data
+untouched, so nothing is lost while you work through this.
+
+Staying on your current major version is also fine. PostgreSQL 16 is supported upstream until
+November 2028. To stay, pin the old image and the old mount, both lines:
+
+```yaml
+  db:
+    image: postgres:16
+    volumes:
+      - db_data:/var/lib/postgresql/data
+```
+
+Reverting only the image tag leaves 16 running against the 18-style mount, where the data directory
+becomes a subdirectory of the volume rather than its root. 16 then creates a fresh empty cluster
+there and Windmill boots against an empty database, while the original one sits unread at the
+volume root. It is recoverable, but it is the one path here that fails quietly rather than loudly.
+
+## Why the mount path changed
+
+From 18 on, the official `postgres` image stores the cluster in a major-version subdirectory
+(`/var/lib/postgresql/18/docker`) and declares its volume at `/var/lib/postgresql`, one level up
+from the pre-18 `/var/lib/postgresql/data`. Mounting the parent is what lets `pg_upgrade` see an
+old and a new cluster inside a single mount point.
+
+The image refuses to start if it finds anything mounted at the old `.../data` path, or a pre-18
+cluster at `/var/lib/postgresql`. An operator who bumps the tag without migrating gets a restart
+loop and an error, rather than Windmill booting against an empty database and appearing wiped.
+
+`postgres:18` ships only PostgreSQL 18 binaries, so an in-image `pg_upgrade` is not possible. The
+migration is a dump and restore.
+
+## Dump the whole cluster, not the windmill database
+
+Windmill's data is not confined to the `windmill` database. Instance datatable databases, DuckLake
+catalogs and [workspace fork](../20_workspace_forks/index.mdx) databases are created next to it in
+the same cluster. A `pg_dump` of the `windmill` database alone carries none of them, and raises no
+error while doing so.
+
+Windmill's row-level security policies are also granted to cluster-level roles that a database
+dump does not carry. `pg_restore` silently skips every policy whose grantee role does not exist,
+unless you pass `--exit-on-error`. On a real instance that is several hundred policies quietly
+dropped.
+
+`pg_dumpall` of the whole cluster handles both, and preserves role passwords too.
+
+## Dump, while still on the old version
+
+Do this before you replace `docker-compose.yml`. If you already replaced it, check out the
+previous version first, or temporarily set the image back.
+
+```bash
+docker compose down && docker compose up --wait db
+docker compose exec -T db pg_dumpall -U postgres > cluster.sql
+```
+
+Bringing everything down and then only `db` back up stops the server, the workers and the indexer
+without naming them, so nothing holds a connection during the dump.
+
+Check the dump lists every database you expect before going further:
+
+```bash
+grep '^CREATE DATABASE' cluster.sql
+```
+
+## Replace the cluster
+
+```bash
+docker compose down
+docker volume ls | grep db_data      # find the one this project owns
+docker volume rm <that_volume>
+```
+
+Switch to the `postgres:18` compose file, then:
+
+```bash
+docker compose up --wait db
+docker compose exec -T db psql -U postgres -d postgres -c 'DROP DATABASE windmill'
+docker compose exec -T db psql -U postgres -d postgres < cluster.sql > restore.log 2>&1
+grep -i '^ERROR' restore.log
+```
+
+`up --wait` blocks on the healthcheck. Plain `up -d` returns as soon as the container starts, and
+the next command can then race `initdb` on a fresh volume.
+
+The `DROP DATABASE` matters. `POSTGRES_DB: windmill` has already created an empty `windmill`, so
+the dump's own `CREATE DATABASE windmill` would fail and its objects would load into the
+entrypoint's database instead, keeping the new cluster's encoding and collation rather than the
+ones recorded in the dump. Dropping it first also leaves a single expected error rather than two,
+which makes the grep meaningful.
+
+`psql` does not stop on error by default, and turning that on would abort the load on the one
+expected error. Since the old volume is already gone at this point, grep the log rather than
+trusting the exit code. Exactly one error is expected:
+
+```
+ERROR:  role "postgres" already exists
+```
+
+The fresh cluster bootstraps that role itself. Anything else means a partial restore, and you
+should investigate rather than starting Windmill on it.
+
+## Rebuild planner statistics
+
+```bash
+docker compose exec -T db vacuumdb -U postgres --all --analyze-in-stages
+```
+
+A dump and restore starts every database with empty planner statistics. `ANALYZE` is per-database
+and would only reach the one it connects to, leaving the datatable and fork databases without
+statistics until autovacuum catches up.
+
+## Start the stack
+
+```bash
+docker compose up -d
+```
+
+## After the upgrade: Postgres triggers
+
+Logical replication slots are never included in a dump. Publications are, so a
+[Postgres trigger](../../triggers/4_postgres_triggers/index.mdx) reading a database in this
+cluster comes back with its publication and no slot.
+
+This fails visibly. The trigger is set to disabled and its error reads "The replication slot
+associated with this trigger no longer exists". Re-saving the trigger recreates the slot, then
+re-enable it. Triggers pointed at an external PostgreSQL database are unaffected, since this
+migration never touches that server.
+
+## Verifying
+
+Compare before and after. On the old cluster before you remove the volume, and again once the new
+one is up:
+
+```sql
+select datname from pg_database where datallowconn and datname not in ('postgres','template1');
+select count(*) from pg_policies;
+select count(*) from pg_roles where rolname not like 'pg\_%';
+```
+
+Then log in and run a script that existed before the upgrade.
+
