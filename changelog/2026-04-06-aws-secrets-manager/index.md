@@ -10,7 +10,7 @@ features:
     'Configurable prefix and custom endpoint for LocalStack.',
     'Bidirectional migration between backends.',
   ]
-docs: /docs/core_concepts/variables_and_secrets#aws-secrets-manager-backend-beta
+docs: /docs/core_concepts/variables_and_secrets#aws-secrets-manager-backend
 ---
 
 Windmill can now store secrets in AWS Secrets Manager, joining HashiCorp Vault and Azure Key Vault as external secret backend options. Configure it from **Instance Settings > Secret backend** with your AWS region and optional credentials. The same migration and fail-closed semantics apply.
