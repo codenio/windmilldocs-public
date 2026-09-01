@@ -1,0 +1,212 @@
+---
+description: How do I test an AI agent in Windmill? Run it against a dataset of cases, score the answers with AI judges or code scorers, and compare runs.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# AI agent evals
+
+Evals answer the question you have after every change to an [AI agent](../54_ai_agents/index.mdx): is it better?
+You curate a dataset of cases the agent should handle, run the agent against all of them, and score the answers with AI judges or scripts.
+Every run is kept, so the next one has something to be compared against.
+
+Evals belong to a [reusable agent](../54_ai_agents/index.mdx#reusable-agents), since a dataset and its runs are attached to the `ai_agent` [resource](../3_resources_and_types/index.mdx).
+An agent written inline in a flow step has nothing to attach them to, so the only setup evals ask for is Save as reusable agent.
+
+Evals are in beta.
+
+## Getting started
+
+1. On an AI agent step whose agent is written inline, press Save as reusable agent.
+2. Open Evals from the agent card, and press New dataset.
+3. Add a scorer to the dataset, and add cases as rows of Question and Expected.
+4. Press New evaluation, pick which state of the agent to measure, and Run.
+5. Change the agent, run the dataset again, and pick the first run under Compare to.
+
+## Opening evals
+
+Evals open as a modal from the two places an agent already is: the agent card at the top of an AI agent step's inputs in the [flow editor](../../flows/1_flow_editor.mdx), and the `ai_agent` row on the resources page.
+Both open on the agent's run history, across every dataset it has been measured on.
+
+Opened from an agent you are editing in the flow editor, a run can measure the unsaved edits the step is holding.
+Everywhere else it measures the deployed agent.
+
+![The agent card on an AI agent step, with its Evals button](./agent_card_evals_button.png.webp 'Evals on the agent card')
+
+## Datasets and cases
+
+A dataset is the set of cases an agent is measured on.
+A case is a question and, optionally, the answer it is expected to produce.
+An expected answer written as JSON is stored as JSON, so a structured answer can be compared as one.
+Cases carry no conversation history, so a run starts from the agent's own [memory](../54_ai_agents/index.mdx#memory-auto--manual) configuration.
+
+New dataset asks for a summary and a path, and holds the dataset's scorers and its cases.
+Editing or deleting a case leaves the runs that already executed it as they were: a case removed from the dataset keeps its row at the end of the runs that ran it.
+
+A dataset holds at most 1000 cases and 20 scorers, and is capped at 16 MiB with each case at 256 KiB.
+Anything over is refused rather than truncated, so keep attachments in [object storage](../38_object_storage_in_windmill/index.mdx) rather than inline in a case.
+
+{/* Placeholder: screenshot of the dataset drawer, showing the summary and path fields, the list of scorers, and the grid of cases with its Question and Expected columns. */}
+
+## Scorers
+
+A scorer reads one run and returns a number between 0 and 1.
+Each scorer is one column of the results table, and every run of a dataset is measured by all of them.
+
+There are two kinds, and both are ordinary Windmill runnables with a path, a version and code you can open:
+
+- An AI judge: an `ai_agent` resource handed the whole run to grade. Its model and grading prompt live on that agent, so there is no second copy of the grading rules on the dataset.
+- A code scorer: a [TypeScript](../../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx) script, created from a template that scores the answer against the case's expected one and reports how the agent got there.
+
+Add scorer creates either kind, or adds one that already exists in the workspace, starting from the scorers other datasets already use.
+Editing a column means editing the runnable behind it, which opens in the script editor or the resource editor.
+
+### What a scorer returns
+
+A scorer may return a bare number, a boolean (read as 1 or 0), or an object with a `score`:
+
+```ts
+export async function main(output: unknown, expected: unknown) {
+  const correct = String(output).includes(String(expected))
+  return {
+    score: correct ? 1 : 0, // between 0 and 1, the number the column plots
+    reason: correct ? undefined : `expected ${expected}`, // shown on the cell, on hover
+    checks: [{ name: 'answer matches', passed: correct }] // listed in the case detail
+  }
+}
+```
+
+`reason` is what the cell shows on hover, so a number that looks wrong can be read rather than re-derived from the trajectory.
+`checks` are listed beside it in the case detail and are not averaged into the score.
+A `comment` field is read as `reason`, so a scorer written for another platform keeps its rationale.
+
+What each return produces:
+
+| Returned | Cell |
+| --- | --- |
+| A number between 0 and 1, or a boolean | The score |
+| A number outside 0 to 1 | `failed`, with the range error on hover |
+| `{ score: null }`, written out | `n/a`: the scorer declining to measure this case, which is left out of the column's mean and pass rate |
+| Anything else with no number in it, including a bare `null` | `failed`, with the reason on hover |
+
+A judge's verdict is read even when it arrives as JSON inside a string or fenced as markdown, which is what a model asked for JSON usually replies with.
+
+### What a scorer receives
+
+A scorer is handed the whole run and not just the final answer, so it can score how the agent got there.
+Judges and scripts receive the same thing:
+
+| Field | Holds |
+| --- | --- |
+| `input`, `expected` | The case, as the run recorded it |
+| `output` | The agent's answer |
+| `tool_calls` | Every tool call in order, with its arguments, result, error and duration |
+| `tools` | The tools that were called, with their schemas |
+| `metrics` | `steps`, `duration_ms`, and the provider's [token usage](../54_ai_agents/index.mdx#usage-optional) when it reported any |
+| `status`, `job_id` | How the case ended, and the job to open |
+
+A script scorer receives this as `run`, with `input`, `output` and `expected` also spelled out as their own arguments so a short scorer can take just the ones it needs.
+A judge receives it rendered into its user message.
+
+Tool results over 4 KiB are truncated and marked `truncated: true`, so a large one cannot swamp a judge's context.
+A tool whose schema could not be resolved carries `null`, which a scorer validating arguments should treat as unchecked rather than as a failure.
+
+### Pass thresholds
+
+A column carries an optional pass threshold, and a case scoring at or above it counts as a pass.
+A boolean scorer is one that returns 0 or 1 with the threshold at 0.5.
+
+- A column with a threshold reports a pass rate and marks each cell with a ✓ or ✗.
+- A column without one reports the average score.
+
+The threshold is set when the column is added, and changed later under Scorer settings.
+Changing it re-reads the runs already recorded without re-running anything, since it is applied when a score is read rather than when it is produced.
+
+### Naming and removing a column
+
+A column's name is the dataset's own name for the scorer, so renaming it does not rename the script or agent behind it, or the column another dataset shows.
+
+Removing a scorer asks for confirmation, and takes its column off the runs already recorded as well as the next ones.
+Adding it back starts a new column, which fills from the next run on.
+
+## Running a dataset
+
+New evaluation opens the Run evaluation dialog, which asks which state of the agent to measure and which dataset to measure it on.
+The agent can be:
+
+- the latest deployed version, as it is saved when you press Run;
+- an earlier version, run as it was then;
+- the unsaved edits the flow step is holding, offered only when evals were opened from an agent you are editing.
+
+![The Run evaluation dialog, with the agent version and dataset to measure](./run_evaluation_dialog.png.webp 'Run evaluation')
+
+Whichever you pick is read once when the run starts, so every case executes the same configuration, and deploying an edit part-way through changes what the next run measures rather than this one.
+A pinned version reproduces the agent but not the world around it: `$var:` and `$res:` references inside it still resolve at run time.
+
+A run does not reproduce the flow around the agent either.
+It runs with the agent's own tool inputs, so a linked step's per-flow [tool input overrides](../54_ai_agents/index.mdx#reusable-agents) are not applied, and an input transform reading another step's results resolves to nothing.
+
+The run opens as soon as it starts and continues on a worker, so a large dataset against a slow provider keeps going after you close the tab.
+
+## Run history
+
+Evals open on every run of this agent, newest first, whichever dataset each is of.
+A row gives the run's number, which state of the agent it measured (`v24`, `v24 + edits`, or a pinned `v18`), the dataset, how many cases it ran, and one badge per scorer: that column's pass rate where it has a threshold, its mean where it does not.
+
+Runs are immutable.
+There is no partial rerun and no editing a result after the fact, so running the dataset again is what produces a new run to compare against the last one.
+
+A run that measured unsaved edits which were later deployed is recognised as that version, rather than staying an edit of the version before it.
+
+{/* Placeholder: screenshot of the Evals modal on an agent's run history: rows of runs with their version badge, dataset, case count and one score badge per scorer. */}
+
+## Reading a run
+
+Opening a run gives one row per case and one column per scorer, with the case, the agent's answer, and each scorer's number.
+The one number a column reports sits under its header, and a cell shows the scorer's reason and checks on hover.
+
+Selecting a row opens the case beside the table, with what was expected, every scorer's verdict and the answer in full.
+From there you can open the job for that case, or the job for the whole run.
+
+## Comparing two runs
+
+Compare to picks another run of the same dataset as a baseline, and every cell and column headline then carries its delta against it.
+
+Deltas are per scorer: there is no single number summarising a dataset.
+Rows are joined by case, so a case added after the baseline ran shows no delta rather than counting as a change, and a column the baseline never had reports that rather than a difference.
+A delta between two runs measured by different versions of the same scorer is marked, so a change of judge is not read as a change of agent.
+
+{/* Placeholder: screenshot of a run's results table with a baseline selected: cases down the side, one column per scorer, per-cell deltas, and the case detail panel open beside it. */}
+
+## What an eval run is
+
+A run is one flow job, so you can open it, cancel it and read its logs like any other [job](../20_jobs/index.mdx), and the runs page filtered on the agent's path lists every eval run of it.
+
+The flow loops over the dataset's cases, eight at a time, skipping failures so one case failing costs one cell rather than the whole run.
+Each case runs the agent and then scores its answer with one parallel branch per scorer, each branch keeping its own failure, so a judge that errors costs only its own column.
+A run's results are copied out of its jobs, so a run still reads as the run it was once those jobs have been cleared by [retention](../20_jobs/index.mdx#retention-policy).
+
+Part of a run uses the `nativets` tag, which the `native` [worker group](../9_worker_groups/index.mdx) serves rather than the default one.
+If nothing serves it, the run dialog says so and the run queues rather than fails.
+
+## Permissions and limits
+
+A dataset is permissioned like any other path-addressed object: who may see and change it follows its folder, its owner and its [extra permissions](../16_roles_and_permissions/index.mdx).
+Cases follow their dataset, so a read-only grant can list a dataset's cases but not edit them.
+[Operators](../16_roles_and_permissions/index.mdx#operator) cannot write datasets or cases at all.
+
+Deleting a dataset takes its cases, its runs and every score with it.
+The jobs those runs produced are left alone, under their own retention.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="AI agents"
+		description="Integrate AI agent steps directly into your Windmill flows."
+		href="/docs/core_concepts/ai_agents"
+	/>
+	<DocCard
+		title="Resources and resource types"
+		description="Resources store connection and configuration details, and can be versioned and shared."
+		href="/docs/core_concepts/resources_and_types"
+	/>
+</div>

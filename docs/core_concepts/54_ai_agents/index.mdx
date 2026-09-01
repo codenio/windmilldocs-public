@@ -2,6 +2,8 @@
 description: How do I build AI agents in Windmill? Add agent steps to flows with full observability. Connect to OpenAI, Anthropic, Mistral, DeepSeek, Gemini and more.
 ---
 
+import DocCard from '@site/src/components/DocCard';
+
 # AI agents
 
 AI Agents steps allow you to integrate AI agents directly into your Windmill [flows](../../flows/1_flow_editor.mdx). They provide an interface to connect with various AI providers and models, allowing you to process data, generate content, execute actions (Windmill [scripts](../../script_editor/index.mdx)), and make decisions as part of your automated workflows.
@@ -336,3 +338,46 @@ In the logging panel of the AI Agent step, you can see the comprehensive logging
 - The final AI response and complete message history
 
 This detailed view allows you to trace through the AI's decision-making process and verify that tools are being called correctly with the expected inputs and outputs.
+
+## Reusable agents
+
+An AI agent step can be saved as a reusable agent: a resource of the built-in `ai_agent` [resource type](../3_resources_and_types/index.mdx) holding the agent's configuration (provider and model, system prompt, temperature, output schema, memory) and its tools.
+Other flows link to the same agent, and edits to it propagate to every linked step.
+
+Save as reusable agent sits at the top of the step's inputs when the agent is written inline.
+Once saved, the step shows a read-only card naming the agent, the version it is on, its configuration and its tools, with three actions:
+
+- Evals runs the agent against a dataset of cases. See [AI agent evals](../70_ai_agent_evals/index.mdx).
+- Edit forks the agent into the step so you can change it. While editing, the card shows an unsaved changes badge that opens a diff against the deployed agent. Save changes writes back to the agent, updating every flow that links to it; Cancel drops the edits and re-links the step.
+- Unlink copies the agent's configuration into this step as a one-off, so it can diverge here without affecting anything else.
+
+Each host flow can override a linked agent's tool inputs for its own use: below the step's inputs, every tool gets a section with the standard input editors and a read-only view of its code.
+Those overrides belong to the flow, not to the agent.
+
+Sharing works through the usual [folder permissions](../8_groups_and_folders/index.mdx) on the resource.
+Deploying a linked flow to another workspace pulls the agent resource in as a dependency, and from there its provider resource and its tools.
+
+### Resolution is live, not pinned
+
+A linked step resolves its agent when the step runs, which is what makes an edit propagate everywhere at once.
+It also means a run is not a snapshot: editing an agent while a flow is in flight affects the steps that have not started yet.
+Inline agents are unaffected, since their configuration lives in the flow value and is snapshotted with the run.
+
+An agent's tools are also outside the flow's lockfile: republishing a script a tool points at does not re-lock the flows that link the agent, and a raw script tool resolves its dependencies when it runs.
+
+### Version history
+
+Editing an agent resource appends a version, so its prompt, model and tool set can be diffed and restored from the History drawer of the resource editor.
+Restoring writes the old value forward as a new version rather than rewinding.
+The version number is what eval runs are recorded against and compared by.
+
+A version captures the resource and not what it references: a `$var:` or `$res:` reference is stored as the reference, so two identical versions can behave differently because the referenced variable changed underneath them.
+Past values are kept for up to 100 versions, and Clear past versions in the History drawer drops every version but the current one, which is worth doing after rotating a credential written inline into a resource.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="AI agent evals"
+		description="Run a reusable agent against a dataset of cases, score the answers, and compare runs."
+		href="/docs/core_concepts/ai_agent_evals"
+	/>
+</div>
