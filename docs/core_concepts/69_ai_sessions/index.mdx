@@ -59,6 +59,8 @@ The session chat is the [Windmill AI chat](../22_ai_generation/index.mdx#windmil
 
 Sessions are the in-app counterpart to the [Model Context Protocol (MCP)](../51_mcp/index.mdx): both let an AI operate your workspace, sessions from within Windmill with a live preview and deploy flow, MCP from an external AI client such as your IDE or desktop assistant.
 
+The tokens a session spends are recorded per user and model, and priced in the workspace and user settings: see [AI usage and cost](../22_ai_generation/index.mdx#ai-usage-and-cost).
+
 ### Attachments
 
 You can attach images and text files to a message by dragging, pasting or picking files: useful to share a design, an error screenshot, a log file or a whiteboard photo. Images require a model with vision support and are downscaled client-side; up to 8 images can be attached per message. Text files (up to 8 per message, 1 MB each) are read by the AI on demand rather than inlined, so they never bloat the conversation history; see [attaching files](../22_ai_generation/index.mdx#attaching-files). A message can also consist of attachments alone, with no text. You can also link workspace files and folders to the conversation so the AI keeps them in context for the whole session.

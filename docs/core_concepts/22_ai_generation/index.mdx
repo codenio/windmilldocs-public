@@ -403,3 +403,38 @@ The fallback resources are read from the `admins` workspace, so any resources re
 In a workspace that is using the instance fallback, the Windmill AI settings page shows a read-only "Active instance AI" summary and an **Override for this workspace** button to reveal the editable workspace form. Clearing the workspace providers reverts the workspace to the instance fallback immediately, without a page refresh.
 
 Non-admin members can use AI chat whenever either scope is configured — they do not need access to workspace or instance settings.
+
+## AI usage and cost
+
+Windmill records the tokens every AI chat spends, per user, model and provider, and prices them so you can see what a workspace is spending on AI. Two panels show it:
+
+- "AI usage", in the workspace's Windmill AI settings: the whole workspace's spend, grouped by day, user or model. Workspace admins only.
+- "Your AI usage", in your user settings: your own spend in the workspace the chat runs in.
+
+Both cover the last 7, 30 or 90 days and list input tokens (cache reads and writes included), output tokens, request count and cost per row.
+
+Usage comes from the chat, so it covers [AI sessions](../69_ai_sessions/index.mdx) and the legacy side panel chat. Code completion, the legacy code generation, editing and fixing copilots, and [AI agent](../54_ai_agents/index.mdx) steps in flows are not counted.
+
+Costs are computed from the rates in force when you look, not from the ones in force when the chat ran, so correcting a rate also corrects past usage.
+
+{/* TODO: screenshot of the "AI usage" panel in workspace Windmill AI settings, showing the range select ("Last 30 days"), the By day / By user / By model toggle, the estimated total on the right (e.g. "~$4.21 total"), and the table below with its grouped key, In, Out, Requests and Cost columns. */}
+
+### Estimated and reported costs
+
+A cost prefixed with `~` is an estimate: token counts multiplied by Windmill's built-in list price for that model. A cost shown without it is the figure the provider billed back, used as is. OpenRouter is currently the only provider that returns one. A row or a total that mixes both sources keeps the `~`.
+
+Windmill's built-in list prices are a best-effort snapshot, and a model it cannot price confidently is left unpriced rather than guessed at. Such a model shows "no rate", and its spend stays out of the total, which is then marked partial. Expect this on models under a promotional rate, on models whose rate changes above a context threshold (Gemini Pro, Anthropic's 1M context window), and on providers with fast-moving catalogs (DeepSeek, Mistral, Groq, Together AI, Custom AI). Set a rate yourself to price them.
+
+### Model pricing overrides
+
+The "Model pricing" panel of the Windmill AI settings lists every configured model per provider and takes rates in USD per million tokens: input, output, cache read and cache write. Use it for negotiated rates, for models Windmill does not price, or to correct a list price that has changed. An override never replaces a cost the provider reported.
+
+Rates can be set on the workspace AI config and on the [instance-level](#instance-level-ai-settings) one, where every workspace inheriting it is priced with them.
+
+Leaving a cache rate empty inherits it from the input rate at the model's published ratio, with the resulting figure shown as the field's placeholder. A rate of `0` prices those tokens as free.
+
+### Usage API
+
+`GET /w/{workspace}/ai/usage` ([listAiUsage](https://app.windmill.dev/openapi.html#/operations/listAiUsage)) returns the same aggregated buckets, taking `days` (1 to 365, defaults to 30), `group_by` (`day`, `user` or `model`) and `scope` (`workspace`, admin only, or `self`). A `truncated: true` in the response means more buckets matched than were returned, so summing them under-reports.
+
+`POST /w/{workspace}/ai/usage` ([recordAiUsage](https://app.windmill.dev/openapi.html#/operations/recordAiUsage)) is how the chat reports its own tokens. Events are always attributed to the caller, so it cannot record usage on someone else's behalf.
