@@ -81,8 +81,7 @@ You now have your Windmill workspace on a GitHub repository.
 1. Go to workspace settings → Git Sync tab
 2. Click **+ Add connection**
 3. Create or select a [git_repository](../../integrations/git_repository.mdx) resource pointing to your Git repository. You have two authentication options:
-   - **GitHub App**: Use the [GitHub App](../../integrations/git_repository.mdx#github-app) for simplified authentication and enhanced security
-   - **GitHub Enterprise Server App**: Use a [self-managed GitHub App](../../integrations/git_repository.mdx#self-managed-github-app) for GHES or custom GitHub instances (Enterprise only)
+   - **GitHub App**: Use the [GitHub App](../../integrations/git_repository.mdx#github-app) for simplified authentication and enhanced security. The button points to the Windmill-managed app, or to your instance's [self-managed GitHub App](../../integrations/git_repository.mdx#self-managed-github-app) when one is configured (for GitHub Enterprise Server, GitHub Enterprise Cloud or a custom app)
    - **Personal Access Token**: Use a [token](https://github.com/settings/tokens) with Read-and-write on "Contents". Your URL should be `https://[USERNAME]:[TOKEN]@github.com/[ORG|USER]/[REPO_NAME].git`
 4. Complete the configuration of the connection and save
 
@@ -168,7 +167,7 @@ When automatic sync is enabled on a repository connected through the GitHub App,
 
 This requires the GitHub App installation to have the webhooks permission. If your organization has not approved it yet, Windmill falls back to polling (the card shows a "Falling back to polling" warning) and upgrades to webhook delivery automatically once the permission is granted. See [GitHub App permissions](../../integrations/git_repository.mdx#github-app-permissions) for the full list of permissions and what each enables.
 
-Self-managed GitHub Apps for GitHub Enterprise Server use the same per-repository webhook path: grant the same permissions on your app and Windmill registers the webhook against your GHES host. Your Windmill base URL only needs to be reachable from the GHES host, not from the public internet, so this also works on private networks.
+[Self-managed GitHub Apps](../../integrations/git_repository.mdx#self-managed-github-app) use the same per-repository webhook path: grant the same permissions on your app and Windmill registers the webhook against your GitHub host. Your Windmill base URL only needs to be reachable from that host, over a certificate it trusts, not from the public internet, so this also works on private networks. See [network requirements for a self-managed app](../../integrations/git_repository.mdx#network-requirements-for-a-self-managed-app).
 
 If GitHub has to reach Windmill on a different url than your users' browsers do, set a [webhook base url](../18_instance_settings/index.mdx#webhook-base-url) in instance settings.
 
@@ -207,7 +206,7 @@ For token-based repositories, these toggles are not available; use the [GitHub A
 
 ### Pull request diff checks
 
-With automatic sync enabled on an app-backed repository, a pull request targeting the tracked branch gets a "Windmill diff" check run on its head commit: Windmill performs a dry-run pull of the pull request head and reports what merging would deploy to the workspace (in sync, N changes, or the failure). Windmill also maintains a single managed comment on the pull request with the workspace, sync status, commit and a collapsible change list, updated in place on each new push to the pull request.
+With automatic sync enabled on an app-backed repository, a pull request targeting the tracked branch gets a "Windmill diff" check run on its head commit: Windmill dry-runs the pull on the result of merging the pull request into the tracked branch, and reports what merging would deploy to the workspace (in sync, N changes, or the failure). Windmill also maintains a single managed comment on the pull request with the workspace, sync status, commit and a collapsible change list, updated in place on each new push to the pull request.
 
 <!-- Placeholder: screenshot of a GitHub pull request showing the "Windmill diff" check run and the managed Windmill comment with the collapsible change list -->
 

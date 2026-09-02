@@ -627,21 +627,24 @@ When minimal telemetry is disabled, the following is also collected:
 
 You can "Send usage" to manually send usage data to Windmill and monitor it from the [Customer portal](../../enterprise/1_plans_details/index.mdx#windmill-customer-portal). You can also "Download usage" to get a signed copy of the telemetry data as a JSON file named `windmill-telemetry-{date}-{signature}.json`. This is useful for air-gapped instances that cannot send telemetry directly: the file can be inspected before being sent manually to Windmill, and the signature lets Windmill verify it has not been tampered with.
 
-## GitHub Enterprise App
+## GitHub App
 
-Configure a self-managed GitHub App for GitHub.com or GitHub Enterprise Server to enable [Git sync](../11_git_sync/index.mdx) without relying on the Windmill-managed GitHub App via `stats.windmill.dev`.
+Configure a self-managed GitHub App for GitHub.com, GitHub Enterprise Cloud or GitHub Enterprise Server to enable [Git sync](../11_git_sync/index.mdx) without relying on the Windmill-managed GitHub App via `stats.windmill.dev`.
 
-This setting is found under **Advanced > GitHub Enterprise App** in Instance Settings and is only available on [Enterprise Edition](/pricing).
+This setting is found under **Advanced > GitHub App** in Instance Settings and is only available on [Enterprise Edition](/pricing). Turn on the "Self-managed GitHub App" toggle to enable the fields below.
 
 | Field | Description |
 |-------|-------------|
-| Base URL | The base URL of your GitHub instance (e.g. `https://github.com` or your GHES URL) |
+| Base URL | The base URL of your GitHub instance (e.g. `https://github.com`, `https://<subdomain>.ghe.com` or your GHES URL) |
 | App ID | The ID of your registered GitHub App |
 | App Slug | The slug of your GitHub App |
 | Client ID | The client ID of your GitHub App |
+| App owner | The organization or user that owns the GitHub App. Only needed on GitHub Enterprise Cloud data residency hosts (`*.ghe.com`), whose installation URLs carry the owner |
 | Private Key (PEM) | The private key generated for your GitHub App |
 
 Once the app is configured, a **Workspace assignments** panel appears below the fields. Click **Refresh** to list the installations the app can see on your GitHub instance, and assign them to workspaces. This lets a superadmin link installations to workspaces directly, so workspace users do not need GitHub permissions to set up sync. It is also the recovery path for installations that were created without the app's Setup URL configured.
+
+Installations assigned this way are tagged "Provisioned by admin" in the workspace Git sync settings and can only be removed from here, not by workspace admins.
 
 For setup instructions, see [Self-managed GitHub App](../../integrations/git_repository.mdx#self-managed-github-app).
 
