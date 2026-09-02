@@ -15,9 +15,16 @@ Google Cloud Pub/Sub triggers is a [self-hosted Enterprise](/pricing) feature.
 
 ### Configure GCP connection
 
-- Select an existing [GCP resource](https://hub.windmill.dev/resource_types/154/gcloud) (service account credentials) or create a new one.
+Windmill can authenticate to Google Cloud in two ways, selected with a toggle in the trigger editor:
 
-> The service account used must have enough permissions for Windmill to fully manage Pub/Sub resources. Specifically:
+- **Service account**: select an existing [GCP resource](https://hub.windmill.dev/resource_types/154/gcloud) (service account credentials) or create a new one.
+- **Application default credentials**: authenticate as the Windmill server itself, using the credentials of its environment. Selecting this mode requires being a workspace admin. See [Application default credentials](#application-default-credentials).
+
+<!-- Placeholder: screenshot of the GCP trigger editor's connection setup, showing the "Service account" / "Application default credentials" toggle and the Project ID field below it. -->
+
+You can also set a **Project ID**: the GCP project in which topics and subscriptions are listed and created. Leave it empty to use the project of the credentials. Topic and subscription IDs given as fully qualified names (`projects/<project>/topics/<id>`, `projects/<project>/subscriptions/<id>`) are reached whatever it is set to, so a subscription can live in a different project than its topic.
+
+> The identity used (service account or application default credentials) must have enough permissions for Windmill to fully manage Pub/Sub resources. Specifically:
 >
 > - **Pub/Sub Viewer** (`roles/pubsub.viewer`): to check if topics or subscriptions exist, list them.
 > - **Pub/Sub Subscriber** (`roles/pubsub.subscriber`): to attach to subscriptions and consume messages.
@@ -26,6 +33,16 @@ Google Cloud Pub/Sub triggers is a [self-hosted Enterprise](/pricing) feature.
 > If you prefer not to assign these three individually, you can simply grant the **Pub/Sub Admin** role (`roles/pubsub.admin`).
 >
 > Additionally, if you want to create **authenticated push delivery subscriptions**, the service account must also have **Service Account User** (`roles/iam.serviceAccountUser`) permission. See [Authenticate Push Subscriptions](https://cloud.google.com/pubsub/docs/authenticate-push-subscriptions) for more details.
+
+#### Application default credentials
+
+Instead of handing Windmill a downloadable service account key through a resource, a trigger can use the server's own [application default credentials](https://cloud.google.com/docs/authentication/application-default-credentials) (ADC). This resolves credentials from the server's environment: GKE Workload Identity, the GCE metadata server, the gcloud well-known file, or a credentials file pointed to by the `GOOGLE_APPLICATION_CREDENTIALS` [environment variable](../../core_concepts/47_environment_variables/index.mdx) on the server.
+
+Because these credentials are the server's identity and no workspace ACL covers them (unlike a `gcloud` resource, whose ACL decides who may use it), only workspace admins can select this mode. Saving any change to such a trigger also requires workspace admin, since saving re-provisions the subscription with those credentials, and so does enabling or disabling it. Non-admins can still view a trigger that already uses application default credentials.
+
+[Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation) credential files are supported with the `file`, `url` and `aws` credential sources; the `executable` source is not supported.
+
+Some ADC files (Workload Identity Federation in particular) carry no project, in which case you should fill in the Project ID field.
 
 ### Subscription setup
 
