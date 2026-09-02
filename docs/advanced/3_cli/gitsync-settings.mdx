@@ -65,6 +65,53 @@ wmill gitsync-settings push [options]
 | `--token`                     | `<token>`             | Specify an API token. This will override any stored token.                                                                                                                                          |
 | `--base-url`                  | `<baseUrl>`           | Specify the base URL of the API. If used, `--token` and `--workspace` are required and no local remote/workspace will be used.                                                                     |
 
+## Status API
+
+Local changes reach the workspace through one of two paths, and which one applies depends on how the repository is wired:
+
+- `git push` - when the workspace deploys new commits itself ([automatic sync from Git](../11_git_sync/index.mdx#automatic-sync-from-git), available on [Enterprise Edition](/pricing)), or when a CI workflow runs `wmill sync push` on push.
+- [`wmill sync push`](./sync.mdx#push-api) - when there is no such deploy-on-push path.
+
+The `wmill gitsync-settings status` command reports which path applies to your workspace and current branch, so you don't have to guess:
+
+```bash
+wmill gitsync-settings status [options]
+```
+
+It reads your current local git branch and asks the backend whether pushing it is deployed by automatic sync from Git.
+A `git push` is confirmed to deploy only when exactly one licensed repository with automatic sync enabled tracks the branch.
+Otherwise the result is reported as not confirmed (rather than a definite no), since a CI workflow the command doesn't recognize could still deploy on push - in that case, determine the deploy path from your CI configuration or use `wmill sync push`.
+
+The endpoint returns only derived booleans - no repository paths, credentials, or webhook configuration - so any workspace member (not just admins) can run it.
+
+### Options
+
+| Option                 | Parameter     | Description                                                                                                                    |
+| ---------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `-h, --help`           | None          | Show help options.                                                                                                            |
+| `--json-output`        | None          | Output in JSON format. Useful for scripting and automation.                                                                  |
+| `--workspace`          | `<workspace>` | Specify the target workspace. This overrides the default workspace.                                                          |
+| `--token`              | `<token>`     | Specify an API token. This will override any stored token.                                                                   |
+| `--base-url`           | `<baseUrl>`   | Specify the base URL of the API. If used, `--token` and `--workspace` are required and no local remote/workspace will be used. |
+
+### JSON output
+
+With `--json-output`, the command prints the deploy mode and a recommended command:
+
+```json
+{
+  "configured": true,
+  "deploy_on_push": true,
+  "current_branch": "main",
+  "deploy_command": "git push"
+}
+```
+
+- `configured` - at least one git-sync repository is configured for the workspace.
+- `deploy_on_push` - `true` only when pushing `current_branch` is confirmed to deploy via automatic sync from Git.
+- `current_branch` - the local git branch checked (or `null` outside a git repository).
+- `deploy_command` - `git push` when `deploy_on_push` is `true`, otherwise `null`.
+
 ## Configuration management
 
 The `gitsync-settings` command manages git-sync filter settings and configuration options defined in your `wmill.yaml` file and the workspace backend.

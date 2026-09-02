@@ -533,7 +533,13 @@ Once git sync is set up, the git repository becomes the entry point for [local d
 - Your IDE of choice, with the [Windmill CLI](../3_cli/index.mdx) (`wmill sync pull` / `wmill sync push`) or the [VS Code extension](../../cli_local_dev/1_vscode-extension/index.mdx).
 - [Agentic coding tools](../../misc/9_guides/local_dev_with_ai/index.mdx) such as Claude Code, Cursor, or any MCP-compatible client. `wmill init` generates an `AGENTS.md` and skill files that give these agents the context they need to write Windmill-native scripts and flows.
 
-Changes committed and pushed to git are replayed back into the workspace by [automatic sync from Git](#automatic-sync-from-git) (or the CI/CD workflow), closing the loop.
+Changes committed and pushed to git are replayed back into the workspace to close the loop.
+There are two ways this deploy happens, and which one applies determines the command you run:
+
+- `git push` - when the workspace deploys new commits itself ([automatic sync from Git](#automatic-sync-from-git)), or when a CI/CD workflow runs `wmill sync push` on push. In both cases pushing the tracked branch is enough.
+- [`wmill sync push`](../3_cli/sync.mdx#push-api) - when there is no deploy-on-push path, deploy your local changes directly with the CLI.
+
+Run [`wmill gitsync-settings status`](../3_cli/gitsync-settings.mdx#status-api) to find out which path applies to your workspace and current branch.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
