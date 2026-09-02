@@ -389,6 +389,18 @@ Enable to send [critical alerts](../../core_concepts/37_critical_alerts/index.md
 
 Email notifications to token owners are always sent regardless of this setting, as long as [SMTP](#smtp) is configured.
 
+### Mute zombie job restart alerts
+
+Stop sending [critical alerts](../../core_concepts/37_critical_alerts/index.mdx) when a zombie job or flow is detected and restarted automatically. This setting is off by default.
+
+A job whose worker stops pinging for longer than [`ZOMBIE_JOB_TIMEOUT`](../../core_concepts/47_environment_variables/index.mdx) is considered a zombie and restarted, up to 3 attempts, and each restart raises a critical alert. On an instance with flaky workers, that means a burst of alerts for a condition Windmill heals on its own.
+
+Muting them leaves the recovery itself untouched, and the terminal alerts still fire: a job that exhausted all its restart attempts and is failed, and a flow cancelled after hanging between two steps.
+
+Toggling this setting takes effect immediately, without restarting the instance.
+
+This setting is only available on [Enterprise Edition](/pricing).
+
 ### Slack
 
 Connecting your instance to a Slack workspace enables [critical alerts](#critical-alert-channels) to be sent to a Slack channel.
