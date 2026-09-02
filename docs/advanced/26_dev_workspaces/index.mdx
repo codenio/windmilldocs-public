@@ -1,5 +1,5 @@
 ---
-description: How do I pair a dev workspace with a lockable prod workspace in Windmill? Edit in dev, lock prod, and promote changes manually.
+description: How do I pair a dev workspace with a lockable prod workspace in Windmill? Edit in dev, lock prod, and promote via Compare & Deploy or Git pull requests.
 ---
 
 import DocCard from '@site/src/components/DocCard';
@@ -26,7 +26,7 @@ A dev workspace is a special kind of fork. Compared to an ordinary fork:
 - **Its own job tags**: because its id is one you chose, `$workspace` in a [job tag](../../core_concepts/9_worker_groups/index.mdx#dynamic-tag) resolves to the dev workspace itself, so it can have its own workers. An ordinary fork resolves to its nearest named ancestor instead.
 - **Identified as dev**: dev workspaces show a badge carrying their [environment label](#environment-labels), sort ahead of ordinary forks in the workspace menu, auto-expand under their prod workspace, and are labelled "\<Label\> workspace of \<prod\>".
 
-Like ordinary forks, promotion stays manual through the [Compare & Deploy](#promoting-changes-to-prod) flow. Auto-sync from dev to prod is not available.
+Promotion is reviewed, never automatic: through the [Compare & Deploy](#promoting-changes-to-prod) flow, or as per-item pull requests with [Promote to prod via Git](#promote-to-prod-via-git). Auto-sync from dev to prod is not available.
 
 ## Environment labels
 
@@ -36,7 +36,7 @@ The label decides three things:
 
 - The badge on the workspace: the label itself, except `staging`, which shows as `stg`.
 - The wording that names the workspace: "This is a uat workspace paired with staging workspace demo-stg".
-- The git branch the workspace deploys to when [git sync](../11_git_sync/index.mdx) is configured: the label verbatim (`uat`), instead of the `wm-fork/...` branch an ordinary fork gets. On a repository set up for [Git Promotion](../9_deploy_gh_gl/index.mdx), a dev workspace keeps the per-item `wm_deploy/**` deploy branches instead.
+- The git branch the workspace deploys to when [git sync](../11_git_sync/index.mdx) is configured: the label verbatim (`uat`), instead of the `wm-fork/...` branch an ordinary fork gets. With [Promote to prod via Git](#promote-to-prod-via-git) enabled, deploys go to per-item `wm_deploy/**` branches instead.
 
 Nothing else follows from the label: locking, promotion and Compare & Deploy behave the same whichever one you pick.
 
@@ -115,6 +115,28 @@ A git-synced prod workspace that is locked still receives [CLI](../3_cli/index.m
 
 Promotion is manual and uses the existing fork promotion flow. From the dev workspace, open the home page banner or the **Compare & Deploy** page to review the diff with the prod workspace and deploy the selected items. This is the same flow as [merging a workspace fork](../20_workspace_forks/index.mdx#merge-workspaces-from-the-ui-merge-ui).
 
+If the workspaces are git-synced, changes can instead be promoted as per-item pull requests - see [Promote to prod via Git](#promote-to-prod-via-git).
+
+## Promote to prod via Git
+
+If the prod workspace uses [git sync](../11_git_sync/index.mdx), its dev workspace can promote changes through per-item pull requests instead of the Compare & Deploy flow. This requires an [Enterprise Edition](/pricing) plan.
+
+A dev workspace created by forking a git-synced prod inherits the prod workspace's repository. On the dev workspace, **Workspace settings** → **Git sync** shows that inherited repository with a **Promote to prod via Git** toggle:
+
+- Off (default): deploys in the dev workspace commit to the branch named after its [environment label](#environment-labels).
+- On: each deploy creates a branch named `wm_deploy/<dev-workspace-id>/<type>/<path>` off the branch tracked by the prod workspace, to be reviewed and merged as a pull request. Once merged, the prod workspace's [CI/CD sync](../11_git_sync/index.mdx#setup---cicd-from-git-repository) reflects the change in the prod workspace. This is the same [Git Promotion workflow](../9_deploy_gh_gl/index.mdx) a root workspace uses, except there is no separate promotion repository to configure: promotion reuses the single inherited repository.
+
+With the toggle on:
+
+- **One pull request per folder** groups a folder's items into a single branch (and pull request) instead of one per item.
+- On a repository authenticated with the [GitHub App](../../integrations/git_repository.mdx#github-app), an **Open a pull request for each deploy branch** sub-toggle appears: Windmill [opens the pull request automatically](../11_git_sync/index.mdx#in-app-pull-request-creation) after each deploy, with no CI action or webhook needed. On other repositories, set up the [GitHub Action](../9_deploy_gh_gl/index.mdx#github-actions-setup) that opens a pull request when a `wm_deploy/**` branch is pushed.
+
+While promotion is on, deploys also keep updating the dev workspace's [environment-label branch](#environment-labels), so it keeps tracking the workspace and forks of the dev workspace keep working against it.
+
+Promotion requires the dev workspace to use the same repository and branch as its prod workspace. A dev workspace created by forking inherits them and always qualifies; an attached dev workspace whose repository points at a different URL or branch cannot enable the toggle. Enabling promotion is also rejected if the repository pins an older version of the git sync script - update the pinned script first.
+
+{/* TODO: screenshot of the dev workspace Git sync settings showing the inherited repository with the "Promote to prod via Git" toggle on, the "One pull request per folder" sub-toggle, and the "Open a pull request for each deploy branch" sub-toggle. */}
+
 ## Per-environment resources and variables
 
 A dev and a prod workspace usually need different values for the same resource or variable (for example, a database URL or an API key). You can mark a resource or variable as workspace-specific so each environment keeps its own value.
@@ -154,7 +176,7 @@ The session's system prompt also tells the AI when it operates in a dev workspac
 - Renaming a dev workspace keeps it the canonical dev workspace, and renaming the prod (root) workspace updates the dev workspace's promotion target to follow.
 - Deleting or archiving an attached dev workspace requires being an admin of the prod workspace; it clears the prod lock. Deleting a prod workspace that still has a dev workspace is blocked - detach first. A [chain](#chained-dev-workspaces) is torn down bottom-up for the same reason: archiving a dev workspace, or detaching one that would revert to a throwaway fork, is refused while it still has a dev workspace of its own.
 - A prod admin who still has write access to a locked prod sees the normal editor (rather than the "Edit in \<dev\>" redirect) and is stopped by the backend deploy block instead.
-- Auto-sync from dev to prod, and special handling of triggers and schedules, are not part of this workflow. Triggers are not copied into a fork on creation - see [triggers and schedules](../20_workspace_forks/index.mdx#triggers-and-schedules).
+- Nothing writes straight to prod without review: promotion goes through the Compare & Deploy diff or a [pull request](#promote-to-prod-via-git). Special handling of triggers and schedules is not part of this workflow either - triggers are not copied into a fork on creation, see [triggers and schedules](../20_workspace_forks/index.mdx#triggers-and-schedules).
 - Like any fork, a dev workspace gets an isolated DuckLake data environment per lake by default, with reads deferred to the prod workspace's data until the dev workspace materializes a table itself - see [fork data environments for DuckLake](../20_workspace_forks/index.mdx#fork-data-environments-for-ducklake).
 
 ## Related documentation
