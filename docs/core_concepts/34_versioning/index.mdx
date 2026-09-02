@@ -1,12 +1,12 @@
 ---
-description: How does versioning work for scripts, flows, and apps in Windmill?
+description: How does versioning work in Windmill? Scripts, flows and apps keep a version per deployment, and resources keep one per value change.
 ---
 
 import DocCard from '@site/src/components/DocCard';
 
 # Versioning
 
-Scripts, Flows and Apps have unique versions when deployed. You can find the said version any time, fork it or go back to this version.
+Scripts, Flows and Apps have unique versions when deployed. You can find the said version any time, fork it or go back to this version. [Resources](../3_resources_and_types/index.mdx#version-history) keep a version for every value change rather than for every deployment, but are browsed from the same kind of `History` drawer.
 
 You can check all the deployed versions and deployment message of a script, flow or app by clicking on the `History` on the script page.
 
@@ -21,6 +21,11 @@ You can check all the deployed versions and deployment message of a script, flow
 		title="Draft and deploy"
 		description="Develop and cooperate in a structured way."
 		href="/docs/core_concepts/draft_and_deploy"
+	/>
+	<DocCard
+		title="Resource version history"
+		description="Diff and restore past values of a resource."
+		href="/docs/core_concepts/resources_and_types#version-history"
 	/>
 </div>
 

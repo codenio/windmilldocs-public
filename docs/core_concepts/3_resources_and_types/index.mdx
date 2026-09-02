@@ -97,6 +97,36 @@ a link, for example:
 
 :::
 
+## Version history
+
+Every change to a resource's value is kept as a version. Recording happens at the database level rather than in the editor, so it covers every write: edits from the UI, pushes from the [CLI](../../advanced/3_cli/index.mdx), `setResource` calls from a script, [workspace forks](../../advanced/20_workspace_forks/index.mdx) cloning resources, and [trashbin](../61_trashbin/index.mdx) restores.
+
+Open the history with the "History" button in the resource editor. Versions are listed newest first with their author and date, and can be viewed or diffed against the current value.
+
+{/* Placeholder: screenshot of the resource editor's History drawer - version list on the left with the top entry labelled "Current", and the right pane on the "Diff with current" view showing a JSON diff. */}
+
+"Restore this version" writes the selected value back onto the resource, and requires write access to it. It is appended as a new version rather than rewinding, so the history stays append-only and a restore can itself be undone. If the version references a `$var:` or `$res:` path that no longer exists, the drawer warns you first: the restore still goes through, but the resource points at something unresolvable until you recreate the reference.
+
+Windmill keeps up to 100 versions per resource and trims older ones in the background. Renaming a resource carries its history to the new path; deleting a resource deletes its history with it, so a trashbin restore starts a fresh history.
+
+[States](#states) and [caches](../24_caching/index.md) are excluded: resources of type `state` and `cache` are rewritten by every job that uses them, so versioning them would record machine churn rather than intent.
+
+:::caution Past values remain readable
+
+Overwriting a resource value no longer erases it - anyone who can read the resource can read its past versions. A secret stored as a [variable](../2_variables_and_secrets/index.mdx) reference (`$var:`) is safe: only the reference is kept in the resource value and it is resolved at fetch time, so the secret itself never enters the history. A value that inlines a credential instead - typed straight into a field, pushed by the CLI, or written by `setResource` - keeps that credential readable in every past version that held it. After rotating such a credential, use "Clear past versions" in the History drawer, which deletes every version but the current value for that resource. It is only offered to [owners](../16_roles_and_permissions/index.mdx) of the resource path. On [cloud](../../enterprise/1_plans_details/index.mdx), workspace admins can also prune the version history of every resource at once from the workspace quotas page.
+
+:::
+
+The same operations are available from the API: [`getResourceHistory`](https://app.windmill.dev/openapi.html#/operations/getResourceHistory) lists a path's versions, [`getResourceVersion`](https://app.windmill.dev/openapi.html#/operations/getResourceVersion) returns one version with its value, [`restoreResourceVersion`](https://app.windmill.dev/openapi.html#/operations/restoreResourceVersion) restores it, and [`clearResourceHistory`](https://app.windmill.dev/openapi.html#/operations/clearResourceHistory) drops every version but the current value.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Versioning"
+		description="Scripts, flows and apps keep a version for every deployment."
+		href="/docs/core_concepts/versioning"
+	/>
+</div>
+
 ## Create a resource type
 
 Windmill comes preloaded with some common Resource types, such as databases, apps, SMTP, etc. You can see the full list on [Windmill Hub](https://hub.windmill.dev/resource_types).
