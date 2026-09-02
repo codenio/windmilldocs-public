@@ -540,7 +540,7 @@ For more details on approval steps and their features, check out the [Approval s
 ## Action on Slack from Windmill
 
 The second way to make Slack and Windmill interact is through scripts triggered from Windmill to the Slack API. In other words, our goal here is to allow Windmill Scripts
-acting on Slack on your behalf.
+acting on Slack through a connected Slack app.
 
 Lets navigate to the <a href="https://app.windmill.dev/resources" rel="nofollow">Resources page</a> page and click "Add a
 resource/API".
@@ -595,11 +595,17 @@ export async function main(text: string, channel: string, slack: Slack) {
 
 ![Test script](../assets/integrations/slack-9-script-result.png.webp)
 
-### Have messages published on Windmill's behalf
+### Which identity messages are published under
 
-Using the resource created above, Slack will behave on your behalf (under your name).
+Messages sent using the resource created above are published by the Slack app the OAuth connection went through, not under your own name, since the flow grants that app a bot token (`xoxb-`).
+On Windmill cloud that app is the Windmill Slack app; on a self-hosted instance it is the app your administrator registered in the instance OAuth settings.
+The `chat:write.public` scope it requests lets it post to any public channel without being invited to it.
 
-To have messages published on Windmill's behalf, use the Slack resource created in the [Action on Windmill from Slack](#action-on-windmill-from-slack) section.
+The identity follows the token, so a resource holding a user token (`xoxp-`) still posts under that user's name: one you filled in by hand, or one issued by an OAuth connection made before Windmill moved to Slack's v2 flow.
+Slack tokens do not expire unless the app turns on [token rotation](https://docs.slack.dev/authentication/using-token-rotation/), so those resources keep working as they are; reconnect them to get a bot token.
+
+The Slack resource created in the [Action on Windmill from Slack](#action-on-windmill-from-slack) section publishes messages the same way, through the same instance-level app unless the workspace [configures its own](#workspace-level-slack-app-configuration).
+It also pairs the Slack workspace with the Windmill workspace, which is what enables slash commands, mention triggers and approvals.
 
 <video
 	className="border-2 rounded-lg object-cover w-full h-full dark:border-gray-800"

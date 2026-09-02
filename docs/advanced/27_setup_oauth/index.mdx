@@ -343,6 +343,14 @@ settings:
 
 ![Slack Manifest](./slack_manifest.png 'Slack Manifest')
 
+:::note Customized manifest
+
+The workspace and instance "Connect to Slack" flows request the bot scopes listed above: `commands`, `chat:write`, `chat:write.public`, `channels:join`, `files:write`, `app_mentions:read`, `im:history` and `im:read`.
+Requested scopes must be a subset of the ones your app declares, so if you trim the manifest, set the `SLACK_OAUTH_SCOPES` [environment variable](../../core_concepts/47_environment_variables/index.mdx) on the server to the comma-separated list your app actually has.
+Connecting a `slack` [resource](../../core_concepts/3_resources_and_types/index.mdx) from the resources page uses the same app but is not affected by that variable: it always requests `chat:write`, `chat:write.public`, `channels:join` and `files:write`.
+
+:::
+
 Then from your [Instance settings](../../advanced/18_instance_settings/index.mdx), fill with Client ID and Client Secret.
 
 ![Slack Fill](./slack_fill.png 'Slack Fill')
