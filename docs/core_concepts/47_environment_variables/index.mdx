@@ -76,6 +76,7 @@ You can use them in a Script by clicking on "+Context Var":
 | LIMIT_WINDOWS_TO_1CU | false | When set to `true`, caps Windows workers to 1 vCPU and 2 GB memory for both the worker and child processes. | Worker |
 | RSCRIPT_PATH | /usr/bin/Rscript | The path to the Rscript binary for R language support. Only available in `windmill-full` Docker images. | Worker |
 | ALLOW_LOCAL_GIT_REMOTES | false | When set to `true` or `1`, allows [Git sync](/docs/advanced/git_sync) repository URLs targeting localhost or private networks, which are rejected by default. For development and testing only (e.g. integration tests against a local git server); do not set in production. | Server |
+| DISABLE_ANTHROPIC_PROMPT_CACHING | false | When set to `true` or `1`, stops [AI agent](../54_ai_agents/index.mdx#anthropic-prompt-caching) steps from sending Anthropic cache breakpoints. Needed for Google Cloud projects that have explicit prompt caching turned off, since Vertex AI then rejects requests that carry them. Applies to every Anthropic-based resource, not just Vertex ones. | Worker |
 
 ## Authentication bypass (NO_AUTH)
 
