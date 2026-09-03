@@ -75,6 +75,19 @@ For SAML authentication to work correctly with Entra, you need to configure the 
 
 ![Entra NameID claim configuration](azure-entra-nameid-claim.png)
 
+#### Configuring the groups claim
+
+Optional, only needed for [login-time group sync](#login-time-group-sync-from-the-idp-groups-claim).
+In the "Attributes & Claims" section, click "Add a group claim" and keep "Group ID" as the source attribute.
+Entra then emits the claim `http://schemas.microsoft.com/ws/2008/06/identity/claims/groups` with the groups' object ids, which is the same value SCIM stores as the instance groups' external id.
+
+The claim must cover every group SCIM provisions, because a login whose claim names at least one group removes the user from every SCIM-provisioned group the claim does not name.
+Choose "Groups assigned to the application" when provisioning is scoped to assigned users and groups (see [SCIM with Entra](#microsoft-entra-azure-1)); this also keeps the claim below the 150-group limit past which Entra omits it.
+Choose "Security groups" or "All groups" when provisioning syncs all users and groups.
+An omitted claim is harmless either way: the login then changes nothing.
+
+{/* Screenshot placeholder: the Entra "Group Claims" panel with "Groups assigned to the application" selected and "Group ID" as the source attribute. */}
+
 #### Configuring Windmill with the metadata URL
 
 Once the SAML configuration is complete in Entra, copy the App Federation Metadata URL from the SAML Certificates section:
@@ -199,3 +212,25 @@ This mapping is configured in the [workspace settings](../../core_concepts/44_wo
 When a user is added to an instance group in your identity provider, they will automatically gain access to all configured workspaces with their assigned roles. Similarly, when users are deleted from the group in the SCIM source, this will automatically propagate to remove them from all mapped workspaces, ensuring consistent access management across your organization.
 
 For more details about how to use instance groups within your workflows and permission structure, see [Groups and folders](../../core_concepts/8_groups_and_folders/index.mdx#instance-groups).
+
+### Login-time group sync from the IdP groups claim
+
+SCIM is push-based: a group change in the identity provider reaches Windmill on the provider's next provisioning cycle, about 40 minutes on Entra.
+For access that has to land faster, such as a break-glass group that grants superadmin, Windmill can also read the groups claim of every SAML or OIDC login and reconcile the user's instance group membership before the session starts.
+This is available under Enterprise Edition and is off unless the setting below is set.
+
+#### How it works
+
+- Only SCIM-provisioned instance groups take part: those whose external id was set by SCIM with the identity provider's group id. Groups created by hand in Windmill are never touched.
+- Claim values are matched against that external id only, so the claim must carry group ids rather than display names. On Entra, SCIM and the groups claim both use the group object id by default.
+- Groups named in the claim are added and SCIM-provisioned groups not named are removed, then the [instance-level role](#instance-level-roles) and the [workspace auto-assignment](#workspace-auto-assignment) are re-derived, all before the session token is created. The claim must therefore cover every group SCIM provisions. A manually granted superadmin or devops role is never revoked.
+- A login whose claim is absent or empty changes nothing and logs a warning. Removal only happens when the claim carries at least one value; otherwise revocation is left to SCIM and session expiry. This protects against a wrong attribute name, and against Entra omitting the claim when a user is in no application-assigned group or in more than 150 groups.
+- Changes apply at the user's next login, not mid-session. A role change also ends the user's other sessions.
+- The setting applies to every SSO client on the instance. A provider that does not send the claim only logs the warning.
+
+#### Enabling it
+
+1. Have your identity provider emit the groups claim with group ids. On Entra, see [configuring the groups claim](#configuring-the-groups-claim).
+2. In the [instance settings](../18_instance_settings/index.mdx#sso-groups-claim), in the "Auth/OAuth/SAML" section under the SSO tab, set "SSO groups claim" to the attribute name: `http://schemas.microsoft.com/ws/2008/06/identity/claims/groups` for Entra SAML, or the userinfo key (usually `groups`) for an OIDC provider. Leave it empty to turn the feature off.
+3. Give the groups their privileges: an instance-level role from the instance group editor, or a workspace role from the workspace's user management settings.
+4. Test with one user: add them to the group in the identity provider, log in, then remove them and log in again. Grants and removals made at login appear in the [audit logs](../../core_concepts/14_audit_logs/index.mdx) with the "Instance" scope, recorded by the `sso` user under the operations `instance_groups.jit_adduser` and `instance_groups.jit_removeuser`.

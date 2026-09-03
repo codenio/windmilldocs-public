@@ -83,6 +83,8 @@ Instance groups are a special type of group that are automatically managed and s
 3. **User assignment**: When users are added to groups in your identity provider, they automatically gain the corresponding group membership in Windmill
 4. **Permission inheritance**: Instance groups can be assigned to folders and resources just like regular groups, inheriting the same permission levels (Viewer, Writer, Admin)
 
+With [login-time group sync](../../advanced/28_saml_and_scim/index.mdx#login-time-group-sync-from-the-idp-groups-claim) enabled ([Enterprise Edition](/pricing)), membership in these groups is also re-evaluated from the identity provider's groups claim at each SSO login, without waiting for the next SCIM push.
+
 ### Instance-level roles
 
 Instance groups can be assigned an **instance-level role** (superadmin or devops). All members of the group automatically receive that role. This is configured in the instance group editor drawer, accessible from the groups page.

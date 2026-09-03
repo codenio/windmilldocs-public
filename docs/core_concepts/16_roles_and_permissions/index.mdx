@@ -66,6 +66,8 @@ Superadmin and devops roles can also be assigned to [instance groups](../8_group
 - Manually-set elevated roles (superadmin or devops) always take precedence over group-assigned roles. A superadmin manually promoted by another superadmin will not be demoted if their instance group only grants devops.
 - To demote a user whose role is set by an instance group, the user must be removed from the group (or the group's instance role must be changed).
 
+With [login-time group sync](../../advanced/28_saml_and_scim/index.mdx#login-time-group-sync-from-the-idp-groups-claim) enabled (Enterprise Edition), membership in SCIM-provisioned groups is also re-evaluated from the identity provider's groups claim at each SSO login, so a role granted or revoked through a group applies at the user's next login instead of waiting for the next SCIM push.
+
 In the [instance settings](../../advanced/18_instance_settings/index.mdx) users list, roles set by instance groups are indicated with a "Set by instance group" label.
 
 ### Admin
