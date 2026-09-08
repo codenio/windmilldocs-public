@@ -38,6 +38,8 @@ Holding the URL is not enough on its own: a visitor arriving without a [guest JW
 
 An app path containing `:`, `,` or `*`, or starting with `/`, cannot be opened to guests: those characters are reserved in the [token scopes](../../core_concepts/59_user_tokens/index.mdx) that confine a guest session, and the mode is refused at deploy time on such a path.
 
+Setting an app back to Members closes it to the guests already holding a session for it: the mode is read again every time a guest acts through the app, not only when they sign in.
+
 ### Restricting who may open an app to guests
 
 On [Enterprise Edition](/pricing), widening an app to guests can be reserved to workspace admins and bypass users with the "Restrict guest app access" [protection ruleset](../../core_concepts/56_protection_rulesets/index.mdx#restrict-guest-app-access) rule.
@@ -74,7 +76,7 @@ A signed-out visitor opening the app URL is offered a sign-in card that says the
 
 The result is a browser session pinned to that workspace and scoped to that one app.
 It expires after 8 hours by default, configurable with the `GUEST_SESSION_VALIDITY_SECONDS` [environment variable](../../core_concepts/47_environment_variables/index.mdx).
-Expiry is the main revocation for a guest, alongside the workspace and instance switches; logging out ends the session too.
+Expiry is the main revocation for a guest, alongside the app's own access mode and the workspace and instance switches; logging out ends the session too.
 
 A guest becomes a member by signing in from the ordinary login page with the same identity, which provisions the account as any first sign-in would.
 From then on they are counted like any other user.
