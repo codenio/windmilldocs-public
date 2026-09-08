@@ -868,10 +868,152 @@ All task types (`task()`, `taskScript()`, `taskFlow()`) accept the following opt
 | `concurrency_limit`         | `number` | Max concurrent executions for this task                                             |
 | `concurrency_key`           | `string` | Key for grouping [concurrency limits](../21_concurrency_limits/index.md)            |
 | `concurrency_time_window_s` | `number` | Time window in seconds for the concurrency limit                                    |
+| `retry`                     | `object` | [Re-dispatch policy](#retries) for a failed task                                    |
+
+## Retries
+
+A task that fails can be re-dispatched automatically by setting `retry` in its [task options](#task-options), instead of writing a retry loop in the workflow body.
+
+<Tabs className="unique-tabs">
+<TabItem value="typescript" label="TypeScript" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```typescript
+import { task, workflow } from 'windmill-client';
+
+async function fetchOrders(since: string) {
+	const resp = await fetch(`https://api.example.com/orders?since=${since}`);
+	if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+	return resp.json();
+}
+
+// At most 4 runs: the first one, then 3 retries 30s, 60s and 120s apart
+const callApi = task(fetchOrders, { retry: { attempts: 3, delay: 30, multiplier: 2 } });
+
+export const main = workflow(async (since: string) => {
+	return await callApi(since);
+});
+```
+
+</TabItem>
+<TabItem value="python" label="Python" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```python
+from wmill import task, workflow
+
+# At most 4 runs: the first one, then 3 retries 30s, 60s and 120s apart
+@task(retry={"attempts": 3, "delay": 30, "multiplier": 2})
+async def call_api(since: str):
+    import httpx
+    async with httpx.AsyncClient() as client:
+        resp = await client.get("https://api.example.com/orders", params={"since": since})
+        resp.raise_for_status()
+        return resp.json()
+
+@workflow
+async def main(since: str):
+    return await call_api(since)
+```
+
+</TabItem>
+</Tabs>
+
+| Field        | Type     | Description                                                                                                                                 |
+| ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `attempts`   | `number` | Required. Retries after the first failure: `2` runs the task at most 3 times. A whole number between 0 and 100.                              |
+| `delay`      | `number` | Seconds to wait before the first retry. Defaults to 0, retry immediately. A delay below 1 second is dropped and the retry goes out with no wait. |
+| `multiplier` | `number` | Applied to the delay after each attempt: 1 (the default) keeps it constant, 2 doubles it.                                                    |
+| `max_delay`  | `number` | Ceiling for the delay in seconds, for a `multiplier` above 1.                                                                                |
+
+The wait before retry *n* is `delay * multiplier ^ (n - 1)`, capped at `max_delay`.
+This is not the formula [flow step retries](../../flows/14_retries.md#exponential-backoff-enabled) use, where the delay is `multiplier * base ^ n`.
+
+`retry` is accepted by `task()`, `taskScript()` and `taskFlow()` (`task`, `task_script` and `task_flow` in Python), and only applies inside a `workflow()`: called outside one, a task runs its body directly and its options are ignored.
+An `attempts` that is not a whole number between 0 and 100 is rejected where the task is declared, as is an unknown key in the Python policy dict, so a typo fails immediately rather than mid-run.
+
+If every attempt fails, the error is raised into the workflow body, where it can be caught like any other [task error](#error-handling).
+
+### Each attempt is its own step
+
+Attempts are dispatched as separate steps named after the first one: `call_api`, `call_api#2`, `call_api#3`.
+Each is a child job with its own logs and timeline entry, so the run page shows the whole attempt history rather than a single step that eventually succeeded.
+
+The wait between two attempts is a [durable sleep](#sleep), not a blocking one: a task that is backing off holds no worker, and the workflow stays suspended for the duration.
+Backing off for an hour costs nothing.
+
+### Tasks in the same fan-out back off one after another
+
+A workflow sleeps once per round, and a round that ends in a sleep dispatches nothing, so tasks backing off in the same [fan-out](#parallel-execution) wait one after another rather than together.
+Each round waits out one pending backoff, and the retries only go out - all of them, in one round - once every backoff in the fan-out has elapsed.
+The delay before the fan-out retries is therefore the sum of every backoff pending in it, not the longest one, and it grows with both the width of the fan-out and `attempts`: three tasks dispatched by one `parallel()` that each retry with `delay: 30` come back after 90 seconds, not 30.
+
+Retries with no `delay` are unaffected - they all go out in a single round.
+
+### Custom retry logic
+
+The `retry` option re-dispatches on any failure. When the policy has to depend on something it cannot express - which error came back, how many attempts are left for a given input, different arguments per attempt - write the loop yourself with try/catch and [`sleep()`](#sleep), and leave `retry` off the task.
+
+<Tabs className="unique-tabs">
+<TabItem value="typescript" label="TypeScript" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```typescript
+import { task, workflow, sleep } from 'windmill-client';
+
+async function callApi(endpoint: string) {
+	const resp = await fetch(endpoint);
+	if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+	return resp.json();
+}
+
+export const main = workflow(async (endpoint: string) => {
+	for (let attempt = 1; attempt <= 3; attempt++) {
+		try {
+			return await task(callApi)(endpoint);
+		} catch (e) {
+			// Only a rate limit is worth waiting out; anything else fails now
+			if (attempt === 3 || !e.message.includes('429')) throw e;
+			await sleep(60);
+		}
+	}
+});
+```
+
+</TabItem>
+<TabItem value="python" label="Python" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```python
+from wmill import task, workflow, sleep
+from wmill.client import TaskError
+
+@task
+async def call_api(endpoint: str):
+    import httpx
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(endpoint)
+        resp.raise_for_status()
+        return resp.json()
+
+@workflow
+async def main(endpoint: str):
+    for attempt in range(1, 4):
+        try:
+            return await call_api(endpoint)
+        except TaskError as e:
+            # Only a rate limit is worth waiting out; anything else fails now
+            if attempt == 3 or "429" not in str(e):
+                raise
+            await sleep(60)
+```
+
+</TabItem>
+</Tabs>
+
+Each call in the loop is a step of its own, so the attempts survive a replay the same way the built-in retries do, and `sleep()` releases the worker just as the built-in backoff does.
+What you give up is the naming: the attempts are keyed `call_api`, `call_api_2`, `call_api_3` by the step counter rather than grouped as `call_api#2`.
 
 ## Error handling
 
-When a child task fails, the error is propagated to the parent workflow. You can catch errors with standard try/catch or try/except:
+When a child task fails, the error is propagated to the parent workflow, once its [retries](#retries) - if any - are exhausted.
+You can catch errors with standard try/catch or try/except:
 
 <Tabs className="unique-tabs">
 <TabItem value="typescript" label="TypeScript" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
@@ -1094,9 +1236,13 @@ async function loadBatch(records: any[]) {
 	return { loaded: records.length };
 }
 
+// 2 retries per endpoint, 10s then 20s apart
+// (backoffs across a fan-out are serial, see the Retries section)
+const extract = task(extractFromApi, { retry: { attempts: 2, delay: 10, multiplier: 2 } });
+
 export const main = workflow(async (endpoints: string[]) => {
 	// Extract from multiple APIs in parallel
-	const rawData = await parallel(endpoints, (ep) => task(extractFromApi)(ep), { concurrency: 10 });
+	const rawData = await parallel(endpoints, (ep) => extract(ep), { concurrency: 10 });
 
 	// Transform all records in parallel
 	const allRecords = rawData.flat();
@@ -1115,7 +1261,9 @@ export const main = workflow(async (endpoints: string[]) => {
 ```python
 from wmill import task, step, workflow, parallel
 
-@task
+# 2 retries per endpoint, 10s then 20s apart
+# (backoffs across a fan-out are serial, see the Retries section)
+@task(retry={"attempts": 2, "delay": 10, "multiplier": 2})
 async def extract_from_api(endpoint: str):
     import httpx
     async with httpx.AsyncClient() as client:
@@ -1259,13 +1407,13 @@ async def main(branch: str):
 </TabItem>
 </Tabs>
 
-### Scheduled retry with backoff
+### Retry with backoff and a fallback
 
 <Tabs className="unique-tabs">
 <TabItem value="typescript" label="TypeScript" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
 
 ```typescript
-import { task, step, workflow, sleep } from 'windmill-client';
+import { task, workflow } from 'windmill-client';
 
 async function callExternalApi(payload: any) {
 	const resp = await fetch('https://api.example.com/submit', {
@@ -1276,16 +1424,22 @@ async function callExternalApi(payload: any) {
 	return resp.json();
 }
 
-export const main = workflow(async (payload: any, maxRetries: number = 3) => {
-	for (let attempt = 1; attempt <= maxRetries; attempt++) {
-		try {
-			return await task(callExternalApi)(payload);
-		} catch (e) {
-			if (attempt === maxRetries) throw e;
-			// Exponential backoff: 30s, 60s, 120s — worker is free during each sleep
-			const delay = 30 * Math.pow(2, attempt - 1);
-			await sleep(delay);
-		}
+async function queueForLater(payload: any, reason: string) {
+	console.log(`Queued for later: ${reason}`);
+	return { submitted: false, reason };
+}
+
+// Exponential backoff, capped: 30s, 60s, 90s - the worker is free during each wait
+const submit = task(callExternalApi, {
+	retry: { attempts: 3, delay: 30, multiplier: 2, max_delay: 90 }
+});
+
+export const main = workflow(async (payload: any) => {
+	try {
+		return await submit(payload);
+	} catch (e) {
+		// Every attempt failed: fall back instead of failing the workflow
+		return await task(queueForLater)(payload, e.message);
 	}
 });
 ```
@@ -1294,10 +1448,11 @@ export const main = workflow(async (payload: any, maxRetries: number = 3) => {
 <TabItem value="python" label="Python" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
 
 ```python
-from wmill import task, workflow, sleep
+from wmill import task, workflow
 from wmill.client import TaskError
 
-@task
+# Exponential backoff, capped: 30s, 60s, 90s - the worker is free during each wait
+@task(retry={"attempts": 3, "delay": 30, "multiplier": 2, "max_delay": 90})
 async def call_external_api(payload: dict):
     import httpx
     async with httpx.AsyncClient() as client:
@@ -1305,17 +1460,18 @@ async def call_external_api(payload: dict):
         resp.raise_for_status()
         return resp.json()
 
+@task
+async def queue_for_later(payload: dict, reason: str):
+    print(f"Queued for later: {reason}")
+    return {"submitted": False, "reason": reason}
+
 @workflow
-async def main(payload: dict, max_retries: int = 3):
-    for attempt in range(1, max_retries + 1):
-        try:
-            return await call_external_api(payload)
-        except TaskError:
-            if attempt == max_retries:
-                raise
-            # Exponential backoff: 30s, 60s, 120s — worker is free during each sleep
-            delay = 30 * (2 ** (attempt - 1))
-            await sleep(delay)
+async def main(payload: dict):
+    try:
+        return await call_external_api(payload)
+    except TaskError as e:
+        # Every attempt failed: fall back instead of failing the workflow
+        return await queue_for_later(payload, str(e))
 ```
 
 </TabItem>
@@ -1483,6 +1639,21 @@ interface TaskOptions {
 	concurrency_limit?: number; // max concurrent executions
 	concurrency_key?: string; // concurrency grouping key
 	concurrency_time_window_s?: number; // concurrency time window (seconds)
+	retry?: TaskRetry; // re-dispatch policy for a failed task
+}
+```
+
+#### `TaskRetry`
+
+[Re-dispatch policy](#retries) for a failed task.
+Each attempt runs as its own step and the wait between two of them is a durable sleep.
+
+```typescript
+interface TaskRetry {
+	attempts: number; // retries after the first failure, 0 to 100
+	delay?: number; // seconds before the first retry (default 0)
+	multiplier?: number; // applied to the delay after each attempt (default 1)
+	max_delay?: number; // ceiling for the delay (seconds)
 }
 ```
 
@@ -1519,7 +1690,16 @@ async def heavy_compute(data: list):
     return sum(data)
 ```
 
-Options: `path`, `timeout`, `tag`, `cache_ttl`, `priority`, `concurrency_limit`, `concurrency_key`, `concurrency_time_window_s`.
+Options: `path`, `timeout`, `tag`, `cache_ttl`, `priority`, `concurrency_limit`, `concurrency_key`, `concurrency_time_window_s`, `retry`.
+
+`retry` takes a dict with `attempts` (required, 0 to 100), `delay`, `multiplier` and `max_delay`.
+See [retries](#retries).
+
+```python
+@task(retry={"attempts": 3, "delay": 30, "multiplier": 2})
+async def call_api(payload: dict):
+    ...
+```
 
 #### `task_script(path, **options)`
 

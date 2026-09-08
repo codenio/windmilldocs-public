@@ -29,6 +29,8 @@ From a single flow, this feature can for example help you with:
 
 As well as many other examples (inventory synchronization, data backups, file uploads, scraping etc.)
 
+Tasks in [workflows as code](../core_concepts/31_workflows_as_code/index.mdx#retries) have their own retry option, set on the task rather than in the flow editor.
+
 ## Constant retries
 
 From the `Advanced` menu, pick `Retries` and toggle `Constant retry enabled`.
