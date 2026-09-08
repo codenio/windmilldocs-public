@@ -27,6 +27,14 @@ Volumes are declared with comment annotations at the top of your script. The syn
 <comment_prefix> volume: <name> <mount_path>
 ```
 
+The comment prefix depends on the script's language.
+Languages not listed below do not accept volume annotations:
+
+| Comment prefix | Languages |
+|---|---|
+| `#` | Python, Bash, PowerShell, Ansible, Ruby, R |
+| `//` | TypeScript (Bun, Deno and native), Go, PHP |
+
 Where:
 - `<name>` is the volume identifier. Must be 2–255 characters, start and end with an alphanumeric character, and contain only `a-z`, `A-Z`, `0-9`, `.`, `_`, or `-`.
 - `<mount_path>` is the path where the volume will be available during execution. With [nsjail sandboxing](../../advanced/27_security_isolation/index.mdx), this can be an absolute path (restricted to `/tmp/`, `/mnt/`, `/opt/`, `/home/`, `/data/` prefixes) or a relative path. Without sandboxing, only relative paths are supported (e.g. `.claude`, `data/models`) — they are resolved relative to the job's working directory via a symlink.
@@ -52,6 +60,27 @@ def main():
     with open("data/result.json", "w") as f:
         f.write('{"ok": true}')
 ```
+
+### PHP
+
+A PHP script opens with `<?php`, which is not a comment.
+That line is skipped while the annotations are read, so the annotation goes on its own line below the opener:
+
+```php
+<?php
+// volume: mydata data
+
+function main() {
+    file_put_contents("data/result.json", json_encode(["ok" => true]));
+}
+```
+
+The opener is skipped even when it carries code (`<?php declare(strict_types=1);`), but an annotation appended to that same line is not read.
+
+PHP has no per-script [`sandbox` annotation](../../advanced/27_security_isolation/index.mdx#sandbox-annotation), so absolute mount paths require [nsjail sandboxing](../../advanced/27_security_isolation/index.mdx) to be enabled for the worker (`DISABLE_NSJAIL=false` or the `job_isolation` instance setting).
+Otherwise use a relative path, resolved relative to the job's working directory.
+
+A PHP script can mount a volume but cannot join a [pipeline](../63_pipelines/index.mdx): the `// pipeline` annotation is not read past the `<?php` opener.
 
 ### With sandbox (absolute paths)
 

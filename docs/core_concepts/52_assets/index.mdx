@@ -21,6 +21,8 @@ As of writing this, assets are supported for the following languages:
 - [JavaScript / TypeScript](../../getting_started/0_scripts_quickstart/1_typescript_quickstart/index.mdx)
 - [DuckDB](../../getting_started/0_scripts_quickstart/5_sql_quickstart/index.mdx#duckdb)
 
+Volume assets are the exception: a `volume://` asset comes from a [`volume:` annotation](../67_volumes/index.mdx#declaring-volumes) rather than from an analysis of the code, so it is detected in every language that accepts the annotation, PHP and Go included.
+
 When the asset is a database resource or an S3 file, an explore button will appear next to the asset with access to the [database manager](../3_resources_and_types/index.mdx#database-manager).
 
 ## Asset detection
