@@ -37,7 +37,7 @@ To enable restricted domain authentication, an administrator can configure the a
 
 ## Guest sign-in
 
-A [guest app](../../apps/13_guest_apps/index.mdx) is opened by someone the identity provider authenticates who has no Windmill account.
+A [guest app](../../apps/13_guest_apps/index.mdx) is opened by someone who has no Windmill account, either after signing in or with a JWT the embedding backend signs (see below).
 Signing in as a guest goes through the same SSO or SAML providers as an ordinary login, but provisions nothing: no user, no invite, no workspace membership, and no seat.
 The session it mints is pinned to one workspace and scoped to that one app.
 
@@ -47,10 +47,12 @@ The instance setting 'Require users to have been added manually to Windmill to s
 Someone who already has an account anywhere on the instance is never admitted as a guest.
 A guest becomes a regular user by signing in from the ordinary login page with the same identity, which provisions the account as any first sign-in would.
 
+An embedded app can skip the sign-in entirely: a [guest JWT](../../apps/13_guest_apps/index.mdx#guest-jwt-for-embedded-apps) your own backend signs, verified against a key the workspace holds, resolves to the same guest without an identity-provider round trip.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Guest apps"
-		description="Let anyone your identity provider authenticates open an app without an account and without a seat."
+		description="Let people open an app without a Windmill account and without a seat, through a sign-in or a JWT your backend signs."
 		href="/docs/apps/guest_apps"
 	/>
 </div>

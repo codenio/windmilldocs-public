@@ -78,7 +78,7 @@ summary: "Partner dashboard"
 guests: true
 ```
 
-[Guest apps](../../apps/13_guest_apps/index.mdx) require a login through the identity provider but no Windmill account and no workspace membership.
+[Guest apps](../../apps/13_guest_apps/index.mdx) require an identity, through a sign-in with the identity provider or a [JWT your own backend signs](../../apps/13_guest_apps/index.mdx#guest-jwt-for-embedded-apps), but no Windmill account and no workspace membership.
 Pushing `guests: true` does not by itself let anyone in: the workspace and instance guest switches are checked on every guest request.
 
 The rest of the execution policy is auto-generated at deployment time.
@@ -100,7 +100,7 @@ The execution policy is auto-generated at deployment time. It controls how backe
 | Mode | Description |
 |------|-------------|
 | `publisher` | Requires login and read access on the app. Runnables execute as the app publisher (the user who deployed the app), so users don't need direct permissions on the underlying scripts. This is the default. |
-| `guest` | Login required, workspace membership not. Anyone the identity provider authenticates who has no Windmill account can open the app, and runnables execute as the app publisher. Only honored where the workspace and the instance admit [guests](../../apps/13_guest_apps/index.mdx). |
+| `guest` | An identity required, workspace membership not. Anyone with no Windmill account whom the identity provider authenticates, or a [guest JWT](../../apps/13_guest_apps/index.mdx#guest-jwt-for-embedded-apps) names, can open the app, and runnables execute as the app publisher. Only honored where the workspace and the instance admit [guests](../../apps/13_guest_apps/index.mdx). |
 | `anonymous` | No login required. Runnables still execute as the app publisher; unauthenticated callers appear as `anonymous`. This is the mode used by public apps. |
 | `viewer` | Requires login. Runnables execute with the permissions of the viewer themselves, for per-user access control. |
 

@@ -192,5 +192,5 @@ Windmill apps are custom-made user interfaces meant to interact with scripts and
 The Access control in the deploy menu decides who can open a deployed app:
 
 - **Members**: The app can be accessed & triggered by anyone who has [read access](../core_concepts/16_roles_and_permissions/index.mdx) to the app. This is the default.
-- **Guests**: The above, plus anyone your identity provider authenticates who has no Windmill account. See [guest apps](./13_guest_apps/index.mdx).
+- **Guests**: The above, plus anyone with no Windmill account whom your identity provider authenticates or a [guest JWT](./13_guest_apps/index.mdx#guest-jwt-for-embedded-apps) names. See [guest apps](./13_guest_apps/index.mdx).
 - **Public**: The app can be accessed as a standalone app by anyone who has the secret URL, with no login. See [public apps](./8_public_apps.mdx).

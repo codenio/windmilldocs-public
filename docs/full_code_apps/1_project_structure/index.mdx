@@ -44,7 +44,7 @@ custom_path: "my-dashboard"
 # Optional: make the app publicly accessible (no login)
 public: false
 
-# Optional: open the app to guests (login required, no account needed)
+# Optional: open the app to guests (an identity required, no Windmill account needed)
 guests: false
 
 # Optional: data table access configuration
@@ -66,7 +66,7 @@ Its `execution_mode` comes from `public` and `guests`: `public: true` means `ano
 | `summary` | string | Yes | Short description of the app (max 1000 chars) |
 | `custom_path` | string | No | Custom URL path (admin only) |
 | `public` | boolean | No | Whether the app is publicly accessible without login ([public app](../../apps/8_public_apps.mdx)) |
-| `guests` | boolean | No | Whether the app is open to [guests](../../apps/13_guest_apps/index.mdx): a login is required, a Windmill account is not |
+| `guests` | boolean | No | Whether the app is open to [guests](../../apps/13_guest_apps/index.mdx): an identity is required, a Windmill account is not |
 | `data.datatable` | string | No | [Datatable](../../core_concepts/11_persistent_storage/data_tables.mdx) name |
 | `data.tables` | string[] | No | List of table names to whitelist |
 | `data.schema` | string | No | Schema name within the datatable |

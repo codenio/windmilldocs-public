@@ -45,7 +45,7 @@ It is a tri-state:
 
 ```yaml
 public: true   # anonymous: anyone with the URL, no login
-guests: true   # guest: login required, Windmill account not
+guests: true   # guest: an identity required, Windmill account not
 # neither      # publisher: workspace members with read access only
 ```
 
