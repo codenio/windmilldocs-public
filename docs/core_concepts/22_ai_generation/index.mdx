@@ -15,6 +15,7 @@ If you're rather interested in leveraging OpenAI from your scripts, flows and ap
 :::
 
 To enable Windmill AI, go to the "Windmill AI" tab in the workspace settings and add a [supported model](#models)'s [resource](../3_resources_and_types/index.mdx). Code completion is disabled by default, but you can enable it in the same tab.
+The same tab has a toggle to [hide the assistant](#hiding-the-ai-assistant-in-a-workspace) from the workspace UI.
 
 ![Enable Windmill AI](./enable_ai.png 'Enable Windmill AI')
 
@@ -403,6 +404,13 @@ The fallback resources are read from the `admins` workspace, so any resources re
 In a workspace that is using the instance fallback, the Windmill AI settings page shows a read-only "Active instance AI" summary and an **Override for this workspace** button to reveal the editable workspace form. Clearing the workspace providers reverts the workspace to the instance fallback immediately, without a page refresh.
 
 Non-admin members can use AI chat whenever either scope is configured — they do not need access to workspace or instance settings.
+
+## Hiding the AI assistant in a workspace
+
+Workspace [admins](../16_roles_and_permissions/index.mdx#admin) can hide the Windmill AI assistant from a whole workspace with the "Hide AI sessions" toggle at the bottom of the "Windmill AI" tab of the [workspace settings](../44_workspace_settings/index.mdx).
+[AI sessions](../69_ai_sessions/index.mdx), the AI chat, code generation and completion, "AI Fix" and the other AI buttons then disappear for every member.
+
+[AI agent](../54_ai_agents/index.mdx) steps and the [AI sandbox](../68_ai_sandbox/index.mdx) keep working: the toggle only hides the assistant in the UI, it does not restrict API access to the configured providers.
 
 ## AI usage and cost
 
