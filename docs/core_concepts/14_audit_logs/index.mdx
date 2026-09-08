@@ -74,6 +74,21 @@ Key properties:
 
 This is the recommended setup when you forward audit logs to a [SIEM](https://en.wikipedia.org/wiki/Security_information_and_event_management) for long-term security analysis: point your SIEM (or its collector) at the day-partitioned NDJSON files in the bucket. Because the bucket then holds the durable, complete history, you can safely lower the database [Audit log retention (days)](../../advanced/18_instance_settings/index.mdx#audit-log-retention-days) to only what you need for the in-app audit log view.
 
+## SCIM and SSO operations
+
+Changes Windmill makes on behalf of your [identity provider](../../advanced/28_saml_and_scim/index.mdx) are recorded under the "Instance" scope and attributed to a system user rather than to the person who triggered them, so an audit reader can tell which channel moved a user.
+They only exist on [Enterprise Edition](/pricing), where SAML and SCIM are available.
+
+| Username | Operations | Recorded when |
+| --- | --- | --- |
+| `scim` | `users.scim_create`, `users.scim_update`, `users.scim_delete` | [SCIM provisioning](../../advanced/28_saml_and_scim/index.mdx#scim) creates a user, updates one (including deactivating it), or deletes one |
+| `scim` | `instance_groups.scim_create`, `instance_groups.scim_update`, `instance_groups.scim_delete` | SCIM provisioning creates an [instance group](../../advanced/28_saml_and_scim/index.mdx#instance-groups), renames it or changes its membership, or deletes it |
+| `sso` | `instance_groups.jit_adduser`, `instance_groups.jit_removeuser` | [Login-time group sync](../../advanced/28_saml_and_scim/index.mdx#login-time-group-sync-from-the-idp-groups-claim) adds the user to, or removes them from, a SCIM-provisioned instance group at SSO login |
+
+The `scim` and `sso` usernames belong to the system accounts `scim@windmill.dev` and `sso@windmill.dev`, so no real user is credited with these entries.
+The two login-time operations name the instance group as the resource and carry the affected user's email as a parameter.
+They are only written when the "SSO groups claim" [instance setting](../../advanced/18_instance_settings/index.mdx#sso-groups-claim) is set.
+
 ## Viewing jobs metadata from the audit logs
 
 You can retrieve the job ID from the job and then access all the job metadata, including the job arguments by fetching the information from the job itself which is stored for as long as the configured retention period.
