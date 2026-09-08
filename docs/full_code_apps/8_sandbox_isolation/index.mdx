@@ -1,0 +1,94 @@
+---
+description: How do I isolate a Windmill app from the viewer's browser session? Turn on sandbox isolation to render the app in an opaque-origin iframe.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Sandbox isolation
+
+Sandbox isolation renders a deployed app in an opaque-origin iframe, so the app's browser-side code cannot reach the viewer's Windmill session.
+It applies to both [low-code apps](../../apps/0_app_editor/index.mdx) and [full-code apps](../index.mdx).
+
+This happens in the viewer's browser, and is unrelated to the [process isolation](../../advanced/27_security_isolation/index.mdx) that sandboxes job execution on a worker.
+
+Turn it on from the app editor's Deploy panel, under Sandbox isolation.
+It is off by default and currently in alpha, and is [being made the norm in stages](#rollout).
+
+![Sandbox isolation setting](./sandbox_toggle.webp 'Sandbox isolation setting')
+
+## Why enable it
+
+An app runs code its author wrote, in the browser of whoever opens it.
+Without isolation that code runs on the Windmill origin with the viewer's session, so it acts as the viewer: a silent privilege escalation for a malicious app author.
+An XSS bug in an otherwise trusted app gives an attacker the same thing.
+
+Isolation removes that reach:
+
+- Low-code apps render in the opaque iframe with a scoped embed token instead of the session cookie. Its app scopes name that one app, so it cannot drive another. It lasts 12 hours and cannot mint a further token.
+- Full-code apps have their bundle served under a `sandbox` content security policy, which confines the bundle without needing a token. One is minted only if the app declares [frontend API access](#frontend-api-access), and that one is the viewer's.
+
+It applies wherever the app is reachable, on the [public URL](../../apps/8_public_apps.mdx) and in-workspace alike.
+
+We recommend turning it on.
+It also removes the warning viewers get before a public app renders HTML or SVG produced by a runnable.
+
+Isolation is a separate question from the app's [execution policy](../../apps/3_app-runnable-panel.mdx#policy), which decides which user the runnables execute as.
+The two are configured independently.
+
+## Rollout
+
+Isolation is becoming the default in three stages:
+
+1. Now: optional, off by default, and in alpha.
+2. November 2026: on by default for newly created apps. Existing apps keep whatever they are set to.
+3. January 2027: viewers see a warning when they load an app that is not sandboxed.
+
+Those dates are intentions, not commitments.
+Turning isolation on now means the later stages change nothing for your apps.
+
+While it is in alpha we are looking for feedback, particularly on apps it breaks.
+Tell us on [Discord](https://discord.com/invite/V7PM2YHsPB) or open a [GitHub issue](https://github.com/windmill-labs/windmill/issues).
+
+## Limitations
+
+An opaque origin has no real web storage and no cookies.
+Windmill shims them so apps that use them keep working, but they are not the browser's own:
+
+- `localStorage` is backed by the hosting page, keyed per workspace and app, so two sandboxed apps never share a store.
+- `sessionStorage` is in-memory and lasts only for the session.
+- `document.cookie` is an in-memory jar, not the Windmill session cookie.
+
+Anything that needs a real origin does not work: IndexedDB, third-party authentication SDKs, and OAuth redirects that return to a named origin.
+Leave isolation off for apps that depend on those.
+
+The feature is in alpha, so after turning it on, open the app from its public URL and confirm it still behaves as expected.
+
+## Frontend API access
+
+A separate opt-in, for [full-code apps](../index.mdx) only and only once isolation is on.
+A sandboxed bundle can no longer reach the API on the viewer's session, so if its frontend code needs the API, give it a credential of its own.
+
+Toggle the capabilities individually: running scripts and flows, reading jobs and results, reading the viewer's identity, reading [resources](../../core_concepts/3_resources_and_types/index.mdx) and reading [variables](../../core_concepts/2_variables_and_secrets/index.mdx).
+The token is minted for the viewer rather than the publisher and carries only what you toggled.
+It is a different credential from the one a sandboxed low-code app gets, and a broader one where it counts: running scripts and flows covers anything that viewer could run, and the resource and variable scopes expose credential values.
+
+Each viewer approves the list before the app runs, and can choose to open the app without granting it.
+Ticking "Do not ask again" skips the prompt on later visits, until the app declares a scope they have not already approved.
+
+![Frontend API access consent screen](./sdk_consent.webp 'Frontend API access consent screen')
+
+Grant only what the app needs: its code, or an XSS bug in it, can use every granted scope as that viewer.
+Add `windmill-client` to the app's dependencies to make the calls, and note that an app bundled before frontend API access existed fails with a CORS error until you deploy it again.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Public apps"
+		description="Share an app through a secret URL, with or without requiring a login."
+		href="/docs/apps/public_apps"
+	/>
+	<DocCard
+		title="Runnable editor"
+		description="Configure how an app's scripts and flows run, and under whose identity."
+		href="/docs/apps/app-runnable-panel"
+	/>
+</div>

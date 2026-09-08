@@ -26,11 +26,19 @@ Widening an app to Guests or to Public can be reserved to workspace admins and b
 
 ![Log in to open the app](../assets/apps/5_public_apps/public_log.png "A visitor without read access is asked to log in")
 
+A public app runs in the browsers of people who may not be workspace members, and by default its code runs there with whatever Windmill session the viewer has.
+We recommend turning on [sandbox isolation](../full_code_apps/8_sandbox_isolation/index.mdx) (alpha) for public apps, which confines that code to an opaque-origin iframe instead.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Guest apps"
 		description="Let people open an app without a Windmill account and without a seat, through a sign-in or a JWT your backend signs."
 		href="/docs/apps/guest_apps"
+	/>
+	<DocCard
+		title="Sandbox isolation"
+		description="Confine an app's browser-side code so it cannot reach the viewer's Windmill session."
+		href="/docs/full_code_apps/sandbox_isolation"
 	/>
 	<DocCard
 		title="Roles and permissions"

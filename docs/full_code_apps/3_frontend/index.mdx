@@ -83,6 +83,9 @@ const finalResult = await streamJob(jobId, (update) => {
 });
 ```
 
+These functions all call the app's own backend runnables, which execute under the app's [execution policy](../7_deployment/index.mdx#execution-policy).
+Calling the wider Windmill API from frontend code is a separate feature: it requires [sandbox isolation](../8_sandbox_isolation/index.mdx#frontend-api-access), and runs as the viewer rather than the publisher.
+
 ## Framework examples
 
 <Tabs>

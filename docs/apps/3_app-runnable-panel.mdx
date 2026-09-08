@@ -608,6 +608,9 @@ A viewer of the app will execute the runnables of the app on behalf of the publi
 
 To understand how to handle resources in apps, see [Static resource select only / Resources from users allowed](#static-resource-select-only--resources-from-users-allowed).
 
+The policy decides which identity the runnables execute under.
+What the app's own browser-side code can reach in the viewer's browser is a separate setting, [sandbox isolation](../full_code_apps/8_sandbox_isolation/index.mdx).
+
 ### Identifying the app viewer
 
 Because runnables execute on behalf of the publisher, the `WM_EMAIL` [contextual variable](../core_concepts/47_environment_variables/index.mdx#contextual-variables) holds the publisher's email, not the viewer's. The viewer's email is exposed separately as `WM_END_USER_EMAIL`, which is set on every runnable an app triggers - including the steps of a flow it runs - and is an empty string for runs that did not come from an app.

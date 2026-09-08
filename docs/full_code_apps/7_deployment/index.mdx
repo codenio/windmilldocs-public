@@ -106,6 +106,13 @@ The execution policy is auto-generated at deployment time. It controls how backe
 
 The `triggerables` and `triggerables_v2` fields map each runnable to its execution configuration and are populated automatically during push/deploy.
 
+## Sandbox isolation
+
+The execution policy decides who the backend runnables run as.
+[Sandbox isolation](../8_sandbox_isolation/index.mdx) (alpha) is the separate, browser-side question: with it on, the app's bundle runs in an opaque-origin iframe and cannot reach the viewer's Windmill session.
+It is turned on from the app editor's Deploy panel and stored in the app's policy, which `wmill sync pull` writes into `raw_app.yaml` and `push` sends back.
+Unlike the rest of the policy it is not regenerated at deploy time, so a `raw_app.yaml` written by hand without that policy block turns isolation back off on the next push.
+
 ## Versioning
 
 Each deployment creates a new version of the app. The version counter increments on every update. Previous versions are retained and can be accessed through the API.
@@ -123,6 +130,11 @@ Full-code apps work with Windmill's [git sync](../../advanced/11_git_sync/index.
 		title="Public apps"
 		description="Share apps with anyone via a secret URL."
 		href="/docs/apps/public_apps"
+	/>
+	<DocCard
+		title="Sandbox isolation"
+		description="Confine an app's browser-side code so it cannot reach the viewer's Windmill session."
+		href="/docs/full_code_apps/sandbox_isolation"
 	/>
 	<DocCard
 		title="Deploy to prod"
