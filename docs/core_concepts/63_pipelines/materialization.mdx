@@ -1,5 +1,5 @@
 ---
-description: How do I materialize DuckLake tables in Windmill pipelines? Managed writes, SCD2 history, time-travel, schema capture, data tests and manual mode.
+description: How do I materialize tables in Windmill pipelines? Managed DuckLake writes, SCD2 history, schema capture, data tests and declared warehouse relations.
 ---
 
 import DocCard from '@site/src/components/DocCard';
@@ -52,6 +52,7 @@ WHERE wm_partition(created_at) = {partition}
 // materialize ducklake://<name>/<table> key=<col> history [track=<c1,…>] [deletes=close]  # managed SCD2 history
 // materialize ducklake://<name>/<table> … on_schema_change=warn|ignore|fail|sync      # any managed form: how a schema change is handled
 // materialize manual ducklake://<name>/<table>                                        # track-only escape hatch
+// materialize manual dbt://<warehouse>/<schema>/<name>                                # track-only warehouse relation, any language but dbt's own
 ```
 
 - **Managed (default)** — Windmill generates the write. DuckDB-only; validated at deploy (a script that is not a single trailing SELECT is rejected with a clear error). The **strategy** decides how each slice is reconciled:
@@ -61,8 +62,9 @@ WHERE wm_partition(created_at) = {partition}
   - `key=<col> history` → **SCD2 history**: keep every version of every row instead of overwriting on change. See [SCD2 history](#scd2-history-slowly-changing-dimensions).
   - `on_schema_change=<warn|ignore|fail|sync>` combines with any strategy and controls what a run does when the SELECT's columns diverge from the target's stored schema, from warning downstream consumers (`warn`, the default) to aborting the run (`fail`) or auto-syncing the table (`sync`). See [on_schema_change](#on_schema_change).
 - **`manual`** — the escape hatch: your script writes its own DDL and Windmill only records that the slice was materialized (no snapshot capture, no idempotency guarantee). Rare; explicit. See [Manual materialization](#manual-materialization-track-only).
+- **`dbt://<warehouse>/<schema>/<name>`** is a warehouse relation rather than a lake table: track-only by construction (`manual` is the only mode) and open to any language but dbt's own. See [Declaring a warehouse relation write](#declaring-a-warehouse-relation-write).
 
-`// materialize` is for DuckDB SQL. From **Python or TypeScript**, use the `wmill.ducklake` helpers (`upsert_partition`, `append_partition`, `read`) which give the same managed, idempotent write from arbitrary code.
+A `ducklake://` target is for DuckDB SQL, managed and `manual` alike: the write engine is DuckDB's, so the annotation is rejected at deploy on any other language. From **Python or TypeScript**, use the `wmill.ducklake` helpers (`upsert_partition`, `append_partition`, `read`) which give the same managed, idempotent write from arbitrary code.
 
 ## Manual materialization (track-only)
 
@@ -99,6 +101,44 @@ What the track-only edge records, and what it gives up:
 - Inert: [data tests](#data-tests) are rejected on a manual target, no [schema capture](#schema-capture) happens (so consumers get no [schema-contract](#schema-contracts) warnings against it), and [`on_schema_change`](#on_schema_change) has nothing to act on - the deploy logs a warning saying so.
 
 If replace, `key=` merge or `append` can express the write, prefer the managed form: `manual` trades the whole safety net for full control of the SQL.
+
+## Declaring a warehouse relation write
+
+The other target kind is a warehouse relation, the same `dbt://<warehouse>/<schema>/<name>` node a [dbt project](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx#models-in-the-asset-graph) puts on the graph.
+A script in any language but dbt's own can declare that it writes one:
+
+```python
+# pipeline
+# materialize manual dbt://main/analytics/raw_orders
+
+def main():
+    # Your own INSERT / COPY / MERGE against the warehouse, in whatever
+    # client the language uses. Windmill records the outcome, not the write.
+    ...
+```
+
+Identity is the physical relation, never the tool that produced it, so the ingestion script above and a dbt model reading `analytics.raw_orders` as a `source` land on the same node.
+That is what makes an ingestion step and the dbt project consuming it one lineage instead of two disconnected pictures, and it is what lets a downstream script subscribe with `// on dbt://main/analytics/raw_orders`.
+
+`manual` is not one mode among several here, it is the only one: Windmill generates no warehouse DDL, so the script issues its own write and Windmill records what happened.
+Writing the annotation without `manual` is refused at deploy rather than quietly downgraded, so nobody ships it expecting a generated write.
+
+Checked at deploy:
+
+- The target is a whole three-segment relation. `dbt://main/analytics` is refused, since no producer and no reader can ever name it.
+- `<warehouse>` is one the workspace [configures](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx#configure-a-warehouse), resolved the same way a dbt project's `profile.warehouse` is. A name no warehouse answers to would strand the write on a node nothing else reaches.
+- A dbt script itself may not declare it: what a project builds is read from its `manifest.json` and republished on every deploy, so an annotated write would be wiped by the deploy that accepted it.
+- [`// data_test`](#data-tests) beside a `dbt://` target is refused. Those checks are probes spliced around a *managed* write, and a warehouse relation is written by the script itself, so nothing would run them. Assert on the relation with a dbt test in the project that reads it.
+
+What a run records is the same track-only edge a `manual` DuckLake target gets: the relation is marked materialized (or failed, with the error) and stamped with the producing job, keyed by the [partition](./partitioning.mdx) when the script is also `// partitioned`.
+Everything the managed path adds is absent: no snapshot id, no row count, no [schema capture](#schema-capture) and so no [contract warnings](#schema-contracts) for consumers.
+The [partition-status grid and backfill](#partition-status-and-backfill) are DuckLake-only surfaces, so unlike a `manual` DuckLake target a warehouse relation gets neither.
+The [cascade](./index.mdx#triggering-a-pipeline) is unaffected: it fans out from the deploy-time asset rows, so subscribers on the relation fire when the script completes.
+A `// on dbt://<relation>` subscription goes through the same relation and warehouse checks as the target above, and is refused when every script that writes the relation is a dbt one, since a dbt run does not dispatch.
+Nothing producing the relation yet is fine: a subscriber may be deployed before its producer, as for every other asset kind.
+
+Like every other runtime pipeline annotation, the recording happens on the normal execution path.
+A run handed to a [dedicated worker](../25_dedicated_workers/index.mdx) or a flow runner skips that path, exactly as it skips `// partitioned` resolution, so such a run performs its write and leaves the relation with no last writer.
 
 ## Strategy and unit
 

@@ -155,7 +155,7 @@ Pipeline membership is broader than materialization: a script that only validate
 A pipeline's edges come from assets, not from manual wiring:
 
 - Outputs are detected automatically from your code. Writing an S3 file, a `COPY (...) TO file` in DuckDB, or a resource write is recognized as a produced asset. See [assets](../52_assets/index.mdx) for how detection works and how to override an ambiguous read/write.
-- Inputs are detected the same way. Inside a `// pipeline`, a read of a [DuckLake](../11_persistent_storage/ducklake.mdx) table or an S3 object [auto-derives its incoming cascade edge](#asset-triggers-the-cascade) straight from the code - no `// on <asset>` needed. `// on <asset>` stays required for edges detection can't see (a read built from dynamic SQL), for the other asset kinds (resource, data table, volume), and to carry per-edge options such as `debounce`.
+- Inputs are detected the same way. Inside a `// pipeline`, a read of a [DuckLake](../11_persistent_storage/ducklake.mdx) table or an S3 object [auto-derives its incoming cascade edge](#asset-triggers-the-cascade) straight from the code - no `// on <asset>` needed. `// on <asset>` stays required for edges detection can't see (a read built from dynamic SQL), for the other asset kinds (resource, data table, volume, warehouse relation), and to carry per-edge options such as `debounce`.
 
 Assets are referenced by URI. Every asset kind Windmill tracks can be used in a `// on` input and is detected as an output from code:
 
@@ -166,14 +166,19 @@ Assets are referenced by URI. Every asset kind Windmill tracks can be used in a 
 | Data table | `datatable://` | `datatable://main` | `wmill.datatable(...)` write |
 | Ducklake | `ducklake://` | `ducklake://main/orders` | managed `// materialize`, `wmill.ducklake` write |
 | Volume | `volume://` | `volume://name` | volume write |
+| Warehouse relation | `dbt://` | `dbt://main/analytics/orders` | a [dbt project](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx)'s models, or a `// materialize manual dbt://…` script |
 
 Mind the S3 URI shape: the first segment after `s3://` is the storage name, and the default workspace storage is the empty name - so a file `datasets/raw/events.parquet` in the workspace storage is `s3:///datasets/raw/events.parquet`, with three slashes. `s3://datasets/raw/events.parquet` would point at a secondary storage named `datasets`. The SDK helpers normalize to the same form (`wmill.writeS3File({ s3: 'datasets/raw/events.parquet' })` produces the asset `s3:///datasets/raw/events.parquet`), so the `// on` line of a consumer must use the triple-slash form to match.
 
 Read/write is inferred from code context (a `COPY (...) TO` is a write, a `read_parquet` is a read). Only asset URIs are valid here; a `// on` with an unrecognized URI is ignored. Duplicate identical `// on` lines are de-duplicated.
 
+`dbt://` is the one kind whose subscriptions are restricted.
+A dbt run does not trigger downstream runs, so `// on dbt://<relation>` is refused when dbt is the only thing that writes the relation, rather than drawing an arrow that can never fire.
+What makes the edge fire is a [`// materialize manual dbt://…`](./materialization.mdx#declaring-a-warehouse-relation-write) producer, and a relation nothing produces yet is accepted like any other asset kind.
+
 :::info Substrate setup
 
-The store an asset points at has to exist before a pipeline can write to it. A [DuckLake](../11_persistent_storage/ducklake.mdx) is one click to create in `workspace settings` -> `Object storage (S3)` (the default lake is `main`), so `ducklake://` targets work as soon as a lake is configured. The [data table](../11_persistent_storage/data_tables.mdx) substrate behind `datatable://` is a separate Postgres database that must be configured first in the workspace's data-tables settings; until it is, `datatable://` reads and writes have no backing store. `s3://`, `$res:` and `volume://` assets need only their usual [object storage](../38_object_storage_in_windmill/index.mdx) / resource / volume configuration.
+The store an asset points at has to exist before a pipeline can write to it. A [DuckLake](../11_persistent_storage/ducklake.mdx) is one click to create in `workspace settings` -> `Object storage (S3)` (the default lake is `main`), so `ducklake://` targets work as soon as a lake is configured. The [data table](../11_persistent_storage/data_tables.mdx) substrate behind `datatable://` is a separate Postgres database that must be configured first in the workspace's data-tables settings; until it is, `datatable://` reads and writes have no backing store. `s3://`, `$res:` and `volume://` assets need only their usual [object storage](../38_object_storage_in_windmill/index.mdx) / resource / volume configuration. A `dbt://` relation needs its `<warehouse>` [configured on the workspace](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx#configure-a-warehouse); a name no warehouse answers to is refused at deploy.
 
 :::
 
@@ -311,7 +316,7 @@ A step runs when any of its triggers fire. There are two trigger forms: asset wr
 
 Asset writes are the default way data flows through a pipeline: when an upstream script writes an asset, every script that reads it runs next. Inside a `// pipeline`, a read of a [DuckLake](../11_persistent_storage/ducklake.mdx) table or an S3 object auto-derives that edge from the code - the DuckDB `FROM` clause, a `read_parquet`, or an SDK `load` call wires the cascade edge with no annotation. Auto-derived edges render as ordinary trigger edges. A cascade-dispatched run also records the DuckLake snapshot id of each direct upstream asset at dispatch time, shown as an [Upstream snapshots](./materialization.mdx#upstream-snapshots) panel on its run page, so you can query the inputs exactly as the run saw them.
 
-Auto-derivation covers read-only DuckLake and S3 reads only. A read the script also writes (an incremental model that `SELECT`s from the table it materializes) is not turned into a self-triggering edge, an ambiguous read is skipped, and the other asset kinds (resource, data table, volume) stay explicit.
+Auto-derivation covers read-only DuckLake and S3 reads only. A read the script also writes (an incremental model that `SELECT`s from the table it materializes) is not turned into a self-triggering edge, an ambiguous read is skipped, and the other asset kinds (resource, data table, volume, warehouse relation) stay explicit.
 
 ```
 // on <asset-uri> [debounce=<duration>]
@@ -320,7 +325,7 @@ Auto-derivation covers read-only DuckLake and S3 reads only. A read the script a
 Use `// on <asset-uri>` for edges detection can't derive on its own:
 
 - a read hidden from static analysis (a table name built from dynamic SQL),
-- an input of a kind that isn't auto-derived (resource, data table, volume),
+- an input of a kind that isn't auto-derived (resource, data table, volume, warehouse relation),
 - or to carry the per-edge `debounce=` option (the only inline option, see [debounce](#debounce); meaningful for asset inputs only). An explicit `// on` wins over the derived edge for the same asset, so it is how you attach options to an otherwise-derived read.
 
 `<asset-uri>` is any of the asset kinds in the table above.
@@ -446,7 +451,7 @@ Materializing one dataset slice per time bucket or key - the `// partitioned` an
 
 ## Materialization
 
-Managed DuckLake writes - the `// materialize` grammar and strategies, SCD2 history, versioning and time-travel, upstream snapshots, partition status and backfill, schema capture, column-level lineage and data tests - are covered on the dedicated [Materialization](./materialization.mdx) page.
+Managed DuckLake writes (the `// materialize` grammar and strategies, SCD2 history, versioning and time-travel, upstream snapshots, partition status and backfill, schema capture, column-level lineage and data tests) and declared `dbt://` warehouse-relation writes are covered on the dedicated [Materialization](./materialization.mdx) page.
 
 ## Macro libraries (DuckDB)
 
@@ -636,11 +641,12 @@ The full command reference (all options for `show`, `run`, `dev` and `docs`) is 
 | Annotation | Scope | Options / values | Default | Purpose |
 | --- | --- | --- | --- | --- |
 | `// pipeline` | script | none (bare marker) | - | Include the script in its folder's pipeline graph |
-| `// on <asset-uri>` | input | `debounce=<duration>` | - | Run when the asset is written (cascade); `<asset-uri>`: `s3:///<key>` (workspace storage) or `s3://<storage>/<key>`, `$res:`, `datatable://`, `ducklake://`, `volume://` |
+| `// on <asset-uri>` | input | `debounce=<duration>` | - | Run when the asset is written (cascade); `<asset-uri>`: `s3:///<key>` (workspace storage) or `s3://<storage>/<key>`, `$res:`, `datatable://`, `ducklake://`, `volume://`, `dbt://` (see the [restriction](#inputs-and-outputs-assets)) |
 | `// on <kind>` | trigger | none (marker-only) | - | Fire from a native trigger that targets the script; `<kind>`: `schedule`, `webhook`, `email`, `kafka`, `mqtt`, `nats`, `postgres`, `sqs`, `gcp`, `data_upload`. The cron and all other options live on the trigger row |
 | `// freshness <duration>` | SLA | `<n>[s\|m\|h\|d]` | - | Fresh/stale badge on the graph; on EE a [watchdog](#freshness-watchdog-ee) re-runs stale scripts (first wins) |
 | `// partitioned <kind> [opts]` | output | kinds `daily\|hourly\|weekly\|monthly\|dynamic`; opts `tz=`, `format=`, `start=`, `key=` (dynamic) | `tz=UTC`, per-kind `format`, no `start` | Materialize one dataset per partition (first wins) |
 | `// materialize [manual] <ducklake-uri> [opts]` | output | `manual` (track-only); opts `append`, `key=<col>`, `history` (SCD2, with `track=`, `deletes=close`), `on_schema_change=warn\|ignore\|fail\|sync` | managed, replace | Managed write into a DuckLake table — idempotent, snapshotted, tracked (first wins). DuckDB-only |
+| `// materialize manual <dbt-uri>` | output | `manual` only | - | Declare a write to a [warehouse relation](./materialization.mdx#declaring-a-warehouse-relation-write) (`dbt://<warehouse>/<schema>/<name>`), from any language but dbt's own. Track-only: the script issues its own write |
 | `// macros` | script | none (bare marker) | - | Mark a DuckDB script as a workspace [macro library](./macros.mdx); its macros become callable from every DuckDB script |
 | `// use <lib_path>` | script | macro library script path | - | Force-inject a macro library (definitions + setup), for calls hidden in dynamic SQL (accumulate) |
 | `// column <out> <- <asset-uri>.<col>[, …]` | lineage | comma-separated source columns | inferred from SQL | Column-to-column lineage; inferred from SQL for DuckDB, override/declare for other languages. Metadata only (accumulate) |

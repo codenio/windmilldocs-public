@@ -1,10 +1,10 @@
 ---
-description: How do I ingest external data into a Windmill pipeline? Write the extract in any language and load it through a managed materialization.
+description: How do I ingest external data into a Windmill pipeline? Extract in any language, then load through a managed materialization or a declared warehouse write.
 ---
 
 # Ingestion (EL)
 
-Most of the [pipelines](./index.mdx) page assumes data is already in the lake. This page covers the extract-load side: an entry script owns the extract in whatever language fits the source, and the load goes through a managed [materialization](./materialization.mdx) so it gets idempotent write strategies, snapshots and the partition grid.
+Most of the [pipelines](./index.mdx) page assumes data is already in the lake. This page covers the extract-load side: an entry script owns the extract in whatever language fits the source, and the load goes through a managed [materialization](./materialization.mdx) so it gets idempotent write strategies, snapshots and the partition grid. A warehouse destination is the exception: there the script owns its own write and only [declares](./materialization.mdx#declaring-a-warehouse-relation-write) it.
 
 When the source is something DuckDB can query directly (an attached database, files in object storage), a single DuckDB step is both extract and load - see the first worked example below. For everything else (paginated or authenticated APIs, SaaS SDKs, streams), split the step in two:
 
@@ -15,7 +15,10 @@ When the source is something DuckDB can query directly (an attached database, fi
 - The entry script talks to the outside world and writes the raw batch to a landing object in [workspace storage](../38_object_storage_in_windmill/index.mdx) with `wmill.write_s3_file` / `wmill.writeS3File`.
 - The loader is a DuckDB script with `-- on s3:///...` and `-- materialize`: it re-runs whenever a new batch lands ([the cascade](./index.mdx#triggering-a-pipeline)) and owns idempotency, typing and history.
 
-Why two scripts instead of one script writing the lake directly: [`materialize`](./materialization.mdx) is DuckDB-only, and lake writes made through SDK helpers are not visible to the asset parser, so a single Python or TypeScript node would deploy with no output edge in the graph. The landing file is not overhead: it is a replayable raw zone that decouples source flakiness from load semantics.
+Why two scripts instead of one script writing the lake directly: a `ducklake://` [`materialize`](./materialization.mdx) is DuckDB-only, and lake writes made through SDK helpers are not visible to the asset parser, so a single Python or TypeScript node would deploy with no output edge in the graph. The landing file is not overhead: it is a replayable raw zone that decouples source flakiness from load semantics.
+
+The single-node shape does work when the destination is a warehouse relation rather than the lake.
+An ingestion script in any language declares its output with [`// materialize manual dbt://<warehouse>/<schema>/<name>`](./materialization.mdx#declaring-a-warehouse-relation-write), issues the write itself, and lands on the same graph node as the [dbt model](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx#models-in-the-asset-graph) that reads the relation.
 
 ## Choosing the extract engine
 

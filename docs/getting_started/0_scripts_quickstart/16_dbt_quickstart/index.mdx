@@ -232,9 +232,34 @@ def main():
     ...
 ```
 
-A dbt run does not trigger downstream runs. dbt already orders its own DAG, and a run's `select` can build any subset of the project, so the deploy-time write set is not what ran; `# on dbt://...` is refused at deploy rather than drawing a cascade arrow that never fires. Schedule the consumer, or run it from the graph. For the same reason a dbt script is not a member of its folder's [pipeline](../../../core_concepts/63_pipelines/index.mdx) - its models are on the shared asset graph regardless, which is what puts a native reader beside them.
-
 Two limits worth knowing: two workspace warehouses pointing at one physical warehouse do not unify, so point both projects at one warehouse to link them; and column-level lineage is not available for dbt, because `manifest.json` carries declared column metadata but no column-to-column edges.
+
+### Declaring a write from a native script
+
+The reverse edge is an annotation.
+A script in any language but dbt's own can declare that it *writes* a warehouse relation with `// materialize manual dbt://<warehouse>/<schema>/<name>`, so an ingestion step and the dbt project consuming its output are one lineage rather than two disconnected pictures:
+
+```python
+# pipeline
+# materialize manual dbt://main/analytics/raw_orders
+
+def main():
+    ...  # your own write against the warehouse
+```
+
+The script and the dbt model that reads `analytics.raw_orders` as a `source` land on the same node, because identity is the physical relation rather than the tool that produced it.
+`manual` is the only mode the target has: Windmill generates no warehouse DDL, so the script issues its own write and Windmill records the outcome.
+A dbt script may not declare one - what a project builds is read from its `manifest.json`.
+See [declaring a warehouse relation write](../../../core_concepts/63_pipelines/materialization.mdx#declaring-a-warehouse-relation-write) for the rest of the deploy-time rules and for what a run records.
+
+### Which subscriptions fire
+
+A dbt run does not trigger downstream runs.
+dbt already orders its own DAG, and a run's `select` can build any subset of the project, so the deploy-time write set is not what ran.
+A native producer does trigger them: a script that declares the write above wakes `# on dbt://<relation>` subscribers when it completes, like any other asset write.
+So `# on dbt://...` is refused at deploy only for a relation dbt projects alone build, which would draw a cascade arrow that can never fire; schedule the consumer of such a mart, or run it from the graph.
+A dbt script may not subscribe at all: a project runs on its own schedule rather than being woken by an asset cascade.
+For the same reason it is not a member of its folder's [pipeline](../../../core_concepts/63_pipelines/index.mdx) - its models are on the shared asset graph regardless, which is what puts a native reader beside them.
 
 ## Engines
 
