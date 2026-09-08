@@ -467,6 +467,12 @@ You can filter on:
 - **[Workspace dependencies](../../core_concepts/55_workspace_dependencies/index.mdx)** - Shared dependency files. Creating, archiving, or deleting workspace dependencies triggers deployment callbacks for git sync.
 - **[Data table migrations](../../core_concepts/11_persistent_storage/data_tables.mdx#migrations)** - SQL migrations of data tables, stored under `migrations/datatable/`. On by default, including on git sync configurations predating the type. Like workspace dependencies, users and workspace settings, they sit outside the `f/` and `u/` namespaces, so the [path filters](#path-filters) do not apply to them and this toggle (or [`skipDatatableMigrations`](../3_cli/wmill-yaml-reference.mdx#skipdatatablemigrations) in `wmill.yaml`) is the only way to opt out.
 
+## Granular permissions
+
+[Granular permissions](../../core_concepts/16_roles_and_permissions/index.mdx#extra-permissions) set on a script, flow, app or variable are committed as an `extra_perms` map in the item's file, and changing them from the Share menu triggers a commit of its own.
+Deploying such a commit back applies the map through the same grant and revoke operations the Share menu uses, so it does not create a new version of the item.
+See [granular permissions](../3_cli/sync.mdx#granular-permissions-extra_perms) for the file format.
+
 ## Workspace forks integration
 
 Git sync automatically creates corresponding git branches for [workspace forks](../20_workspace_forks/index.mdx). When you fork a workspace with git sync enabled, Windmill creates a branch with the naming pattern `wm-fork/<parent-branch>/<fork-name>` and keeps it synchronized with the forked workspace.

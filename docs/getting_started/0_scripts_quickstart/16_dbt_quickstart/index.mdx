@@ -141,7 +141,7 @@ A run takes a single `command` argument whose variant is the dbt command, so it 
 
 | Command | What it does | Arguments |
 | --- | --- | --- |
-| `build` | Builds the project (models, seeds, snapshots and tests interleaved) | `select`, `exclude`, `vars`, `full_refresh`, each defaulting to the descriptor's own value |
+| `build` | Builds the project (models, seeds, snapshots and tests interleaved) | `select`, `exclude`, `vars`, `full_refresh`, `defer`, each defaulting to the descriptor's own value |
 | `retry` | Resumes a failed run from its failure point, rebuilding only what it left failed or skipped | `dbt_retry_job`, the id of the run to resume |
 | `show` | Previews a model's rows without writing anything | `model`, `vars`, `limit` (100 by default, 1000 max) |
 | `parse` | Parses the project and ingests its model graph, building nothing | `vars` |
@@ -157,6 +157,30 @@ While a run is in flight, the run page shows each model's state on the project g
 Test failures honor dbt's own `severity`: an `error` test fails the job and names the failing node, a `warn` test surfaces without failing it. Selecting a model on the run page shows its SQL and fully-qualified relation, and `Preview rows` dispatches a `dbt show` for exactly that node.
 
 `Resume this run` on a failed run page fills in the `retry` command for you. Retry state is kept per worker and in the database, so a retry works from any worker with a database connection, and it is refused rather than misapplied when the project, warehouse or engine has changed since. Retries do not take a lock: a project that must not run twice at once sets the script's [concurrency limit](../../../core_concepts/21_concurrency_limits/index.md), which covers its retries with it.
+
+## Deferring to a previous run
+
+`defer` resolves a `ref()` a run does not build to the relation the last successful run of the same environment produced, instead of to the schema this run writes into.
+Rebuilding one model into a scratch schema then costs that model rather than everything above it.
+
+It is a toggle on the `build` command, defaulting to the descriptor's own `defer:`, and a `show` takes the descriptor's value.
+Per run rather than descriptor-only, because the run that publishes an environment's state and the run that defers to it are two invocations of the same script.
+A deferring run names the run it read, in the job log and in its result as `deferred_to`.
+
+The state is `manifest.json` and `run_results.json`, published by a successful `build` that added nothing of its own, kept per script and environment - the warehouse, the target dbt actually runs, and the database and schema they resolve to.
+So a run overriding `select`, `exclude` or `vars` publishes nothing, and neither does a dynamic descriptor, a `retry`, a preview, or a deferring run itself.
+It lives in the database rather than on the worker that produced it, so the next run reads it wherever it lands, and it goes with the script rather than expiring.
+A manifest past `DBT_STATE_INLINE_MAX_BYTES` (8 MiB, an [environment variable](../../../core_concepts/47_environment_variables/index.mdx) on the worker) goes to the instance's object storage instead, which is an [enterprise](/pricing) feature, so on CE that ceiling is the limit.
+
+Deferring is refused rather than run without a state: where the environment has none published, where the profile selects its schema or database with a Jinja template (dbt renders those and Windmill does not, so two renderings would resolve to one environment), and on an [agent worker](../../../core_concepts/28_agent_workers/index.mdx), which reaches the database only through the API.
+A repointed warehouse or a moved schema is a different environment, so it reads as one nothing has published yet rather than as a manifest whose relation names no longer fit.
+
+dbt's own state selectors compare against the same artifacts, so `state:modified+`, `state:new` and `result:error+` in `select` or `exclude` need `defer` on and are refused without it: `dbt-core-2x` and `fusion` read a missing state as an empty one and exit 0, building nothing or everything while reporting success.
+The descriptor may not carry them at all, since its selection also decides which nodes the script owns and the deploy resolves it before any run exists.
+`source_status:` is refused throughout, and so is a `result:` selector against a state published without `run_results.json`, which is what a build recovered by `retry_failed_nodes` stores.
+
+`dbt retry` reads the run it resumes from `--state`, the flag a deferral reads its manifest from, and only `dbt-core-1x` separates the two (`--defer-state`).
+So a run that deferred cannot be resumed on `dbt-core-2x` or `fusion`, and its `retry_failed_nodes` is dropped there too.
 
 ## The descriptor
 
@@ -181,6 +205,9 @@ vars:
   strict: false         # non-string values keep their YAML type
 threads: 8
 full_refresh: false
+# Resolve a ref() this run does not build through the state the last successful
+# run of this environment published, instead of through the schema it writes into
+defer: false
 # Rebuild the nodes a failed build left failed or skipped, in this same job
 retry_failed_nodes:
   attempts: 2
@@ -203,6 +230,7 @@ env:
 | `vars` | - | `--vars`. Values keep their YAML type; string leaves may carry `{{ arg }}` placeholders substituted from job arguments |
 | `threads` | dbt's own | dbt's `--threads` |
 | `full_refresh` | `false` | dbt's `--full-refresh` |
+| `defer` | `false` | Default for the `build` command's own `defer`, see [Deferring to a previous run](#deferring-to-a-previous-run) |
 | `retry_failed_nodes` | - | `{attempts, delay_seconds}`: in-job retry of a build's failed and skipped nodes, up to 10 attempts. Not available on [agent workers](../../../core_concepts/28_agent_workers/index.mdx) |
 | `env` | - | Environment for the dbt process, for the project's own `{{ env_var() }}` lookups and for engine flags. A `$var:<path>` value resolves to that Windmill [variable](../../../core_concepts/2_variables_and_secrets/index.mdx) |
 

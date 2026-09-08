@@ -209,6 +209,8 @@ For each item (script, flow, app, resource, variable, schedule), you can define 
 
 Extra permissions can be given to a user or a group, with the possibility to give them the role of Viewer, or Writer.
 
+For scripts, flows, apps and variables, those extra permissions are also tracked in source as an `extra_perms` map, so they can be reviewed and deployed like the rest of the workspace through [Git sync](../../advanced/11_git_sync/index.mdx#granular-permissions) or the [CLI](../../advanced/3_cli/sync.mdx#granular-permissions-extra_perms).
+
 ![Extra Permissions](./share.png 'Extra Permissions')
 
 ![Share Menu](./share_menu.png 'Share Menu')

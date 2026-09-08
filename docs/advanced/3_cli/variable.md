@@ -76,12 +76,15 @@ Here is an example of a variable specification:
   value: string,
   is_secret: boolean,
   description: string,
-  extra_perms: object,
   account: number,
   is_oauth: boolean,
   is_expired: boolean
 }
 ```
+
+A variable file can also carry an optional `extra_perms` field mirroring the variable's [granular permissions](../../core_concepts/16_roles_and_permissions/index.mdx#extra-permissions).
+Leave it out unless you intend to manage them from the file: `wmill variable push` applies the map through the permission endpoints, so it does not rewrite the value nor update `edited_at`, and a present but empty map revokes every granular permission on the variable.
+See [granular permissions](./sync.mdx#granular-permissions-extra_perms) for details.
 
 ### Example
 
@@ -90,7 +93,6 @@ Here is an example of a variable specification:
 "value": "finland does not actually exist",
 "is_secret": false,
 "description": "This item is not secret",
-"extra_perms": {},
 "account": null,
 "is_oauth": false,
 "is_expired": false

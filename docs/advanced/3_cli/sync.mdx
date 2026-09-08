@@ -149,6 +149,21 @@ wmill sync push [options]
 | `--extra-includes`     | `<patterns>`  | Comma-separated patterns to specify which files to take into account (among files compatible with Windmill). Useful to still take `wmill.yaml` into account and act as a second pattern to satisfy. |
 | `--message`            | `<message>`   | Include a message that will be added to all scripts/flows/apps updated during this push.                                                                                                            |
 
+## Granular permissions (`extra_perms`)
+
+[Granular permissions](../../core_concepts/16_roles_and_permissions/index.mdx#extra-permissions) set on a script, flow, app or [variable](../../core_concepts/2_variables_and_secrets/index.mdx) are tracked in source as an `extra_perms` map in the item's metadata file (`<path>.script.yaml`, `<path>.variable.yaml`, `flow.yaml`, `app.yaml` or `raw_app.yaml`), like the one [folders](./folder.md) and groups have always carried.
+Each key is a user (`u/<username>`) or a group (`g/<group>`) and the boolean is the write flag: `true` for Writer, `false` for Viewer.
+
+```yaml
+extra_perms:
+  g/data_team: true
+  u/alice: false
+```
+
+`wmill sync pull` writes the field only for items that have grants.
+On push, the difference with the remote map is applied through the permission endpoints instead of the item's update payload, so a permission-only change creates no new script, flow or app version and, for a variable, does not rewrite the value nor update `edited_at`.
+A file with no `extra_perms` key leaves the remote permissions untouched, while `extra_perms: {}` revokes every granular permission on the item.
+
 ## wmill.yaml
 
 Note that you can set the default TypeScript language and explicitly exclude (or include) specific files or folders to be taken into account with a [`wmill.yaml` file](https://github.com/windmill-labs/windmill-sync-example/blob/main/wmill.yaml).
