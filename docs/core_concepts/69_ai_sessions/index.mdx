@@ -64,15 +64,81 @@ The tokens a session spends are recorded per user and model, and priced in the w
 
 ### Attachments
 
-You can attach images and text files to a message by dragging, pasting or picking files: useful to share a design, an error screenshot, a log file or a whiteboard photo. Images require a model with vision support and are downscaled client-side; up to 8 images can be attached per message. Text files (up to 8 per message, 1 MB each) are read by the AI on demand rather than inlined, so they never bloat the conversation history; see [attaching files](../22_ai_generation/index.mdx#attaching-files). A message can also consist of attachments alone, with no text. You can also link workspace files and folders to the conversation so the AI keeps them in context for the whole session.
+You can attach images and text files to a message by dragging, pasting or picking files: useful to share a design, an error screenshot, a log file or a whiteboard photo. Images require a model with vision support and are downscaled client-side; up to 8 images can be attached per message. Text files (up to 8 per message, 1 MB each) are read by the AI on demand rather than inlined, so they never bloat the conversation history; see [attaching files](../22_ai_generation/index.mdx#attaching-files). A message can also consist of attachments alone, with no text. You can also link files and folders to the conversation so the AI keeps them in context for the whole session; what is linked, and whether the AI can actually read it, is listed under [Files & folders](#files-and-folders).
 
 ### Slash commands
 
-Typing `/` in the chat input opens the command picker, with built-in actions and workspace AI skills grouped under Actions and Skills; hover a row to see a command's full description.
+Typing `/` in the chat input opens the command picker, with built-in actions and the AI skills turned on for the chat grouped under Actions and Skills; hover a row to see a command's full description.
 
 - `/compact` summarizes the conversation in place to free context while keeping the important facts, using the same summarization as automatic compaction.
 - `/clear` saves the conversation to history and starts a fresh chat in the same session.
-- AI skills defined in your workspace appear as additional commands.
+- The AI skills you turned on in [Assistant settings](#skills) appear as additional commands.
+
+## Assistant settings
+
+What a chat carries beyond the conversation itself - the tools it can call, the skills and MCP servers turned on for it, the custom instructions in its system prompt, the files linked to it - is listed and changed in one modal.
+Open it with the sliders button in the chat footer, next to the model picker.
+It replaces the read-only context popover and the separate skills and MCP drawers: those are now sections of this modal, and the Skills and MCP submenus of the chat input's `+` menu end with a manage entry that opens it on the matching section.
+
+The modal has five sections, four of them carrying a count of what they hold.
+Everything in it applies to the session's workspace, which is not necessarily the workspace you are navigating in.
+
+![The assistant settings modal open on Tools, with its five sections listed on the left](./assistant_settings_tools.png.webp 'Assistant settings modal')
+
+### Tools
+
+Every tool definition this chat sends with each turn, under the name and description the model sees.
+The search box matches on both the name and the description, and opening a row shows the full description and the arguments the tool takes.
+The list is read-only: the tools a chat sends follow its mode and the MCP servers turned on below, and are not switched one by one.
+
+### Skills
+
+A skill is a `SKILL.md` file: markdown instructions for one kind of task, with a `name` and a `description` in its frontmatter, in the same format Claude skills use.
+Windmill stores each one as an `ai_skill` [resource](../3_resources_and_types/index.mdx), so a skill saved in a folder is shared with everyone who can read that folder.
+
+The section lists every skill in the workspace, each with a switch.
+Turning one on is personal to you and to that workspace: every enabled skill spends context on every turn, so being able to read a skill is not the same as using it.
+The name and description of each skill you turned on go into the system prompt, and the AI loads the full body with its `read_skill` tool when a request matches a description.
+Those skills are also the ones offered as [slash commands](#slash-commands).
+
+"New skill" opens an editor seeded with a sample `SKILL.md`, and "Import a folder" picks up the `SKILL.md` files of a local folder of skills, up to 50 at a time and at most one folder level deep, then stages them for confirmation and flags the ones that would overwrite an existing skill.
+Each row also has "Manage skill", which opens the skill rendered with an edit toggle, and "Delete", which deletes the resource.
+A skill is named by the path it is saved at, which the frontmatter `name` only seeds; an imported skill takes the name of the folder holding its `SKILL.md`, and that one must be lowercase letters, digits and `-`, up to 64 characters.
+A description is capped at 1024 characters and a body at 64 KB.
+
+![The Skills section of the assistant settings modal, with a switch on each skill](./assistant_settings_skills.png.webp 'Skills in the assistant settings modal')
+
+### Instructions
+
+Custom instructions added to the system prompt on top of the assistant's own, in two tabs:
+
+- Workspace: applies to everyone in the session's workspace, and only its admins can edit it. It is read-only for a workspace that has no AI providers of its own and runs on the [instance AI settings](../22_ai_generation/index.mdx#instance-level-ai-settings), since a workspace prompt has no effect there.
+- User (you): stored in your browser, so it follows you into every workspace rather than belonging to one.
+
+Both blocks are sent, the workspace one first, and each is capped at 5000 characters.
+A single Save writes whichever of the two changed.
+Instructions are kept per chat mode, so the ones edited here apply to session chats and not to the in-editor copilots.
+
+### MCP connections
+
+External [MCP](../51_mcp/index.mdx) servers this chat can call, each with a switch that, like a skill's, is personal to you and to the workspace.
+When a server is on, the AI finds its tools with a `search_mcp_tools` tool and calls them with `call_mcp_read_tool` and `call_mcp_write_tool`, the write half asking for confirmation like any other tool that changes something.
+Its tools run under the connection's own credentials, so the chat only reaches what that account can.
+
+"Connect a server" takes the URL of an HTTP streamable MCP server, with shortcuts for a few known ones, and either signs you in or takes a token.
+The connection is saved as an `mcp` [resource](../3_resources_and_types/index.mdx) at a path you choose, with its token in a [secret variable](../2_variables_and_secrets/index.mdx) beside it.
+The path decides who gets it: under `u/<you>` the connection is yours alone, while in a folder everyone with access to that folder can use the connection and its token.
+Signing in is offered for a suggested server whose provider has an OAuth app configured by a superadmin in the instance settings; for any other server it relies on OAuth discovery, which requires [Enterprise Edition](/pricing), so connect those with a token on Community Edition.
+Each row also has "Manage connection", which edits the underlying resource, and "Delete", which deletes it: the switch is the reversible one.
+
+This is the opposite direction from [Windmill's own MCP server](../51_mcp/index.mdx), where an external client drives your workspace.
+
+### Files & folders {#files-and-folders}
+
+The files and folders linked to this chat, which the AI can open and search.
+A row the AI cannot read says why: `needs access`, `unavailable`, `indexing…` or `failed`, and the header counts the usable rows against the total.
+Unlinking takes the AI's access away without deleting anything, and you can attach the file again from the chat input.
+Files attached to an earlier message are listed here too, but they are dropped from the chip on that message rather than from this list.
 
 ## Autonomy and plan mode
 
