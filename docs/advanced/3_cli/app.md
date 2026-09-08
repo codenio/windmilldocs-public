@@ -36,6 +36,24 @@ wmill app push <file_path>
 wmill app push ./my_app.json
 ```
 
+## App access mode
+
+The access mode is the one policy field a tracked app file keeps: `app.yaml` for [low-code apps](../../apps/0_app_editor/index.mdx), `raw_app.yaml` for [full-code apps](../../full_code_apps/index.mdx).
+Everything else in the policy is regenerated on push.
+
+It is a tri-state:
+
+```yaml
+public: true   # anonymous: anyone with the URL, no login
+guests: true   # guest: login required, Windmill account not
+# neither      # publisher: workspace members with read access only
+```
+
+A pull followed by a push round-trips the mode, so an app open to [guests](../../apps/13_guest_apps/index.mdx) stays open to guests through [git sync](../11_git_sync/index.mdx).
+
+Pushing `guests: true` does not by itself let anyone in: guest access is also gated by a workspace switch and an instance switch, both read on every guest request.
+Opening an app to guests or to the public can additionally be restricted to workspace admins and bypass users by a [protection ruleset](../../core_concepts/56_protection_rulesets/index.mdx), which applies to the CLI as it does to the UI.
+
 ## Full-code app commands
 
 The CLI provides additional commands for [full-code apps](/docs/full_code_apps):

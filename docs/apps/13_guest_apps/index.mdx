@@ -1,0 +1,145 @@
+---
+title: Guest apps
+description: How do I share a Windmill app with people who have no Windmill account? Guest access requires a login but no workspace membership and no seat.
+---
+
+import DocCard from '@site/src/components/DocCard';
+
+# Guest apps
+
+A guest is someone your [identity provider](../../advanced/27_setup_oauth/index.mdx) authenticates who has no Windmill account and is a member of no [workspace](../../core_concepts/16_roles_and_permissions/index.mdx#workspace).
+A guest can open an app set to Guests and nothing else.
+The app's [runnables](../3_app-runnable-panel.mdx) execute on behalf of the publisher, exactly as they do for a workspace member.
+
+Guest access sits between the two modes an app already had: a [public app](../8_public_apps.mdx) needs no login at all, while a guest app needs a login but no account.
+Because a guest leaves no user row behind, they do not take a [seat](../../core_concepts/16_roles_and_permissions/index.mdx#users); they count against a separate [guest allowance](#seats-and-the-guest-allowance) instead.
+
+Guest access is off by default and is gated by three independent switches, all of which must be on for a guest to get in.
+
+## Opening an app to guests
+
+In the app editor, the Deploy menu has an Access control with three options:
+
+![App access modes](./app_access_modes.webp "Members, Guests and Public in the app editor's Deploy menu")
+
+| Access | Execution mode | Who can open the app |
+| --- | --- | --- |
+| Members | `publisher` | Workspace members with [read access](../../core_concepts/16_roles_and_permissions/index.mdx) on the app. The default. |
+| Guests | `guest` | The above, plus anyone the identity provider authenticates who has no Windmill account. |
+| Public | `anonymous` | Anyone holding the secret URL, with no login at all. See [public apps](../8_public_apps.mdx). |
+
+An app deployed in `viewer` execution mode, where runnables run as the viewer rather than as the publisher, shows as Members here: a guest cannot be a viewer, so the control never sets that mode.
+
+Guests reach the app through the same URL as a public app: the secret public URL, or the [custom URL](../8_public_apps.mdx#custom-url) when one is set.
+Holding the URL is not enough on its own: the page asks them to sign in first.
+
+An app path containing `:`, `,` or `*`, or starting with `/`, cannot be opened to guests: those characters are reserved in the [token scopes](../../core_concepts/59_user_tokens/index.mdx) that confine a guest session, and the mode is refused at deploy time on such a path.
+
+### Restricting who may open an app to guests
+
+On [Enterprise Edition](/pricing), widening an app to guests can be reserved to workspace admins and bypass users with the "Restrict guest app access" [protection ruleset](../../core_concepts/56_protection_rulesets/index.mdx#restrict-guest-app-access) rule.
+Apps that already admit guests can still be redeployed under it.
+
+## Allowing guests in a workspace
+
+An app's `guest` mode is inert until a workspace admin turns guests on, under workspace settings > Advanced > Apps.
+
+![Workspace guest access setting](./workspace_guest_access.webp "The Guests card in workspace settings")
+
+The switch is read where a guest session is created and again on every request a guest makes, so turning it off stops every guest of the workspace on their next request, including sessions already issued.
+It is checked server-side rather than at deploy time only, because an app carries its access mode in its definition and the [CLI](../../advanced/3_cli/index.mdx) and [git sync](../../advanced/11_git_sync/index.mdx) can push `guest` past the UI.
+
+## Allowing guests on the instance
+
+Above the workspace switch sits a [superadmin](../../core_concepts/16_roles_and_permissions/index.mdx#superadmin) one, under instance settings > Users > Guests.
+
+![Instance guest settings](./instance_guests.webp "The Guests tab in instance settings")
+
+Turned off, no guest can sign in anywhere on the instance whatever a workspace or an app says, apps stop offering a guest sign-in, and sessions already issued stop on their next request.
+
+The same tab lists the distinct guest emails of the trailing 30 days with the workspaces they opened and when they were first and last seen.
+See [instance settings](../../advanced/18_instance_settings/index.mdx#guests).
+
+## How a guest signs in
+
+A signed-out visitor opening the app URL is offered a sign-in card that says they do not need a Windmill account, and that signing in lets them open this app and nothing else.
+
+- The sign-in goes through one of the instance's configured [SSO or OAuth](../../advanced/27_setup_oauth/index.mdx#sso) providers, or [SAML](../../advanced/28_saml_and_scim/index.mdx). Password sign-in is not a guest path, since a guest has no stored credential.
+- No account is provisioned: no user row, no invite, no workspace membership. The instance setting "Require users to have been added manually to Windmill to sign in through OAuth" gates provisioning an account, which a guest sign-in never does, so it does not block guests.
+- Someone who already has a Windmill account anywhere on the instance is never given a guest session. If they are not a member of the app's workspace, the page tells them the app is not open to them rather than looping them through a sign-in that cannot help.
+- A sign-in the server refuses, for instance because the [allowance](#seats-and-the-guest-allowance) is used up or the app is no longer open to guests, is relayed back to the page and shown above the card.
+
+The result is a browser session pinned to that workspace and scoped to that one app.
+It expires after 8 hours by default, configurable with the `GUEST_SESSION_VALIDITY_SECONDS` [environment variable](../../core_concepts/47_environment_variables/index.mdx).
+Expiry is the main revocation for a guest, alongside the workspace and instance switches; logging out ends the session too.
+
+A guest becomes a member by signing in from the ordinary login page with the same identity, which provisions the account as any first sign-in would.
+From then on they are counted like any other user.
+
+Guest sign-ins are recorded in the [audit logs](../../core_concepts/14_audit_logs/index.mdx) as `users.login_guest`.
+
+## What a guest can do
+
+A guest holds no group, no folder and no permission of their own, so what their session grants is the whole of what they can do:
+
+- open the one app they signed in for and use it, with its runnables executing on behalf of the publisher under the app's [policy](../3_app-runnable-panel.mdx#policy), exactly as for a member.
+- read the jobs they launched themselves through the app, and nothing else. A job shared with the workspace's members is not readable by a guest, and a job they may not read is reported as not found.
+- nothing outside the app: listing jobs, scripts, flows, apps or variables, reading resource values, another workspace, and another app opened to guests are all refused. A [public app](../8_public_apps.mdx) stays open to them, as it is to anyone.
+
+Inside a runnable, `WM_END_USER_EMAIL` holds the guest's email, like it does for a logged-in member.
+See [identifying the app viewer](../3_app-runnable-panel.mdx#identifying-the-app-viewer).
+
+Guest executions count against the public app [rate limit](../8_public_apps.mdx#rate-limiting) alongside anonymous ones.
+
+## Seats and the guest allowance
+
+Every Windmill seat counter counts user rows, and a guest has none, so guests never appear in them.
+What they count against instead is a single instance-wide allowance:
+
+- the first 100 distinct guest emails over a trailing 30 days are free everywhere, the free Community Edition included.
+- past that, an instance holding an [Enterprise Edition](/pricing) license meters them at four guests to one seat, rounded up. Those seats count against the license like any other.
+- past that, an instance without one admits no new guest email until the count drops back under 100. A guest already seen in the window is always let back in, so the cap only ever turns away someone new.
+
+The allowance is read from the instance's license, not from a workspace's plan, and one email is one guest however many workspaces they opened.
+The current count is shown in three places: under the Access control in the app editor, on the Guests card in workspace settings, and on the Guests tab in instance settings.
+
+Guest sign-in records are kept for 60 days, longer than the 30-day window they feed.
+They are not attributed to a single workspace and so do not appear in a workspace's billable seats.
+
+## CLI and git sync
+
+The access mode is the one policy field a tracked app file keeps, in `app.yaml` for [low-code apps](../0_app_editor/index.mdx) and `raw_app.yaml` for [full-code apps](../../full_code_apps/index.mdx).
+It is a tri-state:
+
+```yaml
+public: true   # anonymous: no login required
+guests: true   # guest: login required, membership not
+# neither      # publisher: workspace members only
+```
+
+A [pull](../../advanced/3_cli/sync.mdx) followed by a push round-trips the mode, so an app open to guests stays open to guests through git sync.
+
+Pushing `guests: true` does not by itself let anyone in: the workspace and instance switches are read every time a guest session is created and on every request a guest makes.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Public apps"
+		description="Share an app through a secret URL, with or without requiring a login."
+		href="/docs/apps/public_apps"
+	/>
+	<DocCard
+		title="Roles and permissions"
+		description="Find out about the roles within a Windmill instance and their respective permissions."
+		href="/docs/core_concepts/roles_and_permissions"
+	/>
+	<DocCard
+		title="Protection rulesets"
+		description="Enforce governance policies on workspace changes."
+		href="/docs/core_concepts/protection_rulesets"
+	/>
+	<DocCard
+		title="Instance settings"
+		description="Manage settings and features across all workspaces."
+		href="/docs/advanced/instance_settings"
+	/>
+</div>

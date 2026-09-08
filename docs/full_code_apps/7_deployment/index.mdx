@@ -62,16 +62,26 @@ Deploying sources over a low-code app is refused unless `allow_kind_change: true
 
 Both endpoints are exposed over [MCP](../../core_concepts/51_mcp/index.mdx) as the `createApp` and `updateApp` tools, so an AI agent can read a full-code app, edit its sources and deploy them, getting compile errors back as the error of the call. For the same reason, an [MCP token](../../core_concepts/51_mcp/index.mdx#apps--workers) has to name those two tools rather than expose them through a blanket scope.
 
-## Public apps
+## Public and guest apps
 
-Make your app accessible without authentication by setting `public: true` in `raw_app.yaml`:
+`raw_app.yaml` carries the access mode as a tri-state: `public: true` for anonymous access, `guests: true` for guest access, and neither for the default, members only.
 
 ```yaml
 summary: "Public dashboard"
 public: true
 ```
 
-[Public apps](../../apps/8_public_apps.mdx) are accessible at their app URL without requiring a Windmill login. The execution policy is auto-generated at deployment time. See [public apps](../../apps/8_public_apps.mdx) for more details.
+[Public apps](../../apps/8_public_apps.mdx) are accessible at their app URL without requiring a Windmill login.
+
+```yaml
+summary: "Partner dashboard"
+guests: true
+```
+
+[Guest apps](../../apps/13_guest_apps/index.mdx) require a login through the identity provider but no Windmill account and no workspace membership.
+Pushing `guests: true` does not by itself let anyone in: the workspace and instance guest switches are checked on every guest request.
+
+The rest of the execution policy is auto-generated at deployment time.
 
 ## Custom paths
 
@@ -90,6 +100,7 @@ The execution policy is auto-generated at deployment time. It controls how backe
 | Mode | Description |
 |------|-------------|
 | `publisher` | Requires login and read access on the app. Runnables execute as the app publisher (the user who deployed the app), so users don't need direct permissions on the underlying scripts. This is the default. |
+| `guest` | Login required, workspace membership not. Anyone the identity provider authenticates who has no Windmill account can open the app, and runnables execute as the app publisher. Only honored where the workspace and the instance admit [guests](../../apps/13_guest_apps/index.mdx). |
 | `anonymous` | No login required. Runnables still execute as the app publisher; unauthenticated callers appear as `anonymous`. This is the mode used by public apps. |
 | `viewer` | Requires login. Runnables execute with the permissions of the viewer themselves, for per-user access control. |
 

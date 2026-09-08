@@ -35,6 +35,26 @@ To enable restricted domain authentication, an administrator can configure the a
 	/>
 </div>
 
+## Guest sign-in
+
+A [guest app](../../apps/13_guest_apps/index.mdx) is opened by someone the identity provider authenticates who has no Windmill account.
+Signing in as a guest goes through the same SSO or SAML providers as an ordinary login, but provisions nothing: no user, no invite, no workspace membership, and no seat.
+The session it mints is pinned to one workspace and scoped to that one app.
+
+Password sign-in is not a guest path, since a guest has no stored credential.
+The instance setting 'Require users to have been added manually to Windmill to sign in through OAuth' gates provisioning an account, which a guest sign-in never does, so it does not block guests.
+
+Someone who already has an account anywhere on the instance is never admitted as a guest.
+A guest becomes a regular user by signing in from the ordinary login page with the same identity, which provisions the account as any first sign-in would.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Guest apps"
+		description="Let anyone your identity provider authenticates open an app without an account and without a seat."
+		href="/docs/apps/guest_apps"
+	/>
+</div>
+
 ## Manually Add Users to a Windmill Instance
 
 As a superadmin of the instance, you have the ability to manually add users to the Windmill instance. This is useful for inviting users who do not have SSO credentials or for providing access to individuals outside the restricted domain.

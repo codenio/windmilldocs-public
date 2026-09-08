@@ -41,8 +41,11 @@ summary: "My dashboard app"
 # Optional: custom URL path (admin only)
 custom_path: "my-dashboard"
 
-# Optional: make the app publicly accessible
+# Optional: make the app publicly accessible (no login)
 public: false
+
+# Optional: open the app to guests (login required, no account needed)
+guests: false
 
 # Optional: data table access configuration
 data:
@@ -53,7 +56,8 @@ data:
   schema: "app1"              # Schema within the datatable
 ```
 
-The execution policy (including `execution_mode`, `triggerables` and `triggerables_v2`) is auto-generated at deployment time and does not need to be specified in `raw_app.yaml`.
+The execution policy (including `triggerables` and `triggerables_v2`) is auto-generated at deployment time and does not need to be specified in `raw_app.yaml`.
+Its `execution_mode` comes from `public` and `guests`: `public: true` means `anonymous`, `guests: true` means `guest`, and neither means `publisher`.
 
 ### Fields
 
@@ -61,7 +65,8 @@ The execution policy (including `execution_mode`, `triggerables` and `triggerabl
 |-------|------|----------|-------------|
 | `summary` | string | Yes | Short description of the app (max 1000 chars) |
 | `custom_path` | string | No | Custom URL path (admin only) |
-| `public` | boolean | No | Whether the app is publicly accessible |
+| `public` | boolean | No | Whether the app is publicly accessible without login ([public app](../../apps/8_public_apps.mdx)) |
+| `guests` | boolean | No | Whether the app is open to [guests](../../apps/13_guest_apps/index.mdx): a login is required, a Windmill account is not |
 | `data.datatable` | string | No | [Datatable](../../core_concepts/11_persistent_storage/data_tables.mdx) name |
 | `data.tables` | string[] | No | List of table names to whitelist |
 | `data.schema` | string | No | Schema name within the datatable |
