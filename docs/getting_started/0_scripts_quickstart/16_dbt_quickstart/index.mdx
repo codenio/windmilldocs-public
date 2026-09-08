@@ -208,6 +208,8 @@ full_refresh: false
 # Resolve a ref() this run does not build through the state the last successful
 # run of this environment published, instead of through the schema it writes into
 defer: false
+# Static-analysis pass producing column-level lineage. Needs an engine that does it
+column_lineage: false
 # Rebuild the nodes a failed build left failed or skipped, in this same job
 retry_failed_nodes:
   attempts: 2
@@ -231,6 +233,7 @@ env:
 | `threads` | dbt's own | dbt's `--threads` |
 | `full_refresh` | `false` | dbt's `--full-refresh` |
 | `defer` | `false` | Default for the `build` command's own `defer`, see [Deferring to a previous run](#deferring-to-a-previous-run) |
+| `column_lineage` | `false` | Run the static-analysis pass that produces [column-level lineage](#column-level-lineage), on the engines that write it |
 | `retry_failed_nodes` | - | `{attempts, delay_seconds}`: in-job retry of a build's failed and skipped nodes, up to 10 attempts. Not available on [agent workers](../../../core_concepts/28_agent_workers/index.mdx) |
 | `env` | - | Environment for the dbt process, for the project's own `{{ env_var() }}` lookups and for engine flags. A `$var:<path>` value resolves to that Windmill [variable](../../../core_concepts/2_variables_and_secrets/index.mdx) |
 
@@ -244,7 +247,7 @@ A project that keeps its own `profiles.yml` runs unchanged - point `profile.prof
 
 ## Models in the asset graph
 
-Every model, seed, snapshot and source the project declares becomes an [asset](../../../core_concepts/52_assets/index.mdx) named `dbt://<warehouse>/<schema>/<name>`, with the project's `ref()` lineage as edges between them. Models, seeds and snapshots are writes; sources are reads. Each node carries its materialization (`view`, `table`, `incremental`, `snapshot`, `seed`), its tags, its declared column descriptions and its data tests, and the script node is badged with the number of models it materializes.
+Every model, seed, snapshot and source the project declares becomes an [asset](../../../core_concepts/52_assets/index.mdx) named `dbt://<warehouse>/<schema>/<name>`, with the project's `ref()` lineage as edges between them. Models, seeds and snapshots are writes; sources are reads. Each node carries its materialization (`view`, `table`, `incremental`, `snapshot`, `seed`), its tags, its column metadata (the descriptions the project declares, or the [analyzed column schema](#column-level-lineage) when it asks for one) and its data tests, and the script node is badged with the number of models it materializes.
 
 ![The asset graph of a folder holding two dbt projects: source nodes, model nodes badged view or table, and ref() lineage running between the two projects through a shared table](./dbt_asset_graph.png 'Two dbt projects in one folder, meeting on the table one writes and the other reads')
 
@@ -260,7 +263,7 @@ def main():
     ...
 ```
 
-Two limits worth knowing: two workspace warehouses pointing at one physical warehouse do not unify, so point both projects at one warehouse to link them; and column-level lineage is not available for dbt, because `manifest.json` carries declared column metadata but no column-to-column edges.
+One limit worth knowing: two workspace warehouses pointing at one physical warehouse do not unify, so point both projects at one warehouse to link them.
 
 ### Declaring a write from a native script
 
@@ -288,6 +291,97 @@ A native producer does trigger them: a script that declares the write above wake
 So `# on dbt://...` is refused at deploy only for a relation dbt projects alone build, which would draw a cascade arrow that can never fire; schedule the consumer of such a mart, or run it from the graph.
 A dbt script may not subscribe at all: a project runs on its own schedule rather than being woken by an asset cascade.
 For the same reason it is not a member of its folder's [pipeline](../../../core_concepts/63_pipelines/index.mdx) - its models are on the shared asset graph regardless, which is what puts a native reader beside them.
+
+## Column-level lineage
+
+On top of the `ref()` graph, a project can publish column-level lineage: the real column list of every relation, typed and in the order the model emits it, and the column-to-column edges between them.
+Neither comes from `manifest.json`, whose `columns` are the ones an author wrote down in a `schema.yml` and which carries no column-to-column edges at all.
+Both come from the static-analysis index the engine writes, which is a `dbt compile` of its own, so it is opt-in per project:
+
+```yaml
+# wm_dbt.yaml
+engine: fusion
+column_lineage: true
+```
+
+Strict static analysis is a stricter dialect than a build: `select no_such_column from ref(...)` compiles under dbt's default and is an error under it.
+That is why it is a separate compile rather than a flag on the build - nothing it decides can change what a build does, and a project it cannot analyze keeps exactly the graph it had.
+The pass runs wherever the graph is ingested: at deploy, on [Refresh models](#refreshing-the-model-graph), and on a run that re-parses.
+It gets half the job's remaining time, so the build behind it is not starved.
+
+It also needs an engine that does the analysis.
+`dbt-core-1x` has no such option, and `dbt-core-2x` accepts the flag today without writing the index, so [`fusion`](#engines) is the engine that produces lineage - and only for the warehouses it analyzes natively, since an adapter it still treats as experimental turns static analysis off on its own.
+None of that can fail a build: a wrong engine, a rejected analysis, a missing or unreadable index and a pass that outran its budget all end in partial lineage or none, plus a line in the job log naming which.
+
+### Where it shows
+
+Selecting a model in the [dbt editor's](#the-dbt-editor) `Models` pane, or a `dbt://` relation on a folder's [pipeline page](../../../core_concepts/63_pipelines/index.mdx), opens two things above the model's SQL:
+
+- `columns` - every column the model produces, with its type and whatever description the project documented for it. Without the analysis pass the list is the declared metadata only, and says so.
+- The column trace - the columns feeding the selected relation's columns, and the ones derived from them.
+
+Only direct edges are drawn: `copy`, where the value passes through, and `mod`, where it is transformed.
+dbt also records the columns a model reads to pick its rows - a join key, a `where` predicate, a `group by` - and those are stored but not drawn, since such a column reaches every output column of its model and would draw the diagram as a solid block of edges.
+
+![The dbt editor's details pane for a selected model: its typed column list, then a column-lineage diagram running from the staging models' columns through the model's own to the mart derived from them, above the model's SQL](./dbt_column_trace.webp "A model's columns and its column trace, above its SQL")
+
+### Across projects, and into pipelines
+
+A trace is not one project's.
+A relation one project produces is another's source, so a trace follows the columns into whichever project owns the relation it just reached, and repeats from there.
+That is what the pipeline page draws: the workspace's live graph, expanded until the columns run out.
+The dbt editor is the exception - it draws one project as of one parse, its deployed version or the parse behind `Refresh models`, and its trace stays inside that project, since another project's live graph is not the one on screen.
+
+A trace crosses the boundary into [pipelines](../../../core_concepts/63_pipelines/index.mdx) the same way.
+A DuckDB pipeline script that names a dbt model's column as the source of one of its own:
+
+```sql
+-- pipeline
+-- materialize ducklake://main/orders_enriched
+-- column amount <- dbt://main/analytics/orders.amount
+```
+
+puts that model's column on the pipeline's [column-level lineage](../../../core_concepts/63_pipelines/materialization.mdx#column-level-lineage) graph under the same identity dbt's own lineage gives it, so the two are one graph.
+Selecting a DuckLake table traces back through the script that wrote it into the dbt models that fed it, and selecting a dbt model traces forward into what a pipeline derived from it.
+
+### Who sees a trace, and where it stops
+
+Column-level lineage is gated on being able to read the project that produces the relation, exactly like the model's SQL: it is the shape of what an author wrote, one level finer than the `ref()` graph, which is ungated only because it draws relations the caller already sees.
+Someone entitled to a dbt run but not to the project therefore gets the run's relations and `ref()` edges, and neither the SQL nor the columns.
+Because a trace crosses projects, that check is re-decided for every project it reaches rather than once for the one selected - reaching a relation says nothing about who may read the project on the far side of it - so both the project's own visibility and a token's [`scripts:read` scope](../../../core_concepts/59_user_tokens/index.mdx#token-scopes) apply per project, and a trace ends where the caller's access does.
+
+A trace also stops at 5000 edges.
+It is walked outwards from the selected relation, so a bounded answer holds the part nearest the selection, and the pane says the lineage reaches further than it can draw rather than letting a cut trace look like one that ended.
+
+### From the API
+
+`GET /api/w/<workspace>/assets/column_lineage` returns the trace around one or more relations.
+`asset_path` is repeated once per relation - the `dbt://` URI without its scheme - and the relations are answered as one union, since one selection can reach several.
+At least one and at most 1000: a request naming none, or more than that, is refused rather than answered with an empty component.
+`dbt_script_hash` pins the answer to one deployed version of one project; without it the answer crosses projects as above.
+
+```bash
+curl -H "Authorization: Bearer $WM_TOKEN" \
+  "$BASE_INTERNAL_URL/api/w/$WM_WORKSPACE/assets/column_lineage?asset_path=main/analytics/customers"
+```
+
+```json
+{
+  "edges": [
+    {
+      "from_asset_path": "main/analytics/stg_customers",
+      "from_column": "customer_id",
+      "to_asset_path": "main/analytics/customers",
+      "to_column": "customer_id",
+      "kind": "copy"
+    }
+  ],
+  "truncated": false
+}
+```
+
+`truncated` is how a cut trace is told apart from a complete one.
+`GET /api/w/<workspace>/jobs/dbt_column_lineage/<job_id>` takes the same repeated `asset_path` and answers for the project version one job ran, authorized through the job - which is the only way to reach a graph that names no deployed version, such as the editor's parse of its own buffer.
 
 ## Engines
 

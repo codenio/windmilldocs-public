@@ -78,6 +78,8 @@ Column information is displayed:
 - In the [flow editor](../../flows/1_flow_editor.mdx) as column badges on asset nodes, showing which columns each step reads or writes.
 - In the asset usage drawer, alongside the script/flow path and read/write mode.
 
+For [dbt](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx) relations, a project that opts into dbt's static-analysis pass publishes the real column schema of each model and its [column-to-column lineage](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx#column-level-lineage), which the details pane draws as a trace above the model's SQL.
+
 ## Tracking where your assets are used
 
 Assets are stored in the database upon script / flow deployment.

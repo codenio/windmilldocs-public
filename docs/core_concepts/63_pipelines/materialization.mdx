@@ -381,6 +381,18 @@ SQL-AST inference runs when a pipeline is deployed, so column lineage shows on *
 
 :::
 
+### Crossing into dbt
+
+A `// column` source can name a [dbt](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx) model's column as well as a `ducklake://` one:
+
+```sql
+-- column amount <- dbt://main/analytics/orders.amount
+```
+
+That names the same column node dbt's own [column-level lineage](../../getting_started/0_scripts_quickstart/16_dbt_quickstart/index.mdx#column-level-lineage) does, so the pipeline's graph and the dbt project's are drawn as one.
+Selecting a DuckLake table traces back through the script that wrote it into the dbt models that fed it, and selecting a dbt model traces forward into the pipeline that derives from it.
+The dbt half only exists for a project that opted into dbt's static-analysis pass, and it is fetched per selection, so it lands a moment after the selection does.
+
 ## Data tests
 
 A materialized asset can declare **data tests** that run against the freshly-materialized slice and **fail the pipeline run** on violation — propagating through the cascade like any other step failure. They are the pipeline equivalent of dbt/Dagster data tests. Whether the data written by a failing run stays visible depends on the edition - see [Failing tests: publish or roll back](#failing-tests-publish-or-roll-back-ce-vs-ee).
