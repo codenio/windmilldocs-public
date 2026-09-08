@@ -360,6 +360,32 @@ Autoscaling is available in the [Enterprise plan](/pricing).
 	/>
 </div>
 
+## Dependency cache object storage
+
+The [distributed dependency cache](../38_object_storage_in_windmill/index.mdx#instance-object-storage-distributed-cache-for-python-rust-go) normally lives in the [instance object storage](../38_object_storage_in_windmill/index.mdx#instance-object-storage).
+A worker group can point it at its own bucket instead, from the "Dependency cache object storage" section of its config.
+This is meant for workers that sit far from the instance bucket, or cannot reach it at all: a regional pool that would otherwise pull every virtual env, bundle and compiled binary across a WAN on each cold start.
+
+This is an [Enterprise Edition](/pricing) feature, and takes the same S3, Azure Blob, Google Cloud Storage or AWS OIDC settings as the instance object storage.
+
+Only the dependency cache moves to the group's bucket: Python virtual envs, language dependency bundles, and compiled Go, Rust, C# and Java binaries.
+Everything else keeps using the instance object storage, including job results, [service and job logs](../36_service_logs/index.mdx), [codebases](../33_codebases_and_bundles/index.mdx) uploaded at deploy time, app assets and [AI agent](../54_ai_agents/index.mdx) conversation memory.
+
+The override applies without restarting the workers.
+Everything it holds can be rebuilt from a lockfile, so while the bucket is misconfigured or unreachable, the group's cache stays local to each worker instead of falling back to the instance bucket: cold starts get slower, jobs keep running.
+
+Bucket credentials are masked for [devops](../16_roles_and_permissions/index.mdx#devops) users who are not instance admins, and saving the group from that view keeps the stored credentials.
+The config key is `object_store_cache_config`, so the override can also be set through [config as code](../57_infrastructure_as_code/index.mdx#worker-group-config-fields).
+[Agent workers](../28_agent_workers/index.mdx) read their tags from their token rather than from a group config, so the override does not apply to them.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Instance object storage"
+		description="Connect your instance to a bucket for large logs and the distributed dependency cache."
+		href="/docs/core_concepts/object_storage_in_windmill#instance-object-storage"
+	/>
+</div>
+
 ## Worker scripts
 
 Worker scripts provide methods to run bash scripts on workers at different stages of the worker lifecycle. There are two types of worker scripts: init scripts that run once at worker startup, and periodic scripts that run at regular intervals for ongoing maintenance.

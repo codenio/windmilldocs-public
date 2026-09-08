@@ -158,6 +158,9 @@ If you enable [Store audit logs in object storage](#store-audit-logs-in-object-s
 
 This feature has no overlap with the [Workspace object storage](../../core_concepts/38_object_storage_in_windmill/index.mdx#workspace-object-storage).
 
+A [worker group](../../core_concepts/9_worker_groups/index.mdx) can cache its dependencies in its own bucket instead of this one, see [dependency cache object storage](../../core_concepts/9_worker_groups/index.mdx#dependency-cache-object-storage).
+Everything else, including logs and job results, always uses the instance object storage.
+
 You can choose to use S3, Azure Blob Storage, AWS OIDC or Google Cloud Storage. For each you will find a button to test settings from a server or from a worker.
 
 ![S3/Azure for Python/Go cache & large logs](../../core_concepts/20_jobs/s3_azure_cache.png "S3/Azure for Python/Go cache & large logs")

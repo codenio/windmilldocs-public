@@ -514,6 +514,20 @@ The first time a dependency is seen by a worker, if it is not cached locally, th
 
 S3 cache tarballs are organized and separated by Python version, so dependencies are cached and retrieved according to the specific Python version used.
 
+#### Per worker group cache bucket
+
+Under [Enterprise Edition](/pricing), a [worker group](../9_worker_groups/index.mdx#dependency-cache-object-storage) can cache its dependencies in its own bucket instead of the instance one, from the "Dependency cache object storage" section of its config.
+This is for workers that sit far from the instance bucket, or cannot reach it at all, and only covers what a worker rebuilds by itself: virtual envs, language bundles and compiled binaries.
+Job results, logs, codebases and app assets keep using the instance object storage on every group.
+
+<div className="grid grid-cols-2 gap-6 mb-4">
+	<DocCard
+		title="Dependency cache object storage"
+		description="Point a worker group's dependency cache at its own bucket."
+		href="/docs/core_concepts/worker_groups#dependency-cache-object-storage"
+	/>
+</div>
+
 ### Service logs storage
 
 [Logs are stored in S3](../36_service_logs/index.mdx) if S3 instance object storage is configured. This option provides more scalable storage and is ideal for larger-scale deployments or where long-term log retention is important.
