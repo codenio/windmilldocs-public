@@ -335,7 +335,9 @@ Patterns that break determinism (wrap these in `step()` instead):
 - Reading environment variables or config that may change between replays
 - External API calls whose results affect control flow
 
-If a workflow's code changes between replays (e.g. a deployment mid-execution), Windmill detects the source hash mismatch and re-runs from scratch to avoid stale checkpoint data.
+A running workflow keeps executing the version it started on: the job is pinned to the script hash it was created with, so deploying a new version mid-run leaves runs already in flight untouched.
+If a replay's checkpoint was written by a different version of the script, Windmill refuses to resume it and fails the job with an error asking you to restart it, rather than replaying against step keys that may have shifted.
+Previews carry no script hash, so this check doesn't apply to them.
 
 ## Parallel execution
 
@@ -1068,6 +1070,10 @@ async def main(data: str):
 
 </TabItem>
 </Tabs>
+
+These errors are not limited to the ones your own code raises.
+If the worker running a task dies, the task is restarted on another worker, and once the restart attempts are exhausted, or if the task is cancelled, the failure reaches the workflow as a task error like any other and the workflow resumes in its `catch` or `except` block.
+Restarting is on by default and controlled by [`RESTART_ZOMBIE_JOBS` and `ZOMBIE_JOB_TIMEOUT`](../47_environment_variables/index.mdx): with restarts turned off, the task fails the first time the server detects it.
 
 In Python, task errors raise `TaskError` which includes `step_key`, `child_job_id`, and `result` attributes for detailed inspection.
 
