@@ -23,7 +23,7 @@ import TabItem from '@theme/TabItem';
 
 Windmill's [flow editor](/docs/flows/flow_editor) is powerful for visual workflows. But some orchestration logic is easier to express in code: dynamic branching, complex error handling, loops over variable-length data, or workflows that need to live in your codebase alongside the rest of your application.
 
-Other workflow-as-code frameworks (Temporal, Inngest) require dedicated infrastructure, complex SDKs, or proprietary runtimes. We wanted the same capabilities with two annotations and zero new infrastructure.
+Other workflow-as-code frameworks leave the execution somewhere you have to run yourself: Temporal polls its task queues from worker processes you deploy, Inngest invokes an HTTP handler inside your own application. We wanted the same capabilities with two annotations and zero new infrastructure.
 
 ## Workflow-as-code: functions, not YAML
 
@@ -155,7 +155,7 @@ The workflow suspends at `waitForApproval()` and the worker is fully freed — a
 
 Three design choices drove the architecture:
 
-**Zero worker waste.** When a workflow suspends (sleep, approval, waiting for child jobs), the worker is fully released. Other frameworks hold a thread or container open. Windmill's checkpoint model means you pay only for compute you actually use.
+**Zero worker waste.** When a workflow suspends (sleep, approval, waiting for child jobs), the worker is fully released and keeps nothing in memory. The next round rebuilds the workflow from its checkpoint on any available worker, so you pay only for compute you actually use.
 
 **Standard language, standard tooling.** Workflows are regular TypeScript or Python files. You get IDE autocomplete, type checking, unit testing, and Git diffs. No proprietary DSL to learn.
 

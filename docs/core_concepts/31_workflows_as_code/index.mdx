@@ -120,7 +120,7 @@ Workflows as code use a **checkpoint/replay** model that ensures zero worker was
 This design means the parent workflow process is **never alive while child jobs run, during sleeps, or while waiting for approvals**. It only occupies a worker during the brief moments between checkpoints. A workflow that sleeps for 24 hours or waits a week for approval consumes zero worker time during those waits.
 
 :::info Zero worker waste
-Unlike traditional workflow engines that hold a thread or process alive while waiting, Windmill workflows fully suspend between steps. The parent job is marked as suspended in the database and becomes invisible to the worker pull query. When a child completes (or a sleep/approval timer fires), the database counter is decremented atomically. Only when all pending children reach zero does the parent become eligible for pickup again. This means:
+Windmill workflows keep nothing in memory between steps. The parent job is marked as suspended in the database and becomes invisible to the worker pull query, and the next round rebuilds its state from the checkpoint on whichever worker picks it up. When a child completes (or a sleep/approval timer fires), the database counter is decremented atomically. Only when all pending children reach zero does the parent become eligible for pickup again. This means:
 
 - A workflow with 100 parallel tasks uses 100 worker slots for the tasks, but 0 slots while orchestrating
 - A workflow sleeping for 1 hour uses 0 worker slots during the entire sleep
