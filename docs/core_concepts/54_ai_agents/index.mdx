@@ -108,7 +108,41 @@ If the MCP server handles OAuth, you can simply connect using the OAuth URL. Oth
 
 3. The AI agent will automatically discover and use tools exposed by the MCP server
 
+To limit which of the server's tools the agent gets, use the tool filtering settings of the MCP tool: "Only include specified tools" and "Exclude specified tools".
+
 **Note**: Only HTTP streamable MCP servers are supported.
+
+## Enabled tools
+
+The `enabled_tools` step input narrows which of the step's tools the agent can call in a run, so it costs no more than it needs.
+Add it to the step with "Add a field":
+
+- Not set (default): the agent can call all of its tools.
+- Empty list: the agent runs with no tools.
+- List of names: the agent can call only the tools named.
+
+To give the agent all of its tools back, remove the field rather than emptying it.
+
+Like any other step input, it can be a JavaScript expression evaluated on each run, for example to choose tools from a flow input:
+
+```js
+flow_input.mode === 'support' ? ['get_user', 'u/admin/github_mcp'] : ['__wm_web_search']
+```
+
+In an expression, name each tool as follows:
+
+| Tool | Name in `enabled_tools` |
+| --- | --- |
+| Script, flow or nested AI agent tool | The tool name, as shown to the model |
+| MCP server | The MCP resource path, for example `u/admin/github_mcp` |
+| Websearch | The reserved name `__wm_web_search`, which no other tool can use |
+
+An MCP server is enabled as a whole: it gives the agent every tool the server exposes, filtered by the server's [tool filtering settings](#mcp-tools).
+A single tool from an MCP server cannot be enabled on its own: use the server's tool filtering settings for that.
+
+Names that match none of the step's tools are ignored rather than failing the step, and the job logs record how many names had no effect.
+
+`enabled_tools` belongs to the step, not to the agent: flows that link the same [reusable agent](#reusable-agents) can each enable a different set of its tools without changing the agent.
 
 ## Input parameters
 
@@ -221,6 +255,10 @@ The field was previously named `user_images`; flows using the old name continue 
 
 #### max_iterations (number, optional)
 Maximum number of tool-calling iterations the agent is allowed to perform in a single run. Each iteration corresponds to one round-trip where the model can choose to call tools; once the limit is reached, the agent stops and returns its current output. Use this to bound cost and runtime, or to prevent runaway agents that get stuck in tool-calling loops.
+
+#### enabled_tools (string[], optional)
+Names of the step's tools the agent can call in this run, all of them when unset.
+See [Enabled tools](#enabled-tools).
 
 #### max_completion_tokens (number)
 Controls the maximum number of tokens the AI can generate in its response. This helps manage costs and ensures responses stay within desired length limits.
