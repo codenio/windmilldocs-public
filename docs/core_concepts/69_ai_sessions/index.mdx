@@ -123,6 +123,8 @@ Instructions are kept per chat mode, so the ones edited here apply to session ch
 
 External [MCP](../51_mcp/index.mdx) servers this chat can call, each with a switch that, like a skill's, is personal to you and to the workspace.
 When a server is on, the AI finds its tools with a `search_mcp_tools` tool and calls them with `call_mcp_read_tool` and `call_mcp_write_tool`, the write half asking for confirmation like any other tool that changes something.
+A tool goes through the read half only when its server marks it read-only with the `readOnlyHint` annotation.
+In [plan mode](#plan-mode) the AI can still search a server and call its read-only tools, while write calls are blocked.
 Its tools run under the connection's own credentials, so the chat only reaches what that account can.
 
 "Connect a server" takes the URL of an HTTP streamable MCP server, with shortcuts for a few known ones, and either signs you in or takes a token.
