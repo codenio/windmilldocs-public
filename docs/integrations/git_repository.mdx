@@ -1,5 +1,5 @@
 ---
-description: How do I connect Git to Windmill? Sync your workspace to a Git repository with automatic commits on deploy.
+description: How do I connect Git to Windmill? Connect a repository through the GitHub App or a GitLab project access token and sync your workspace on each deploy.
 ---
 
 import DocCard from '@site/src/components/DocCard';
@@ -123,3 +123,69 @@ Once configured, the self-managed GitHub App can be used for [Git sync](../advan
 Windmill talks to your GitHub host directly: `https://api.github.com` for GitHub.com, `https://api.<subdomain>.ghe.com` for GitHub Enterprise Cloud data residency, and `<base-url>/api/v3` for GHES. Pushing, pulling, opening pull requests and posting checks only need outbound access from your instance and workers.
 
 Webhook delivery is the one inbound path. Your GitHub host must be able to reach the Windmill URL the webhook is registered on, over a certificate it trusts (Windmill registers webhooks with SSL verification enabled). It does not need to be reachable from the public internet, so this works on private networks. If GitHub has to reach Windmill on a different url than your users' browsers do, set a [webhook base url](../advanced/18_instance_settings/index.mdx#webhook-base-url). Without a reachable receiver, automatic sync stays on [polling](../advanced/11_git_sync/index.mdx#polling) and nothing else is affected.
+
+## GitLab
+
+GitLab has no equivalent of a GitHub App: instead of installing something, you create one token in GitLab and hand it to Windmill.
+A GitLab repository whose token Windmill holds gets the same managed [Git sync](../advanced/11_git_sync/index.mdx) features an app-backed GitHub repository has: instant pull over a [webhook](../advanced/11_git_sync/index.mdx#webhooks), [merge requests opened on deploy](../advanced/11_git_sync/index.mdx#in-app-pull-request-creation), a [diff preview](../advanced/11_git_sync/index.mdx#merge-request-diff-previews) on the merge request, and renewal of the token before it expires.
+
+Handing the token to Windmill is available under [Windmill Enterprise](/pricing).
+A GitLab repository whose token is written into its URL, or into the [secret variable](../core_concepts/2_variables_and_secrets/index.mdx) the URL points at (`$var:`), keeps syncing on every plan as a plain git remote: no webhook, no merge requests, no renewal.
+
+### The project access token
+
+Create a project access token on the project you are syncing, under Settings → Access tokens.
+
+| Setting | Value |
+| --- | --- |
+| Scope | `api`. It covers Git over HTTPS too, so no separate `write_repository` is needed, and it is what lets Windmill renew the token |
+| Role | Maintainer. Developer covers pushing deploy branches and opening merge requests, but creating the webhook needs Maintainer (see [what each managed feature needs](#what-each-managed-feature-needs)) |
+| Expiry | Required. Only a group service account personal access token on self-managed can go without one |
+
+Use a separate token per repository.
+A group access token reaches every project in the group, but Windmill stores the credential per repository and a renewal rewrites only the repository it renewed for, stranding the others until you paste a new token there.
+
+The token's name becomes the name of the GitLab bot user it is issued to, which is the author of every commit, merge request and preview note Windmill writes.
+Name it `windmill-sync` or similar.
+
+### Connecting a repository
+
+In the resource form of a `git_repository` resource, use the GitLab button: paste the instance URL and the token, list the projects the token can reach, and pick one.
+Windmill stores the token and fills the resource with the plain remote URL, which carries no credential of its own.
+
+<!-- Placeholder: screenshot of the git_repository resource form with the GitLab button's popover open, showing the "GitLab instance" field, the "Project access token" field, the "List projects" button and the project select -->
+
+The token is stored encrypted on the workspace, keyed by the repository it was issued for rather than by the resource that names it, and served only to the sync job that needs it.
+Two consequences: repointing a resource's `url` does not carry the token along, so a repository that genuinely moved needs its token entered again, and [workspace forks](../advanced/20_workspace_forks/index.mdx) read this one copy rather than each holding their own.
+
+Treat workspace admin as equivalent to holding the token: an admin of the workspace, or of any fork below it, can have a job request the credential, exactly as they can for a GitHub App installation token.
+
+To swap a token, use "Replace token" on the resource.
+Only the workspace that holds the token has that control; a fork borrowing its parent's is pointed at the parent.
+
+### Expiry and renewal
+
+Windmill shows the token's expiry on the repository in the Git sync settings and renews it within three weeks of expiring.
+A token without the `api` scope (or `self_rotate`) cannot rotate itself, so Windmill cannot renew it and says so on the repository instead.
+
+A failed renewal is never retried, because GitLab revokes the whole token family if an already-rotated token is presented again.
+Replace the token to restore sync.
+
+Non-expiring tokens are possible only for a group service account personal access token on self-managed, with `require_personal_access_token_expiry` turned off in the instance's application settings.
+A group access token is always rejected without an expiry.
+
+### What each managed feature needs
+
+| Feature | Needs |
+| --- | --- |
+| Instant pull | Maintainer, so Windmill can create the project hook, and a Windmill base URL GitLab can reach. Falls back to polling about every minute |
+| Merge requests on deploy | Developer, plus the `api` scope |
+| Diff preview on a merge request | The project hook, plus permission to post merge request notes |
+
+### Self-managed GitLab
+
+Windmill talks to `<your-gitlab>/api/v4` and needs no inbound access of its own beyond the hook deliveries.
+Two limits:
+
+- Webhooks to a private network are blocked until an administrator enables "Allow requests to the local network from webhooks and integrations" (Admin → Settings → Network → Outbound requests). A Windmill instance on the same private network as GitLab needs this, otherwise hook creation fails and the repository keeps polling.
+- GitLab served under a path prefix (a relative-URL install) is not supported, so the managed features stay unavailable. The repository still syncs through a token in its URL.

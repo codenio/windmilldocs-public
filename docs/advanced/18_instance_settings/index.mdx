@@ -713,9 +713,9 @@ For setup instructions, see [Self-managed GitHub App](../../integrations/git_rep
 
 ### Webhook base url
 
-Base url GitHub delivers [Git sync webhooks](../11_git_sync/index.mdx#webhooks) to, without trailing slash. When empty, the [base url](#base-url) is used. Set it, for the managed and self-managed apps alike, when GitHub cannot reach your instance on the url your users' browsers use.
+Base url your git host delivers [Git sync webhooks](../11_git_sync/index.mdx#webhooks) to, without trailing slash. When empty, the [base url](#base-url) is used. Set it, for the managed and self-managed GitHub Apps and for [GitLab](../../integrations/git_repository.mdx#gitlab) alike, when the git host cannot reach your instance on the url your users' browsers use.
 
-Configure it before connecting any GitHub App: changing it later does not move the webhooks GitHub already holds, and the setting then lists the workspaces whose Git sync settings must be re-saved to move them.
+Configure it before connecting any repository: changing it later does not move the webhooks the git host already holds, and the setting then lists the workspaces whose Git sync settings must be re-saved to move them.
 
 ## DB Health
 

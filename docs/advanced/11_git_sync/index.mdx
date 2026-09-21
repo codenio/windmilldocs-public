@@ -80,10 +80,14 @@ You now have your Windmill workspace on a GitHub repository.
 
 1. Go to workspace settings → Git Sync tab
 2. Click **+ Add connection**
-3. Create or select a [git_repository](../../integrations/git_repository.mdx) resource pointing to your Git repository. You have two authentication options:
+3. Create or select a [git_repository](../../integrations/git_repository.mdx) resource pointing to your Git repository. You have several authentication options:
    - **GitHub App**: Use the [GitHub App](../../integrations/git_repository.mdx#github-app) for simplified authentication and enhanced security. The button points to the Windmill-managed app, or to your instance's [self-managed GitHub App](../../integrations/git_repository.mdx#self-managed-github-app) when one is configured (for GitHub Enterprise Server, GitHub Enterprise Cloud or a custom app)
+   - **GitLab**: Hand a [GitLab project access token](../../integrations/git_repository.mdx#gitlab) to Windmill with the GitLab button in the resource form, and pick the project from the list (Enterprise only)
    - **Personal Access Token**: Use a [token](https://github.com/settings/tokens) with Read-and-write on "Contents". Your URL should be `https://[USERNAME]:[TOKEN]@github.com/[ORG|USER]/[REPO_NAME].git`
 4. Complete the configuration of the connection and save
+
+The GitHub App and the GitLab token are the two ways Windmill holds the repository's credential itself, which is what unlocks the managed features below: [instant pull over a webhook](#webhooks), [pull and merge requests opened on deploy](#in-app-pull-request-creation), and diff previews on [pull requests](#pull-request-diff-checks) and [merge requests](#merge-request-diff-previews).
+A token written into the URL is a plain git remote: it syncs on deploy and by polling, and nothing else.
 
 ![Git sync Setup](./git_sync_setup.png 'Git sync Setup')
 
@@ -156,26 +160,29 @@ The repository card in the Git sync settings is split into the two sync directio
 
 How changes are detected depends on how the repository is connected:
 
-- Repositories connected through the [GitHub App](../../integrations/git_repository.mdx#github-app) (managed or [self-managed](../../integrations/git_repository.mdx#self-managed-github-app)) sync instantly via a webhook, with polling kept on as a safety net.
-- Token-based repositories are checked by polling only, about every minute. New sync connections default the toggle on only for app-backed repositories; polling is opt-in for token repositories.
+- Repositories Windmill holds a credential for sync instantly via a webhook, with polling kept on as a safety net. That covers repositories connected through the [GitHub App](../../integrations/git_repository.mdx#github-app) (managed or [self-managed](../../integrations/git_repository.mdx#self-managed-github-app)) and GitLab repositories whose [project access token](../../integrations/git_repository.mdx#gitlab) was handed to Windmill.
+- Every other repository, including one whose token is written into its URL, is checked by polling only, about every minute. New sync connections default the toggle on only for repositories Windmill holds a credential for; polling is opt-in for the rest.
 
 Once enabled, the repository card shows the current delivery mode and the last sync status (last synced commit, or the error if the last pull failed). Pull jobs also appear in the [runs page](../../core_concepts/5_monitor_past_and_future_runs/index.mdx) under the "Sync" filter, like the deployment jobs of the push direction.
 
 ### Webhooks
 
-When automatic sync is enabled on a repository connected through the GitHub App, Windmill registers a webhook on the repository. Pushes to the tracked branch are then delivered to your instance and deployed within seconds. Deliveries are signature-verified, and disabling the toggle deletes the webhook.
+When automatic sync is enabled on a repository Windmill holds a credential for, Windmill registers a webhook on the repository. Pushes to the tracked branch are then delivered to your instance and deployed within seconds. Deliveries are verified against a secret Windmill sets on the hook, and disabling the toggle deletes the webhook.
 
-This requires the GitHub App installation to have the webhooks permission. If your organization has not approved it yet, Windmill falls back to polling (the card shows a "Falling back to polling" warning) and upgrades to webhook delivery automatically once the permission is granted. See [GitHub App permissions](../../integrations/git_repository.mdx#github-app-permissions) for the full list of permissions and what each enables.
+On GitHub this requires the GitHub App installation to have the webhooks permission. If your organization has not approved it yet, Windmill falls back to polling (the card shows a "Falling back to polling" warning) and upgrades to webhook delivery automatically once the permission is granted. See [GitHub App permissions](../../integrations/git_repository.mdx#github-app-permissions) for the full list of permissions and what each enables.
 
 [Self-managed GitHub Apps](../../integrations/git_repository.mdx#self-managed-github-app) use the same per-repository webhook path: grant the same permissions on your app and Windmill registers the webhook against your GitHub host. Your Windmill base URL only needs to be reachable from that host, over a certificate it trusts, not from the public internet, so this also works on private networks. See [network requirements for a self-managed app](../../integrations/git_repository.mdx#network-requirements-for-a-self-managed-app).
 
-If GitHub has to reach Windmill on a different url than your users' browsers do, set a [webhook base url](../18_instance_settings/index.mdx#webhook-base-url) in instance settings.
+On GitLab, the webhook is a project hook, which the token needs the Maintainer role to create.
+A self-managed GitLab also refuses to create a hook pointing at a private address until an administrator allows it, see [self-managed GitLab](../../integrations/git_repository.mdx#self-managed-gitlab).
 
-If your instance is not reachable from GitHub at all, webhook registration fails and the repository stays on polling. Nothing breaks; latency is the only difference.
+If your git host has to reach Windmill on a different url than your users' browsers do, set a [webhook base url](../18_instance_settings/index.mdx#webhook-base-url) in instance settings.
+
+If your instance is not reachable from the git host at all, webhook registration fails and the repository stays on polling. Nothing breaks; latency is the only difference.
 
 ### Polling
 
-Windmill periodically checks whether the tracked branch has new commits and deploys them when it does. Token-based repositories are checked about every minute; while a webhook is live, polling relaxes to about every 10 minutes and only acts as a safety net for missed deliveries.
+Windmill periodically checks whether the tracked branch has new commits and deploys them when it does. Repositories without a webhook are checked about every minute; while a webhook is live, polling relaxes to about every 10 minutes and only acts as a safety net for missed deliveries.
 
 ### Loop prevention
 
@@ -191,32 +198,42 @@ It is configured once on the parent workspace's repository and applies to every 
 
 ## Pull requests and checks
 
-For repositories connected through the [GitHub App](../../integrations/git_repository.mdx#github-app), Windmill can also open pull requests itself and post checks on your pull requests, replacing the `gh pr create` GitHub Actions. Both run from the deploy job itself (outbound calls to GitHub), so they work even when your instance is not reachable from GitHub.
+For repositories Windmill holds a credential for, through the [GitHub App](../../integrations/git_repository.mdx#github-app) or a [GitLab project access token](../../integrations/git_repository.mdx#gitlab), Windmill can also open pull requests itself and report on your pull requests, replacing the `gh pr create` GitHub Actions. Both run from the deploy job itself (outbound calls to the git host), so they work even when your instance is not reachable from it.
+
+On GitLab the toggles below open merge requests, and the preview is a [merge request note](#merge-request-diff-previews) rather than a check, with no commit-level check either.
 
 ### In-app pull request creation
 
 Two per-repository toggles control pull request creation:
 
-- "Open a pull request for each deploy branch", on [Git Promotion](../9_deploy_gh_gl/index.mdx) repositories: after a deploy pushes its `wm_deploy/**` branch, Windmill opens (or reopens) a pull request to the target branch. Defaults on for newly configured app-backed promotion repositories.
+- "Open a pull request for each deploy branch", on [Git Promotion](../9_deploy_gh_gl/index.mdx) repositories: after a deploy pushes its `wm_deploy/**` branch, Windmill opens (or reopens) a pull request to the target branch. Defaults on for newly configured promotion repositories whose credential Windmill holds.
 - "Open a pull request when an item is deployed in a fork", on the parent workspace's sync repository: after an item deployed in a [workspace fork](../20_workspace_forks/index.mdx) is pushed to the fork's `wm-fork/**` branch, Windmill opens a pull request to the tracked branch of the shared repository. Opt-in, [Enterprise Edition](/pricing) only.
 
-If a pull request already exists for the branch, Windmill reuses it, so the documented `open-pr-on-commit` / `open-pr-on-fork-commit` GitHub Actions can stay installed if you want custom titles or CI, without duplicate pull requests. If a pull request could not be opened (for example because the app installation has not approved the pull requests permission yet), the error is surfaced on the repository card.
+If a pull request already exists for the branch, Windmill reuses it, so the documented `open-pr-on-commit` / `open-pr-on-fork-commit` GitHub Actions can stay installed if you want custom titles or CI, without duplicate pull requests. If a pull request could not be opened (for example because the GitHub App installation has not approved the pull requests permission yet, or a GitLab token's role is too low), the error is surfaced on the repository card.
 
-For token-based repositories, these toggles are not available; use the [GitHub Actions](#github-actions) workflows instead.
+For repositories whose credential Windmill does not hold, these toggles are not available; use the [GitHub Actions](#github-actions) or [GitLab CI](#gitlab-ci) workflows instead.
 
 ### Pull request diff checks
 
-With automatic sync enabled on an app-backed repository, a pull request targeting the tracked branch gets a "Windmill diff" check run on its head commit: Windmill dry-runs the pull on the result of merging the pull request into the tracked branch, and reports what merging would deploy to the workspace (in sync, N changes, or the failure). Windmill also maintains a single managed comment on the pull request with the workspace, sync status, commit and a collapsible change list, updated in place on each new push to the pull request.
+With automatic sync enabled on an app-backed GitHub repository, a pull request targeting the tracked branch gets a "Windmill diff" check run on its head commit: Windmill dry-runs the pull on the result of merging the pull request into the tracked branch, and reports what merging would deploy to the workspace (in sync, N changes, or the failure).
+Windmill also maintains a single managed comment on the pull request with the workspace, sync status, commit and a collapsible change list, updated in place on each new push to the pull request.
 
 <!-- Placeholder: screenshot of a GitHub pull request showing the "Windmill diff" check run and the managed Windmill comment with the collapsible change list -->
 
+### Merge request diff previews
+
+On GitLab the preview is the same dry-run pull, reported in a merge request note that Windmill updates in place on each push, so a merge request carries one Windmill comment however many times it is pushed to.
+The note is advisory: unlike a GitHub check, it cannot block a merge or change what your own pipeline reports.
+
+<!-- Placeholder: screenshot of a GitLab merge request showing the managed Windmill note with the sync status line and the list of changes merging would deploy -->
+
 ### Deploy status check
 
-When a commit on the tracked branch is deployed by automatic sync, Windmill posts a "Windmill" check run on that commit that flips from "Deploying…" to "Deployed N changes", with a link back to the Windmill run. When several workspaces sync the same repository, each check is titled with its target workspace.
+When a commit on the tracked branch is deployed by automatic sync, Windmill posts a "Windmill" check run on that commit that flips from "Deploying…" to "Deployed N changes", with a link back to the Windmill run. When several workspaces sync the same repository, each check is titled with its target workspace. Windmill posts no deploy status on GitLab.
 
 ## Setup - CI/CD from git repository
 
-As an alternative to [automatic sync from Git](#automatic-sync-from-git), CI/CD can be configured to sync back changes to Windmill anytime a commit is made. This is the way to go for git hosting platforms other than GitHub, or when you prefer running the sync from your own CI. Keep either the CI/CD action or automatic sync enabled, not both, so they don't fight over deploys.
+As an alternative to [automatic sync from Git](#automatic-sync-from-git), CI/CD can be configured to sync back changes to Windmill anytime a commit is made. This is the way to go for git hosting platforms other than GitHub and GitLab, for repositories whose credential Windmill does not hold, or when you prefer running the sync from your own CI. Keep either the CI/CD action or automatic sync enabled, not both, so they don't fight over deploys.
 
 ### Github Actions
 
@@ -425,7 +442,7 @@ push-on-merge-to-forks:
 
 The `push-on-merge-to-forks` job powers [workspace forks](../20_workspace_forks/index.mdx): pushes to `wm-fork/**` branches are deployed into the matching fork workspace. Fork workspace IDs and branch names follow the `wm-fork-<name>` / `wm-fork/<originalBranch>/<name>` convention.
 
-To open a merge request when Windmill commits a fork branch (the equivalent of `open-pr-on-fork-commit`), either enable [in-app pull request creation](#in-app-pull-request-creation) on the parent workspace's repository, or add a job that calls the [GitLab merge requests API](https://docs.gitlab.com/ee/api/merge_requests.html#create-mr) (or `glab mr create`) on `wm-fork/**` branch pushes.
+To open a merge request when Windmill commits a fork branch (the equivalent of `open-pr-on-fork-commit`), either enable [in-app pull request creation](#in-app-pull-request-creation) on the parent workspace's repository, which works once the repository's [project access token](../../integrations/git_repository.mdx#gitlab) has been handed to Windmill, or add a job that calls the [GitLab merge requests API](https://docs.gitlab.com/ee/api/merge_requests.html#create-mr) (or `glab mr create`) on `wm-fork/**` branch pushes.
 
 ### Other Git hosting platforms
 
@@ -482,7 +499,7 @@ This enables parallel development workflows where multiple developers can work o
 A [dev workspace](../26_dev_workspaces/index.mdx) is the exception: it deploys to a top-level branch named after its [environment label](../26_dev_workspaces/index.mdx#environment-labels) (`dev`, `qa`, `test`, `uat`, `staging`, `demo`, `sandbox` or `preprod`) rather than to a `wm-fork/**` branch, which is why a label cannot be a branch this repository already tracks.
 With [Promote to prod via Git](../26_dev_workspaces/index.mdx#promote-to-prod-via-git) enabled on the repository it inherited from prod, deploys instead create per-item `wm_deploy/**` branches off the prod workspace's tracked branch, the same [Git Promotion](../9_deploy_gh_gl/index.mdx) scheme a root workspace uses.
 
-For repositories connected through the GitHub App, both fork directions can be fully managed by Windmill: [automatic fork sync](#automatic-fork-sync) deploys external changes on a fork's branch into the fork workspace, and the ["Open a pull request when an item is deployed in a fork" toggle](#in-app-pull-request-creation) opens the pull request back to the tracked branch.
+For repositories Windmill holds a credential for (GitHub App or [GitLab project access token](../../integrations/git_repository.mdx#gitlab)), both fork directions can be fully managed by Windmill: [automatic fork sync](#automatic-fork-sync) deploys external changes on a fork's branch into the fork workspace, and the ["Open a pull request when an item is deployed in a fork" toggle](#in-app-pull-request-creation) opens the pull or merge request back to the tracked branch.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
