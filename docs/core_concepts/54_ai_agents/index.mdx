@@ -58,6 +58,9 @@ Reasoning effort is supported on the following providers. Whether a given model 
 
 Reasoning consumes additional tokens, which are billed and counted in the step's [token usage](#usage-optional). When a flow with reasoning enabled is run in [chat mode](#chat-mode), the model's thinking is streamed into a collapsible "Thinking" box in the chat interface while the step runs.
 
+On OpenAI, the thinking is a summary that is only returned to organizations having completed [organization verification](https://help.openai.com/en/articles/10910291-api-organization-verification).
+Without it the step still reasons and answers normally, but its thinking stays hidden; after verifying, it can take up to an hour to appear.
+
 Anthropic extended thinking was previously toggled by appending a `/thinking` suffix to the model id. Existing selections keep working: the suffix is stripped automatically and mapped to the reasoning effort control.
 
 ## Script tools
@@ -197,6 +200,13 @@ The stream will contain json payloads separated by newlines. The payloads can be
 ```json
 {
 	"type": "token_delta", // sent everytime the AI generates a new token
+	"content": "string",
+}
+```
+
+```json
+{
+	"type": "reasoning_token_delta", // sent everytime the AI generates a new token of its thinking, when reasoning is enabled
 	"content": "string",
 }
 ```
