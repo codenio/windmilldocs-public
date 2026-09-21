@@ -79,7 +79,7 @@ wmill gitsync-settings status [options]
 ```
 
 It reads your current local git branch and asks the backend whether pushing it is deployed by automatic sync from Git.
-A `git push` is confirmed to deploy only when exactly one licensed repository with automatic sync enabled tracks the branch.
+A `git push` is confirmed to deploy only when exactly one repository with automatic sync enabled tracks the branch.
 Otherwise the result is reported as not confirmed (rather than a definite no), since a CI workflow the command doesn't recognize could still deploy on push - in that case, determine the deploy path from your CI configuration or use `wmill sync push`.
 
 The endpoint returns only derived booleans - no repository paths, credentials, or webhook configuration - so any workspace member (not just admins) can run it.
