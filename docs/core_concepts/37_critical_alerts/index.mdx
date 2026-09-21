@@ -28,7 +28,8 @@ Windmill monitors API tokens and sends notifications when they are about to expi
 
 - Email notifications are always sent when [SMTP](../../advanced/18_instance_settings/index.mdx#smtp) is configured, regardless of the "Alert on token expiry" setting.
 - Critical alerts are only sent when the ["Alert on token expiry"](../../advanced/18_instance_settings/index.mdx#alert-on-token-expiry) instance setting is enabled.
-- Session and ephemeral tokens are excluded from expiration notifications.
+- Session, ephemeral and CLI login tokens are excluded from expiration notifications.
+- A token created with 7 days or less to live gets no advance warning, only the notice when it is deleted.
 
 The tokens table in user settings also shows color-coded expiration badges for tokens expiring within 30 days, and a warning banner for tokens expiring within 7 days.
 

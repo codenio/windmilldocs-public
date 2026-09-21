@@ -161,6 +161,14 @@ How long to keep audit log entries in the database. Default: 365 days (EE), 14 d
 
 If you enable [Store audit logs in object storage](#store-audit-logs-in-object-storage), the bucket holds the durable long-term history, so you can safely lower this value to only what you need for the in-app [audit log](../../core_concepts/14_audit_logs/index.mdx) view. Windmill never deletes the exported audit logs from object storage.
 
+### Maximum token expiration (days)
+
+Furthest ahead, in days, that a user-created API token can expire.
+A token requested with no expiration or a longer one is created with this expiration instead.
+[Service account](../../core_concepts/16_roles_and_permissions/index.mdx#service-accounts) tokens are exempt.
+Leave empty for no limit.
+See [Maximum token expiration](../../core_concepts/59_user_tokens/index.mdx#maximum-token-expiration) for what it covers.
+
 ### Instance object storage
 
 [Connect your instance](../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage) to a S3 bucket to [store large logs](../../core_concepts/38_object_storage_in_windmill/index.mdx#large-job-logs-management) and [global cache for Python and Go](../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage-distributed-cache-for-python-rust-go).
