@@ -131,6 +131,7 @@ There are two ways to sync external branch changes back into fork workspaces:
 - [CI/CD actions](../9_deploy_gh_gl/index.mdx#github-actions-setup): set up the fork-specific actions, in particular the `push-on-merge-to-forks.yaml` action.
 
 Similarly, the pull request that merges a fork's changes back into the tracked branch can be opened by Windmill itself when an item is deployed in the fork ("Open a pull request when an item is deployed in a fork" on the parent's repository, see [In-app pull request creation](../11_git_sync/index.mdx#in-app-pull-request-creation)), or by the `open-pr-on-fork-commit` GitHub Action.
+On GitHub, that pull request can be gated on the fork's [CI tests](../24_ci_tests/index.mdx) with the ["Windmill CI tests" check](../11_git_sync/index.mdx#ci-tests-check), Enterprise Edition only.
 
 ### Fork and branch naming
 

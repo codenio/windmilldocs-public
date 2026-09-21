@@ -99,6 +99,12 @@ In [workspace forks](../20_workspace_forks/index.mdx), CI results are also visib
 - The fork banner shows a summary of passing, failing, and running tests across all changed items.
 - On the [comparison page](../20_workspace_forks/index.mdx#merge-workspaces-from-the-ui-merge-ui), each changed item displays a CI badge, and a test summary lists all test scripts with their latest results.
 
+## Gate GitHub pull requests
+
+When a workspace syncs to a repository through the [GitHub App](../../integrations/git_repository.mdx#github-app) with [automatic sync from Git](../11_git_sync/index.mdx#automatic-sync-from-git) enabled, pull requests from a fork or dev workspace branch get a ["Windmill CI tests" check run](../11_git_sync/index.mdx#ci-tests-check) that runs the workspace's CI tests on the pull request head.
+Mark it as a required status check in GitHub to block merging until the tests pass.
+This is [Enterprise Edition](/pricing) only.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Deploy to prod"

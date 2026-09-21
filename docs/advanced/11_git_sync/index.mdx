@@ -227,6 +227,21 @@ The note is advisory: unlike a GitHub check, it cannot block a merge or change w
 
 <!-- Placeholder: screenshot of a GitLab merge request showing the managed Windmill note with the sync status line and the list of changes merging would deploy -->
 
+### CI tests check
+
+With automatic sync enabled on an app-backed GitHub repository, a pull request targeting the tracked branch also gets a "Windmill CI tests" check run on its head commit, reporting the [CI test scripts](../24_ci_tests/index.mdx) of the workspace its branch syncs to.
+Mark it as a [required status check](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging) on the tracked branch to block merging until the tests pass, with no GitHub Action to maintain.
+
+The check applies to pull requests whose head branch is the branch of a [workspace fork](../20_workspace_forks/index.mdx#fork-and-branch-naming) (`wm-fork/**`) or of a [dev workspace](../26_dev_workspaces/index.mdx#environment-labels).
+Once that workspace reflects the pull request head, Windmill runs every CI test it declares, as the user who created the fork or dev workspace, and fails the check as soon as one of them fails.
+A workspace declaring no test passes with a "No CI tests" conclusion, and a check still running 30 minutes after it opened fails.
+Each push to the pull request opens a new check on the new head and runs the whole suite again.
+
+Pull requests from any other branch, such as a plain feature branch or a contributor's fork of the repository, get the check posted as skipped, which GitHub counts as passing for a required check.
+Merge queues are not supported: a merge group commit exists in no workspace, so require the check on the pull request itself.
+
+<!-- Placeholder: screenshot of a GitHub pull request checks list showing the "Windmill CI tests" check run marked as required, next to the "Windmill diff" check -->
+
 ### Deploy status check
 
 When a commit on the tracked branch is deployed by automatic sync, Windmill posts a "Windmill" check run on that commit that flips from "Deploying…" to "Deployed N changes", with a link back to the Windmill run. When several workspaces sync the same repository, each check is titled with its target workspace. Windmill posts no deploy status on GitLab.
