@@ -2,6 +2,9 @@
 description: How do I connect LLMs to Windmill? Use the Model Context Protocol (MCP) to trigger scripts and flows from Claude, Cursor or any MCP client.
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Windmill MCP
 
 Windmill supports the [**Model Context Protocol (MCP)**](https://modelcontextprotocol.io/introduction), an open standard that enables seamless interaction between LLMs and tools like Windmill.
@@ -276,6 +279,80 @@ The two write tools deploy [full-code apps](../../full_code_apps/index.mdx): the
 | `searchDocs` | Search the Windmill documentation and get back matching pages |
 | `readDocsPage` | Read one documentation page, or one of its sections |
 | `listDataMetrics` | List the [measures and dimensions](../63_pipelines/measures.mdx) declared on DuckLake tables |
+
+---
+
+## Reading the caller's request headers
+
+A script or flow exposed as its own MCP tool can read the HTTP headers of the request that invoked it, through a [preprocessor](../43_preprocessors/index.mdx).
+This is how a multi-user MCP server learns who is on the other end.
+
+The model's tool arguments arrive as `event.body`, and the request's headers as `event.headers`, a key the model never fills, so an identity read from a header cannot be forged by prompt injection.
+There is nothing to configure: a runnable with a preprocessor receives the request the way a [webhook](../4_webhooks/index.mdx) or [HTTP route](../../triggers/2_http_routing/index.mdx) one does, and a runnable without one receives only what the model sent, unchanged.
+
+<Tabs>
+<TabItem value="TypeScript">
+```TypeScript
+export async function preprocessor(event: {
+  kind: "mcp";
+  body: Record<string, any>; // the arguments the model sent
+  headers: Record<string, string>;
+  tool_name: string; // the MCP tool that was called
+}) {
+  const caller = event.headers["x-user-id"];
+  if (!caller) {
+    // the header is missing, rather than defaulting to an anonymous caller
+    throw new Error("missing x-user-id header");
+  }
+  // the header wins: it comes after the model's arguments, not before
+  return { ...event.body, caller };
+}
+
+export async function main(caller: string /*, the tool's own parameters */) {
+  // your code here
+}
+```
+</TabItem>
+
+<TabItem value="Python">
+```Python
+from typing import TypedDict, Literal
+
+
+class McpEvent(TypedDict):
+    kind: Literal["mcp"]
+    body: dict  # the arguments the model sent
+    headers: dict[str, str]
+    tool_name: str  # the MCP tool that was called
+
+
+def preprocessor(event: McpEvent):
+    caller = event["headers"].get("x-user-id")
+    if not caller:
+        # the header is missing, rather than defaulting to an anonymous caller
+        raise ValueError("missing x-user-id header")
+    # the header wins: it comes after the model's arguments, not before
+    return {**event["body"], "caller": caller}
+
+
+def main(caller: str):  # plus the tool's own parameters
+    # your code here
+```
+</TabItem>
+</Tabs>
+
+Header names are lowercase, as they appear on the wire (`x-user-id`, not `X-User-Id`).
+Unlike [webhooks](../4_webhooks/index.mdx#request-headers), there is no `include_header` list to set: every header of the request is in `event.headers`, except `authorization`, `cookie` and `proxy-authorization`, which are withheld.
+
+### Which tools deliver headers
+
+Only the tools generated from your workspace's own scripts and flows, one per runnable.
+The [endpoint tools](#available-mcp-tools), including `runScriptByPath` and `runFlowByPath`, reach a runnable over a second HTTP request, so a preprocessor invoked that way sees that request rather than the caller's.
+[Multi-workspace tokens](#multi-workspace-tokens) expose only endpoint tools, so they never deliver headers.
+
+Which tool the model picks is its own choice, so a preprocessor relying on a header should treat a missing one as an error rather than defaulting.
+A preprocessor also runs only on a triggered run: a [scheduled](../1_scheduling/index.mdx) run or a preview calls `main` directly with the arguments it is given.
+Where a runnable relies on an identity read from its headers, scope the token to the scripts and flows it needs.
 
 ---
 

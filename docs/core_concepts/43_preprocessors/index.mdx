@@ -8,7 +8,7 @@ import TabItem from '@theme/TabItem';
 # Preprocessors
 
 [Scripts](#script-preprocessor) and [flows](#flow-preprocessor) can include a preprocessor to transform incoming requests before they are passed to the runnable.
-The preprocessor is only called when the runnable is triggered via a [webhook](../4_webhooks/index.mdx), an [HTTP route](../../triggers/2_http_routing/index.mdx), an [email trigger](../../triggers/1_email_triggers/index.mdx), a [WebSocket trigger](../../triggers/3_websocket_triggers/index.mdx), a [Kafka trigger](../../triggers/5_kafka_triggers/index.mdx), a [NATS trigger](../../triggers/6_nats_triggers/index.mdx), a [Postgres trigger](../../triggers/4_postgres_triggers/index.mdx), an [SQS trigger](../../triggers/7_sqs_triggers/index.mdx), an [MQTT trigger](../../triggers/8_mqtt_triggers/index.mdx), a [GCP Pub/Sub trigger](../../triggers/9_gcp_triggers/index.mdx), an [Azure Event Grid trigger](../../triggers/10_azure_triggers/index.mdx) or a [native trigger](../../triggers/11_native_triggers/index.mdx).
+The preprocessor is only called when the runnable is triggered via a [webhook](../4_webhooks/index.mdx), an [HTTP route](../../triggers/2_http_routing/index.mdx), an [email trigger](../../triggers/1_email_triggers/index.mdx), a [WebSocket trigger](../../triggers/3_websocket_triggers/index.mdx), a [Kafka trigger](../../triggers/5_kafka_triggers/index.mdx), a [NATS trigger](../../triggers/6_nats_triggers/index.mdx), a [Postgres trigger](../../triggers/4_postgres_triggers/index.mdx), an [SQS trigger](../../triggers/7_sqs_triggers/index.mdx), an [MQTT trigger](../../triggers/8_mqtt_triggers/index.mdx), a [GCP Pub/Sub trigger](../../triggers/9_gcp_triggers/index.mdx), an [Azure Event Grid trigger](../../triggers/10_azure_triggers/index.mdx), a [native trigger](../../triggers/11_native_triggers/index.mdx) or a [tool call over MCP](../51_mcp/index.mdx#reading-the-callers-request-headers).
 
 This approach is useful for preprocessing arguments differently depending on the trigger before the execution of the runnable.
 It also separates the handling of arguments according to whether they are called by a trigger or from the UI, which can help you keep a simple schema form in the UI for the runnable.
@@ -124,6 +124,12 @@ export async function preprocessor(
         delivery_type: "push" | "pull";
         headers?: Record<string, string>;
         publish_time?: string;
+      }
+    | {
+        kind: "mcp";
+        body: Record<string, any>;
+        headers: Record<string, string>;
+        tool_name: string;
       }
 ) {
   // you can use a switch statement to handle different trigger kinds
@@ -259,6 +265,14 @@ class GcpEvent(TypedDict):
     headers: Optional[dict[str, str]]
     publish_time: Optional[str]
 
+
+class McpEvent(TypedDict):
+    kind: Literal["mcp"]
+    body: dict
+    headers: dict[str, str]
+    tool_name: str
+
+
 Event = Union[
     WebhookEvent,
     HttpEvent,
@@ -269,6 +283,7 @@ Event = Union[
     SqsEvent,
     MqttEvent,
     GcpEvent,
+    McpEvent,
 ]
 
 
@@ -414,6 +429,12 @@ export async function preprocessor(
       old_row?: Record<string, any>,
       row: Record<string, any>
     }
+    | {
+      kind: "mcp";
+      body: Record<string, any>;
+      headers: Record<string, string>;
+      tool_name: string;
+    }
 ) {
   // you can use a switch statement to handle different trigger kinds
   switch (event.kind) {
@@ -555,6 +576,13 @@ class PostgresEvent(TypedDict):
     row: dict[str, any]
 
 
+class McpEvent(TypedDict):
+    kind: Literal["mcp"]
+    body: dict
+    headers: dict[str, str]
+    tool_name: str
+
+
 Event = Union[
     WebhookEvent,
     HttpEvent,
@@ -566,6 +594,7 @@ Event = Union[
     MqttEvent,
     GcpEvent,
     PostgresEvent,
+    McpEvent,
 ]
 
 
