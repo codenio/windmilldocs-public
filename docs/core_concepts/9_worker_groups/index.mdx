@@ -244,6 +244,20 @@ the workspaces, `dev`, `staging`, `prod` and the worker groups: `normal-dev`, `n
 
 Last, if the tags contain `$args[argName]` (e.g: `foo-$args[foobar])` then the tag will be replaced by the string value at the arg key `argName` and thus can be fully dynamic.
 
+On a flow step, the tag can also contain `$flow_expr[path]`, which reads from the flow's state instead of the step's inputs, so a step can run on a worker group chosen by an earlier step's result, a flow input or a flow env variable.
+The path starts with one of:
+
+- `results.<step_id>`: the result of a previous step, including a step of the enclosing flow from inside a [loop](../../flows/12_flow_loops.md) or [branch](../../flows/13_flow_branches.md).
+- `flow_input.<key>`: a [flow input](../../flows/3_editor_components.mdx#flow-inputs). Inside a for loop, `flow_input.iter.value` is the current item.
+- `flow_env.<key>`: a [flow env variable](../../flows/3_editor_components.mdx#flow-env-variables).
+
+For example, with the tag `gpu-$flow_expr[results.a.region]`, if step `a` returned `{"region": "eu"}`, the step runs on the `gpu-eu` worker group.
+A path that reaches nothing resolves to an empty string, and a tag left empty runs on the default tag.
+When you test the step on its own, there is no flow state to read, so it also runs on its default tag.
+
+To make such a tag assignable, add the template itself (e.g. `gpu-$flow_expr[results.a.region]`) to the assignable tags.
+Any value it resolves to is then allowed.
+
 See [Deploy to staging prod](../12_staging_prod/index.md) to see a full UI flow to deploy to staging and prod.
 
 :::note Workspace-specific tags and workspace forks
