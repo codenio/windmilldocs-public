@@ -592,6 +592,28 @@ You can select which language runtimes should have tracing enabled. Toggling thi
 
 This setting is only available on [Enterprise Edition](/pricing).
 
+Captured spans are not kept forever: see [HTTP request tracing retention in secs](#http-request-tracing-retention-in-secs) for the retention window and its default.
+
+### HTTP request tracing retention in secs
+
+How long a captured [HTTP tracing](#http-tracing) span is kept, and therefore how far back the job details view can show the HTTP requests a job made.
+Defaults to 7 days, and there is no "keep forever" value.
+
+This window is independent of the job retention period, so a span can outlive its job or be deleted while the job is still listed.
+Spans are usually worth expiring sooner than the jobs themselves: tracing records one per HTTP request made from a job script.
+
+The window can also be set with the `OTEL_TRACES_RETENTION_SECS` env var on the servers, which the instance setting overrides when both are set.
+
+:::warning Upgrading to a version that sweeps traces
+
+Traces were never swept before this setting existed, so an instance with HTTP tracing enabled kept every span it had ever captured.
+After upgrading, every span older than the retention window is deleted, with no way to recover them.
+
+To keep more than 7 days of request traces, set the window before the upgrade rather than after: servers read `OTEL_TRACES_RETENTION_SECS` at startup, so setting it in the same deploy as the upgrade applies from the very first sweep.
+:::
+
+Capturing traces requires [Enterprise Edition](/pricing).
+
 ### Prometheus
 Expose [Prometheus](https://prometheus.io/) metrics for workers and servers on port 8001 at /metrics.
 

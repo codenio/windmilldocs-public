@@ -253,6 +253,9 @@ You can set a custom retention period for the jobs runs details. The retention p
 
 ![Set Retention Period](./set_retention_policy.png 'Set Retention Period')
 
+The HTTP request traces captured by [HTTP tracing](../../advanced/18_instance_settings/index.mdx#http-tracing) are not covered by this retention period.
+They have their own window, [configured separately](../../advanced/18_instance_settings/index.mdx#http-request-tracing-retention-in-secs), so a trace can outlive its job or be deleted while the job is still listed.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="Plans & How to Upgrade"
