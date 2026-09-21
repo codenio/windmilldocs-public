@@ -296,21 +296,21 @@ HTTP route responses include permissive CORS headers by default so that routes c
 | `Access-Control-Allow-Headers` | `content-type, authorization` |
 
 `OPTIONS` preflight requests are handled automatically by the HTTP trigger handler.
+On sync routes, a runnable can override these on its own response with [`wm_headers`](../../core_concepts/4_webhooks/index.mdx#custom-response-headers), but never on the preflight, so they cannot restrict who calls a route, and an allowlist overrides the origin they set.
 
-To override any of these defaults for a route, set the corresponding header on the response returned by your runnable using the [`wm_headers`](../../core_concepts/4_webhooks/index.mdx#custom-response-headers) mechanism (or its longer alias `windmill_headers`). Only headers that are **not** already present in the response are filled in with the defaults above, so you can restrict origins or allowed headers on a per-route basis:
+### Allowed origins
 
-```ts
-export async function main() {
-  return {
-    wm_headers: {
-      "Access-Control-Allow-Origin": "https://app.example.com",
-      "Access-Control-Allow-Methods": "GET, POST",
-      "Access-Control-Allow-Headers": "content-type, x-api-key"
-    },
-    result: { ok: true }
-  };
-}
-```
+To restrict which origins can call a route from a browser, turn on 'Allowed origins' in the route editor under Advanced > Request Options ('Override allowed origins' when the instance sets a default) and enter a comma-separated list, such as `https://app.example.com, https://admin.example.com`.
+
+A listed origin gets its own value back in `Access-Control-Allow-Origin`, and any other origin gets no such header, on both the preflight and the response.
+The browser then blocks the read, and a request that needs a preflight (a JSON body or an `Authorization` header, for example) never reaches the runnable.
+`Access-Control-Allow-Methods` also narrows from the defaults above to the route's own method plus `OPTIONS`.
+Matching is exact and ignores case, so write each origin the way a browser sends it, with no trailing slash or path.
+This only restricts browsers, so use [authentication](#authentication-options) to control who can run the route.
+
+The allowlist is resolved route first, then the [HTTP route default allowed origins](../../advanced/18_instance_settings/index.mdx#http-route-default-allowed-origins) instance setting ([Enterprise Edition](/pricing)), then any origin.
+An empty list counts as unset and still follows the instance default, while `*` allows any origin even when the instance default is narrower.
+[Static websites](#serving-static-files-or-websites) ignore allowlists entirely, while single static files follow them like any other route.
 
 ---
 
