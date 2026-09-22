@@ -64,7 +64,7 @@ In the fork form:
 4. Optionally configure the **Protect \<root\>** options to lock the prod workspace (see [Locking the prod workspace](#locking-the-prod-workspace)):
    - **Block direct edits (deploy via the dev workspace)**
    - **Prevent forking**
-5. Optionally enable **Copy members** to copy the source workspace's members (and their roles, including service-account type) into the dev workspace, so the whole team can work in it. This is only offered when creating a dev workspace, not when attaching an existing one.
+5. Optionally enable **Copy members** to copy the source workspace's members (and their roles, including service-account type) into the dev workspace, so the whole team can work in it. This is only offered when creating a dev workspace, not when attaching an existing one. With it off, the dev workspace still starts with the parent's admins and developers if the parent has [Add admins and developers to new forks](../20_workspace_forks/index.mdx#add-admins-and-developers-to-new-forks) enabled.
 
 {/* TODO: screenshot of the fork creation form with the "Persistent dev workspace" toggle, "Protect <root>" sub-card, Workspace ID field, and "Copy members" toggle. */}
 

@@ -104,6 +104,16 @@ Forks can be created by any user of the workspace. Roles and access will be the 
 
 On [Windmill Cloud](https://app.windmill.dev/), creating a fork additionally requires the workspace to be on a paid plan and to have fork capacity left under the [per-seat cap](#forks-on-windmill-cloud).
 
+#### Add admins and developers to new forks
+
+By default, a new fork's only member is its creator.
+To have every new fork start with the workspace's admins and developers, each with the role they hold in the workspace, a workspace admin can enable `Add admins and developers to new forks` in `Workspace settings` -> `Users` -> `Fork members`.
+Operators, disabled users and service accounts are not added.
+
+The setting is off by default and only applies when a fork is created: existing forks keep their members.
+Forks inherit the setting, so forks of a fork follow it too.
+A [dev workspace](../26_dev_workspaces/index.mdx#creating-a-dev-workspace) created with `Copy members` enabled gets all members of the parent instead.
+
 #### Managing members of a fork you created
 
 The creator of a fork can manage developers on it without being an admin of it. From the fork's workspace settings, under `Members`, they can:
