@@ -208,7 +208,7 @@ See [workspace-specific items](../3_cli/environment-specific-items.mdx) for the 
 
 - You need a separate production environment that is fully isolated from day-to-day development.
 - You want PR-based review on the *promotion* step, not just the merge-to-shared step.
-- You're deploying across multiple Windmill instances.
+- You're deploying across multiple Windmill instances and want promotion to go through git. To deploy item by item from the UI instead, see [deploying to a workspace on another instance](../../core_concepts/12_staging_prod/index.md#deploy-to-a-workspace-on-another-instance).
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
@@ -372,7 +372,7 @@ Most teams should start at **stage 1** and only move up when they feel the pain 
 - **Stage 1** if you have a small team, no compliance requirements, and a single environment is fine.
 - **Stage 2** if you want enforced review on every change and isolated sandboxes, but don't need external version control.
 - **Stage 3** if you want git history, backup, local development, and the option of git PR-based review on top of stage 2.
-- **Stage 4** if you need a separate production environment with a promotion gate, or you deploy across multiple Windmill instances.
+- **Stage 4** if you need a separate production environment with a promotion gate, or you deploy across multiple Windmill instances through git (the UI can also [deploy to a workspace on another instance](../../core_concepts/12_staging_prod/index.md#deploy-to-a-workspace-on-another-instance)).
 
 Stages 1 → 2 → 3 → 4 are designed to be adopted in order, but you can skip stages: a small team on Community Edition can go stage 1 → stage 3 (skip forks) to get git sync and local development without needing fork-based review.
 

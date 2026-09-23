@@ -29,7 +29,7 @@ For a long-lived dev/prod pair instead of throwaway branches, use a [dev workspa
 
 This is a more complex but very reliable setup that leverages [Git Sync](../11_git_sync/index.mdx) to deploy from one workspace to another through git. When changes are done to the Staging workspace, they are pushed to a branch in the Prod repo. Once merge to the main branch of the Prod repo, the Prod workspace is updated with the changes.
 
-This workflow lets you review all the changes on a PR before merging and deploying. It also has the advantage, unlike the other options here, to work across separate windmill instances.
+This workflow lets you review all the changes on a PR before merging and deploying. It also works across separate Windmill instances, as does [deploying from the UI](#option-4-deploy-to-prod-using-the-ui-only---multi-workspace) to a workspace on another instance.
 
 ![Git Promotion](/images/git_promotion.png 'Git Promotion')
 
@@ -43,7 +43,7 @@ This workflow lets you review all the changes on a PR before merging and deployi
 
 ## Option 4. Deploy to prod using the UI only - Multi workspace
 
-From a workspace in Windmill, you can deploy a script/flow/resource/variable and all its dependencies into the workspace it deploys to, item by item. That target is the workspace's parent: the workspace a [fork](../20_workspace_forks/index.mdx) was forked from, or the prod workspace a [dev workspace](../26_dev_workspaces/index.mdx) is paired with. Two unrelated workspaces are not linked by a setting, so pair them first if you want a standing staging/prod flow. A pair configured before Windmill 1.776.0 converts to that pairing on upgrade with nothing to do: see [upgrading from the deploy target setting](../../core_concepts/12_staging_prod/index.md#upgrading-from-the-deploy-target-setting) for the cases that do need a look.
+From a workspace in Windmill, you can deploy a script/flow/resource/variable and all its dependencies into the workspace it deploys to, item by item. That target is the workspace's parent: the workspace a [fork](../20_workspace_forks/index.mdx) was forked from, or the prod workspace a [dev workspace](../26_dev_workspaces/index.mdx) is paired with. Two unrelated workspaces of the same instance are not linked by a setting, so pair them first if you want a standing staging/prod flow. A workspace can also deploy to a [workspace on another Windmill instance](../../core_concepts/12_staging_prod/index.md#deploy-to-a-workspace-on-another-instance), set in its workspace settings, with each person deploying under their own account on that instance. A pair configured before Windmill 1.776.0 converts to that pairing on upgrade with nothing to do: see [upgrading from the deploy target setting](../../core_concepts/12_staging_prod/index.md#upgrading-from-the-deploy-target-setting) for the cases that do need a look.
 
 Deploy to prod using the UI is [Cloud plans and Self-Hosted Enterprise Edition](/pricing) only.
 

@@ -1,5 +1,5 @@
 ---
-description: How do I deploy items from a staging workspace to production using the Windmill UI?
+description: How do I deploy items from a staging workspace to production with the Windmill UI, including to a workspace on another Windmill instance?
 ---
 
 # Deploy to prod using the UI
@@ -31,14 +31,18 @@ The [Draft and deploy](../0_draft_and_deploy/index.mdx) is another feature that 
 
 ### How it works
 
-A workspace deploys into its parent workspace: a [workspace fork](../../advanced/20_workspace_forks/index.mdx) deploys into the workspace it was forked from, and a [dev workspace](../../advanced/26_dev_workspaces/index.mdx) deploys into the prod workspace it is paired with. Create a fork or pair a dev workspace to get a deployment target - there is no separate setting to link two unrelated workspaces.
+A workspace deploys into its parent workspace: a [workspace fork](../../advanced/20_workspace_forks/index.mdx) deploys into the workspace it was forked from, and a [dev workspace](../../advanced/26_dev_workspaces/index.mdx) deploys into the prod workspace it is paired with. Create a fork or pair a dev workspace to get a deployment target - there is no separate setting to link two unrelated workspaces of the same instance.
+
+A workspace can also [deploy to a workspace on another Windmill instance](#deploy-to-a-workspace-on-another-instance), set by an admin in the workspace settings, alongside its parent or instead of one.
 
 The parent workspace can for example be:
 
 - a Prod workspace, paired with a dev or staging workspace where scripts and flows are edited and tested first
 - a workspace the changes of a short-lived fork are merged back into.
 
-A workspace with no parent has nothing to deploy into: the deploy drawer shows `Staging/Prod deploy not set up`, and the fix is to pair it, not to fill in a target. See [upgrading from the deploy target setting](#upgrading-from-the-deploy-target-setting) if you used the `Deployment UI` settings tab before Windmill 1.776.0.
+A workspace with no parent and no target on another instance has nothing to deploy into: the deploy drawer shows `Deploy destination not set up`.
+The fix is to pair it with a prod workspace on the same instance, or to point it at a workspace on another instance.
+See [upgrading from the deploy target setting](#upgrading-from-the-deploy-target-setting) if you used the `Deployment UI` settings tab before Windmill 1.776.0.
 
 Items that can be deployed are:
 - [Scripts](../../script_editor/index.mdx)
@@ -82,6 +86,83 @@ This can be useful for non-admin (for example, operators) to share a page to pro
 
 > This page then allows users with the right permissions to deploy the given items.
 
+## Deploy to a workspace on another instance
+
+Teams that keep dev and prod on separate Windmill instances can deploy from the same drawer into a workspace on the other instance, instead of going through the [git promotion workflow](../../advanced/9_deploy_gh_gl/index.mdx) or the [CLI](../../advanced/3_cli/index.mdx).
+Like the rest of the deploy UI, it is available on [Cloud plans and Self-Hosted Enterprise Edition](/pricing) only.
+
+Deploys to the remote instance run as the person deploying, with their own account there, not with a shared service account.
+The remote workspace's permissions, [protection rules](../56_protection_rulesets/index.mdx) and [audit logs](../14_audit_logs/index.mdx) apply to them as to any other call made with that person's token.
+
+### Set the target
+
+A workspace admin sets the target from `Workspace settings` -> `Dev workspace` -> `Deploy to another instance`:
+
+- `Instance URL`: the root URL of the remote instance, without `/api`, for example `https://windmill.example.com`.
+- `Workspace on that instance`: the ID of the workspace to deploy into, for example `prod`.
+
+![Deploy to another instance setting](./remote_deploy_target_setting.webp 'Deploy to another instance setting')
+
+`Remove target` clears the setting.
+Changing the instance URL or the workspace drops every token stored for the previous target, so everyone connects again.
+
+A workspace can have a target on another instance and a parent on this one at the same time: the drawer then lets you [choose the destination](#choosing-the-destination) of each deploy.
+
+Windmill's server calls the remote instance on the deployer's behalf, so the remote must be reachable from this instance's servers, and it needs no CORS setup.
+A self-hosted instance can target a URL on a private network.
+On Windmill Cloud, the URL must resolve to a public address.
+Redirects are not followed: if the URL redirects, for example from `http` to `https`, set the target to the URL it redirects to.
+
+### Connect your account
+
+Each person who deploys connects once per workspace, from the drawer.
+
+![Connect to the remote instance](./remote_deploy_connect.webp 'Connect by signing in to the remote instance, or with a pasted token')
+
+1. Click `Sign in to <host>`.
+   A popup opens the remote instance's authorization page, after asking you to log in there if you are not already.
+   If popups are blocked, the whole tab goes to the remote instance instead and comes back once you have authorized.
+2. Check that the page names the instance you came from, the workspace, and your account on the remote, then click `Authorize`.
+   You must be a member of that workspace on the remote instance.
+
+![Authorize a deploy connection](./remote_deploy_authorize.webp 'Authorization page on the remote instance')
+
+The remote instance issues a token limited to that one workspace, with your permissions in it, valid for up to 90 days.
+It is listed in your account settings on the remote, labelled `remote-deploy:<host of this instance>`, where you can revoke it.
+When it expires, connect again from the drawer.
+
+Signing in needs the remote instance to run a Windmill version that has the authorization page.
+With an older remote, or if you prefer, click `Paste a token instead` to open a token field.
+Follow `Create a token on <host>` to [create a token](../59_user_tokens/index.mdx#create-a-token) in your account settings on the remote, paste it and click `Connect`.
+Windmill checks the token against the remote instance before storing it.
+
+Once connected, the drawer shows `Deploying as <your remote email> on <instance URL>`, and `Disconnect` forgets the token.
+
+Stored tokens are encrypted with the workspace's [encryption key](../30_workspace_secret_encryption/index.mdx) and only ever sent to the target they were issued for.
+A token is deleted when its owner is removed from this workspace or their account is deleted.
+Connecting and deploying require your own session on this instance, or an unscoped [token](../59_user_tokens/index.mdx) for it: job, scoped and read-only tokens are refused.
+
+### Deploy to the remote workspace
+
+Once connected, the drawer works as for a workspace on the same instance, with every lookup made on the remote workspace: which dependencies already exist there, the diffs, the users offered by [run on behalf of](#run-on-behalf-of), and the protection rules of the target.
+
+![Connected to the remote instance](./remote_deploy_connected.webp 'Connected to the remote instance')
+
+If the remote instance rejects the stored token, for example because it was revoked or has expired, the drawer shows `Could not deploy to <workspace> on <host>` with the remote's reason.
+Disconnect, then connect again.
+
+The [shareable page](#shareable-page) works the same way: whoever opens it deploys with their own connection to the remote instance.
+
+### Choosing the destination
+
+When a workspace has both a parent workspace and a target on another instance, the drawer's `Destination` shows a toggle between the parent workspace and `<workspace> on <host>`.
+Each side loads its own items, diffs and permissions.
+
+### Limitations
+
+Only the per-item deploy drawer and its shareable page deploy to another instance.
+The fork [Compare & Deploy page](#merge-ui-for-merging-changes-done-in-workspace-forks) compares workspaces of the same instance.
+
 ## Upgrading from the deploy target setting
 
 Before Windmill 1.776.0, the deployment target was named in a separate `Deployment UI` settings tab and could be any workspace you belonged to. That setting is gone: the target is the workspace's parent, and the tab is folded into `Workspace settings` -> [`Dev workspace`](../../advanced/26_dev_workspaces/index.mdx).
@@ -94,7 +175,7 @@ There is nothing to do. A `staging` workspace that was the only one deploying in
 Both are named individually in the migration logs.
 
 - **Several workspaces deployed into the same target.** Only one can be the dev workspace of a given parent, so each becomes a plain [fork](../../advanced/20_workspace_forks/index.mdx) instead. Their [`$workspace` job tags](../9_worker_groups/index.mdx#dynamic-tag) then resolve to the parent, and their [git sync](../../advanced/11_git_sync/index.mdx) deploys move to a `wm-fork/**` branch with no promotion mode.
-- **The link could not be converted** (target missing or archived, self-reference, source already a fork of something else, cycle) and was dropped. Deploying reports `Staging/Prod deploy not set up`.
+- **The link could not be converted** (target missing or archived, self-reference, source already a fork of something else, cycle) and was dropped. Deploying reports `Deploy destination not set up`.
 
 Either way the fix is one attach, as an admin of both workspaces: on the prod workspace, `Workspace settings` -> `Dev workspace` -> `Attach an existing workspace as dev`. The [environment label](../../advanced/26_dev_workspaces/index.mdx#environment-labels) is fixed once set, and the two [lock](../../advanced/26_dev_workspaces/index.mdx#locking-the-prod-workspace) toggles default to on, which is stricter than the old setup: turn them off to keep the previous behaviour.
 
