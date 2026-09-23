@@ -1,16 +1,127 @@
 ---
-description: How does streaming work in Windmill? Stream job results via SSE, webhooks, HTTP routes and AI agents.
+description: How do I stream from Windmill? Stream flow progress step by step, script output and AI agent tokens over SSE from webhooks, HTTP routes and the jobs API.
 ---
 
 import DocCard from '@site/src/components/DocCard';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Streaming
 
-Windmill supports streaming data from jobs in several ways. Runnables can return streams (any `AsyncGenerator<string>` in TypeScript, `iter` in Python, or an AI agent step), and Windmill provides multiple ways to consume them.
+Windmill streams two kinds of data from a running [job](../20_jobs/index.mdx) over [Server-Sent Events (SSE)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events):
 
-## Job result streaming
+- [Progress](#stream-flow-progress): the status of each step of a [flow](../../flows/1_flow_editor.mdx) as it runs, plus logs and [explicit progress](../../advanced/19_explicit_progress/index.mdx).
+  Use it to show users where a long-running flow is at, from your own frontend or backend.
+- [Output](#stream-output): text that a script or [AI agent](../54_ai_agents/index.mdx) step yields while it runs, such as LLM tokens.
+  Use it to display a response as it is being generated.
+
+| I want to... | Use |
+|---|---|
+| Show which step a flow is at, with logs and progress | Run the flow [asynchronously](../4_webhooks/index.mdx#asynchronous), then subscribe to [`jobs_u/getupdate_sse`](#stream-flow-progress) |
+| Get the text a script or flow yields, in one request | [SSE stream webhook](../4_webhooks/index.mdx#sse-stream-webhooks) (`jobs/run_and_stream`) |
+| Expose the text stream on a custom URL | [HTTP route](../../triggers/2_http_routing/index.mdx) in Sync SSE mode |
+| Follow an AI agent's tool calls and tokens | [AI agent streaming](../54_ai_agents/index.mdx#streaming-optional) |
+
+## Stream flow progress
+
+Every job, and flows in particular, can be followed live with the [job progress SSE endpoint](../20_jobs/index.mdx#job-progress-stream-api):
+
+```bash
+GET /api/w/<workspace>/jobs_u/getupdate_sse/<job_id>
+```
+
+Each `update` event carries the `flow_status` of the flow whenever it changes.
+Its `modules` array has one entry per top-level step, with the step `id`, its `type` (`WaitingForPriorSteps`, `WaitingForExecutor`, `WaitingForEvents` for a step suspended until [approval](../../flows/11_flow_approval.mdx), `InProgress`, `Success` or `Failure`) and the `job` id of the step once it has started.
+Loops and branches also report their iteration or branch in the entry.
+
+```json
+{
+	"type": "update",
+	"running": true,
+	"flow_status": {
+		"step": 1,
+		"modules": [
+			{ "type": "Success", "id": "a", "job": "0199...", "skipped": false },
+			{ "type": "InProgress", "id": "b", "job": "0199..." },
+			{ "type": "WaitingForPriorSteps", "id": "c" }
+		]
+		// other flow_status fields omitted
+	}
+}
+```
+
+The last event has `"completed": true` and a `job` field with the completed job, including its `result`.
+The full list of fields is in [Job progress event response](../20_jobs/index.mdx#job-progress-event-response).
+
+To stream the progress of a flow you trigger:
+
+1. Start it with the [asynchronous webhook](../4_webhooks/index.mdx#asynchronous), which returns the job id right away.
+   The path is `jobs/run/f/<flow_path>`, so a flow at `f/examples/onboarding` is started with `jobs/run/f/f/examples/onboarding`.
+2. Open the SSE stream on that job id.
+   Pass `fast=true` so the server checks for updates every 100ms, then every 500ms, before settling at every 3 seconds (without it, it checks every 3 seconds from the start).
+   Pass `no_logs=true` if you only need step statuses.
+
+<Tabs className="unique-tabs">
+<TabItem value="curl" label="curl" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```bash
+BASE="https://app.windmill.dev/api/w/<workspace>"
+
+JOB_ID=$(curl -s -X POST "$BASE/jobs/run/f/f/examples/onboarding" \
+	-H "Authorization: Bearer $TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{"email": "jane@example.com"}')
+
+curl -N "$BASE/jobs_u/getupdate_sse/$JOB_ID?fast=true&no_logs=true" \
+	-H "Authorization: Bearer $TOKEN"
+```
+
+</TabItem>
+<TabItem value="ts" label="TypeScript (browser)" attributes={{className: "text-xs p-4 !mt-0 !ml-0"}}>
+
+```ts
+const base = 'https://app.windmill.dev/api/w/<workspace>';
+
+const jobId = await fetch(`${base}/jobs/run/f/f/examples/onboarding`, {
+	method: 'POST',
+	headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+	body: JSON.stringify({ email: 'jane@example.com' })
+}).then((r) => r.text());
+
+// EventSource cannot set headers, so the token is passed as a query arg
+const events = new EventSource(
+	`${base}/jobs_u/getupdate_sse/${jobId}?fast=true&no_logs=true&token=${token}`
+);
+
+events.onmessage = (e) => {
+	const update = JSON.parse(e.data);
+	if (update.type !== 'update') return; // ping, timeout, notfound, error
+
+	for (const step of update.flow_status?.modules ?? []) {
+		console.log(step.id, step.type); // e.g. "b InProgress"
+	}
+	if (update.completed) {
+		console.log('result', update.job.result);
+		events.close();
+	}
+};
+```
+
+</TabItem>
+</Tabs>
+
+Add `get_progress=true` to also receive the `progress` percentage set from code with [explicit progress](../../advanced/19_explicit_progress/index.mdx).
+The same endpoint works for scripts, where `new_logs` gives the logs as they are written.
+
+The [SSE stream webhook](../4_webhooks/index.mdx#sse-stream-webhooks) does not include `flow_status`: it only sends the result stream and the final result.
+Use the two-step approach above when you need step-level progress.
+
+## Stream output
+
+### Job result streaming
 
 Scripts in Python and TypeScript can stream back results as a text stream. The stream exists while the job is running, and the full content becomes the result once the job completes.
+In a flow, the stream comes from the last step, or from the [early return](../../flows/19_early_return.mdx) step when one is set.
 
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
@@ -20,8 +131,7 @@ Scripts in Python and TypeScript can stream back results as a text stream. The s
 	/>
 </div>
 
-
-## AI agent streaming
+### AI agent streaming
 
 AI agent steps support streaming token deltas, tool calls and tool results as structured JSON payloads.
 
@@ -33,27 +143,33 @@ AI agent steps support streaming token deltas, tool calls and tool results as st
 	/>
 </div>
 
-## Consuming a stream
+### Consuming an output stream
 
-### Webhook SSE stream
+Output streams can be consumed from:
 
-Runnables are associated with SSE stream webhook endpoints that trigger the job and return a Server-Sent Events stream.
+- [SSE stream webhooks](../4_webhooks/index.mdx#sse-stream-webhooks), which trigger the job and return the stream in a single request.
+- [HTTP routes](../../triggers/2_http_routing/index.mdx) in Sync SSE mode, to serve the stream on a custom path.
+- The [job progress SSE endpoint](#stream-flow-progress), where it arrives as `new_result_stream` alongside the flow progress.
+
 <div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="SSE stream webhooks"
 		description="Trigger a job and get an SSE stream of the result."
 		href="/docs/core_concepts/webhooks#sse-stream-webhooks"
 	/>
-</div>
-
-### HTTP trigger SSE stream
-
-HTTP routes can be configured in Sync SSE mode to return a Server-Sent Events stream when the bound runnable returns a stream.
-
-<div className="grid grid-cols-2 gap-6 mb-4">
 	<DocCard
 		title="HTTP routes"
 		description="Trigger scripts and flows from custom HTTP routes."
 		href="/docs/triggers/http_routing"
+	/>
+	<DocCard
+		title="Job progress stream API"
+		description="Watch a job's status, logs, flow steps and result stream over SSE."
+		href="/docs/core_concepts/jobs#job-progress-stream-api"
+	/>
+	<DocCard
+		title="Explicit progress"
+		description="Set and get a job's progress percentage from code."
+		href="/docs/advanced/explicit_progress"
 	/>
 </div>

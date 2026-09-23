@@ -77,3 +77,9 @@ export async function main() {
 
 </TabItem>
 </Tabs>
+
+## Stream progress to your own frontend
+
+To follow the progress from outside Windmill, subscribe to the job's SSE stream with `get_progress=true`: each update then includes a `progress` field.
+For flows, the same stream also reports the status of each step.
+See [Stream flow progress](../../core_concepts/58_streaming/index.mdx#stream-flow-progress).

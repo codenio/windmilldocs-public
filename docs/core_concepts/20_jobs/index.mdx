@@ -134,6 +134,7 @@ If not returning the stream directly, we introduce 2 new functions on our SDK: `
 The stream only exists while the job is in the queue. Afterwards, the full stream becomes the result (or added as the field "wm_stream" if there is already a result).
 
 You can run a job and get an SSE stream of the result using the [SSE stream webhooks](../4_webhooks/index.mdx#sse-stream-webhooks) or an [HTTP route](../../triggers/2_http_routing/index.mdx) in Sync SSE mode.
+See [Streaming](../58_streaming/index.mdx) for all streaming options, including streaming a flow's progress step by step.
 
 #### Returning a stream directly
 
@@ -267,8 +268,10 @@ They have their own window, [configured separately](../../advanced/18_instance_s
 ## Job Progress Stream API
 
 This section is relevant if you want to use the API of Windmill to build your own client or frontend that watch the progress of a job, retrieve its new logs, result stream and get the job at completion with its result and all job metadata.
+For flows, updates carry the `flow_status` with the status of every step whenever it changes, which lets you show a flow's progress step by step.
+See [Stream flow progress](../58_streaming/index.mdx#stream-flow-progress) for a complete example.
 
-Windmill provides an [SSE endpoint](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) to watch a given job for new logs or completion. The API endpoint is [api/job/get/w/\{workspace\}/jobs_u/getupdate_sse/\{id\}](https://app.windmill.dev/openapi.html#tag/job/get/w/{workspace}/jobs_u/getupdate_sse/{id})
+Windmill provides an [SSE endpoint](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events) to watch a given job for new logs or completion. The API endpoint is [/api/w/\{workspace\}/jobs_u/getupdate_sse/\{id\}](https://app.windmill.dev/openapi.html#tag/job/get/w/{workspace}/jobs_u/getupdate_sse/{id})
 
 It takes as query args:
 
@@ -281,6 +284,8 @@ stream_offset (optional integer, default 0): what was the last log offset known 
 get_progress (optional integer, default false): should the updates contains [explicit job progress](/docs/advanced/explicit_progress)
 only_result (optional integer, default false): should we only care about the result and ignore all else
 no_logs (optional boolean, default false): should we skip streaming logs
+fast (optional boolean, default false): check for updates every 100ms, then every 500ms, before settling at every 3s. Without it, updates are checked every 3s
+poll_delay_ms (optional integer, Enterprise Edition): fixed interval in ms between update checks, minimum 50
 ```
 
 ### Job Progress event response
@@ -289,7 +294,7 @@ The response from the SSE endpoint is a stream of JSON objects, each with a `typ
 
 - **Update**
 
-  The updates will only contain new updates since the last one, no update will be sent if there are no updates to share, otherwise the maximum frequency at which updates are sent is every 100ms.
+  The updates will only contain new updates since the last one, no update will be sent if there are no updates to share, otherwise updates are sent at most as often as the server checks for them (see `fast` and `poll_delay_ms` above).
 
   with only_result = false (default):
   ```json
