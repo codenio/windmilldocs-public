@@ -118,6 +118,12 @@ With a multi-workspace token, the MCP server exposes an extra `list_workspaces` 
 
 Access is always gated by workspace membership: the token only reaches workspaces you are a member of, and requests to any other workspace are denied.
 
+### Refuse tokens in MCP URLs
+
+A token in a URL ends up in browser history and proxy logs.
+Superadmins can make the MCP endpoints refuse a `?token=` query parameter with the [Disable token in MCP URLs](../../advanced/18_instance_settings/index.mdx#disable-token-in-mcp-urls) instance setting.
+Clients then use the bare MCP URL and sign in through [OAuth](#connect-with-oauth), or send the token in an `Authorization: Bearer <token>` header.
+
 ---
 
 ### Connect your LLM to Windmill
@@ -367,6 +373,7 @@ Where a runnable relies on an identity read from its headers, scope the token to
 - **Client has issues connecting to the MCP server**
   - Make sure your MCP client is configured to use **HTTP streamable** as the transport protocol.
   - Verify that your MCP URL is correct and the token is valid.
+  - If the client gets a `401` saying the instance does not accept a token in the MCP URL, remove `?token=` and [sign in through OAuth](#refuse-tokens-in-mcp-urls).
   - If the client reports error `-32022`, it asked for a [protocol revision](#protocol-versions) the server does not serve; the error payload lists the ones it does.
 
 ---

@@ -169,6 +169,12 @@ A token requested with no expiration or a longer one is created with this expira
 Leave empty for no limit.
 See [Maximum token expiration](../../core_concepts/59_user_tokens/index.mdx#maximum-token-expiration) for what it covers.
 
+### Disable token in MCP URLs
+
+When enabled, the [MCP](../../core_concepts/51_mcp/index.mdx) endpoints refuse a token passed as a `?token=` query parameter, which would otherwise end up in browser history and proxy logs.
+MCP clients then sign in through [OAuth](../../core_concepts/51_mcp/index.mdx#connect-with-oauth) or send the token in an `Authorization` header.
+It is off by default, and existing MCP URLs that carry a token stop working once it is enabled.
+
 ### Instance object storage
 
 [Connect your instance](../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage) to a S3 bucket to [store large logs](../../core_concepts/38_object_storage_in_windmill/index.mdx#large-job-logs-management) and [global cache for Python and Go](../../core_concepts/38_object_storage_in_windmill/index.mdx#instance-object-storage-distributed-cache-for-python-rust-go).
