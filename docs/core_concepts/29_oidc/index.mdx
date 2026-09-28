@@ -107,8 +107,7 @@ The token includes standard claims:
 
 - `aud`: Intended audience for the token. This field is set by the user when fetching the ID token and is the only customizable field.
 - `iss`: The issuer of the token, your base_url set in in your i[nstance settings](../../advanced/18_instance_settings/index.mdx#base-url)
-- `sub`: The subject claim is validated by your cloud provider. The subject is formatted as `{email}::{script_path}::{flow_path}::{workspace}`. For instance level, the sub claim is "instance". For SQS triggers and workspace level object storage, the sub claim is "`<workspace_id>`".
-- `exp`: The expiration time of the token.
+- `sub`: The subject claim is validated by your cloud provider. The subject is formatted as `{email}::{script_path}::{flow_path}::{workspace}`. For instance level, the sub claim is "instance". For SQS triggers and workspace level object storage, the sub claim is "`<workspace_id>`".- `exp`: The expiration time of the token.
 - `iat`: The time the token was issued.
 - `alg`: The algorithm used to sign the token.
 - `kid`: The key ID used to sign the token.
@@ -124,6 +123,23 @@ The token also includes custom claims provided by Windmill. To see the full list
 - `workspace`: workspace_id the job is executed in
 - `fork_parent_workspace`: when the job runs in a [workspace fork](../../advanced/20_workspace_forks/index.mdx), the workspace_id of the parent workspace. This lets OIDC consumers such as Vault write policies scoped to the parent workspace that also apply to all its forks. The claim is omitted for non-fork workspaces, and workspace-level tokens (workspace object storage, SQS triggers) do not include it.
 - `end_user_email`: the email of the end user when the job runs on behalf of a different user (e.g. via approval flows or operator impersonation)
+- `job_kind`: the kind of job that requested the token, e.g. `script`, `preview`, `flow`, `flowscript` (an inline step of a deployed flow) or `aiagent`
+- `deployed`: `true` only when the job and every job it descends from run code and a path taken from a deployed version. It is `false` for anything run from the script, flow or app editor, and for a deployed script called from a flow preview. Bind it to `true` in any policy that trusts `path` or `flow_path`, since a preview can use any path its author can read.
+- `root_job_id`, `root_path`, `root_job_kind`: the job at the top of the chain, e.g. the flow that ran this step, or the job itself when it has no parent
+- `root_trigger_kind`: how the root job was started (e.g. `schedule`, `webhook`, `http`), absent when none was recorded, e.g. for runs started directly through the API
+
+### Trust only deployed code
+
+Code run from the editor (a preview) declares its own path, and only needs read access to it, so its token carries that `path` and the same `sub` as the deployed script would. A policy that trusts `path` or `sub` alone therefore also trusts previews by anyone who can read that path. On providers that check claims (e.g. Vault's `bound_claims`), require `deployed` to accept deployed code only, and pin `root_path` when a credential should only be used under a specific flow. For example, to issue a credential only to the tools of one deployed flow, bind:
+
+- `workspace` = `foobar`
+- `path` matching `f/infra_ro/*`
+- `root_path` = `f/infra_ro/agent`
+- `deployed` = `true`
+
+`deployed` is computed each time a token is requested, so it can turn `false` during a run: inline steps of a flow get `deployed: false` when the instance runs with `DISABLE_FLOW_SCRIPT`, or when the flow was deployed before flow nodes existed and never redeployed (redeploying it fixes this), because those steps then run as previews; a running job's later tokens do too once its script or flow is permanently deleted or its user folder is renamed.
+
+Providers that only check `sub` (e.g. AWS) cannot see `deployed`: restrict who can read the paths such a role trusts.
 
 The following example token was requested with the audience `sts.amazonaws.com` from the script `u/admin/ambitious_script` in the `foobar` workspace:
 
